@@ -1,6 +1,6 @@
 {
   "name": "modelmix",
-  "version": "1.0.2",
+  "version": "1.0.4",
   "description": "🧬 ModelMix - Integrate AI Models with Ease.",
   "main": "index.js",
   "repository": {

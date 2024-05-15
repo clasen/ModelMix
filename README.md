@@ -1,14 +1,14 @@
-# 🧬 ModelMix: Integrate Multiple AI Language Models with Ease 🚀
+# 🧬 ModelMix: Integrate Multiple AI Language Models with Ease
 
 **ModelMix** is a versatile module that enables seamless integration of various language models from different providers through a unified interface. With ModelMix, you can effortlessly manage and utilize multiple AI models while controlling parallel requests to avoid provider restrictions. 
 
-## Features ✨
+## ✨ Features 
 
 - **Unified Interface**: Interact with multiple AI models through a single, coherent API.
 - **Request Control**: Manage the number of parallel requests to adhere to provider limitations.
 - **Flexible Integration**: Easily integrate popular models like OpenAI and Anthropic, as well as custom models such as Perplexity.
 
-## Installation 📦
+## 📦 Installation
 
 First, install the ModelMix package:
 
@@ -22,7 +22,7 @@ You'll also need to install the respective SDKs for each model provider you plan
 npm install openai @anthropic-ai/sdk dotenv
 ```
 
-## Usage 🛠️
+## 🛠️ Usage
 
 Here's a quick example to get you started:
 
@@ -79,7 +79,7 @@ Here's a quick example to get you started:
     console.log(txtPPLX);
     ```
 
-## ModelMix Class Overview 📚
+## 📚 ModelMix Class Overview
 
 ### `ModelMix` Class
 
