@@ -7,7 +7,6 @@ import { ModelMix, OpenAIModel, AnthropicModel, CustomModel } from '../index.js'
 
 const env = process.env;
 
-
 const driver = new ModelMix({
     options: {
         max_tokens: 200,
