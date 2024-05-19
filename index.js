@@ -15,6 +15,7 @@ class ModelMix {
 
         this.config = {
             system: 'You are an assistant.',
+            max_request: 1,
             max_history: 5, // Default max history
             ...args.config
         }
@@ -27,7 +28,7 @@ class ModelMix {
         modelInstance.active_requests = 0;
     }
 
-    async create(modelKey, overOptions = {}) {
+    create(modelKey, overOptions = {}) {
         const modelEntry = Object.values(this.models).find(entry =>
             entry.config.prefix.some(p => modelKey.startsWith(p))
         );
