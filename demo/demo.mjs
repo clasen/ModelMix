@@ -24,7 +24,8 @@ driver.attach(new CustomModel({
     config: {
         url: 'https://api.perplexity.ai/chat/completions',
         bearer: env.PPLX_API_KEY,
-        prefix: ["pplx", "llama", "mixtral"]
+        prefix: ["pplx", "llama", "mixtral"],
+        system: "You are my personal assistant."
     }
 }));
 

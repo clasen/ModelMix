@@ -265,7 +265,7 @@ class CustomModel {
 
     async create(args = { config: {}, options: {} }) {
         args.options.messages = [{ role: 'system', content: args.config.system }, ...args.options.messages || []];
-
+        
         const response = await axios.post(this.config.url, args.options, {
             headers: {
                 'accept': 'application/json',
