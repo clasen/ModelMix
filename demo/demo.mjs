@@ -34,7 +34,7 @@ const gpt = await driver.create('gpt-4o', { temperature: 0.5 });
 const question = await gpt.addText("Have you ever eaten a cat?").message();
 console.log(question);
 
-console.log('--------| claude-3-sonnet-20240229 |--------');
+console.log("\n" + '--------| claude-3-sonnet-20240229 |--------');
 const claude = await driver.create('claude-3-sonnet-20240229', { temperature: 0.5 });
 await claude.addImage("./watson.png")
 const imageDescription = await claude.addText("describe the image").message();
