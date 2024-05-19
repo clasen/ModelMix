@@ -85,7 +85,7 @@ Here's a quick example to get you started:
     console.log(news);
     ```
 
-4. Find the files for this example at: [/demo](https://github.com/clasen/ModelMix/tree/master/demo).
+4. Find the files for this example at: [/ModelMix/demo](https://github.com/clasen/ModelMix/tree/master/demo).
 
 
 ## 📚 ModelMix Class Overview
