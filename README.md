@@ -97,8 +97,16 @@ Here's a quick example to get you started:
 ```javascript
 new ModelMix(args = { options: {}, config: {} })
 ```
-
 - **args**: Configuration object with `options` and `config` properties.
+  - **options**: This object contains default options that are applied to all models. These options can be overridden when creating a specific model instance. Examples of default options include:
+    - `max_tokens`: Sets the maximum number of tokens to generate, e.g., 2000.
+    - `temperature`: Controls the randomness of the model's output, e.g., 1.
+    - `top_p`: Controls the diversity of the output, e.g., 1.
+    - ...
+  - **config**: This object contains configuration settings that control the behavior of the `ModelMix` instance. These settings can also be overridden for specific model instances. Examples of configuration settings include:
+    - `system`: Sets the default system message for the model, e.g., "You are an assistant."
+    - `max_history`: Limits the number of historical messages to retain, e.g., 5.
+    - `max_request`: Limits the number of parallel request.
 
 **Methods**
 
@@ -106,11 +114,6 @@ new ModelMix(args = { options: {}, config: {} })
 - `create(modelKey, overOptions = {})`: Creates a new `MessageHandler` for the specified model.
 
 #### MessageHandler
-
-- **mix**: Instance of `ModelMix`.
-- **modelEntry**: Model entry object.
-- **options**: Options for the message handler.
-- **config**: Configuration for the message handler.
 
 **Methods**
 
