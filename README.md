@@ -41,7 +41,7 @@ Here's a quick example to get you started:
     import OpenAI from 'openai';
     import Anthropic from '@anthropic-ai/sdk';
 
-    import { ModelMix, OpenAIModel, AnthropicModel, CustomModel } from 'model-mix';
+    import { ModelMix, OpenAIModel, AnthropicModel, CustomModel } from 'modelmix';
 
     const env = process.env;
 
