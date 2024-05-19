@@ -1,4 +1,4 @@
-# 🧬 ModelMix: Integrate Multiple AI Language Models with Ease
+# 🧬 ModelMix: Unified API for Diverse AI Language Models
 
 **ModelMix** is a versatile module that enables seamless integration of various language models from different providers through a unified interface. With ModelMix, you can effortlessly manage and utilize multiple AI models while controlling parallel requests to avoid provider restrictions. 
 
@@ -7,6 +7,7 @@
 - **Unified Interface**: Interact with multiple AI models through a single, coherent API.
 - **Request Control**: Manage the number of parallel requests to adhere to provider limitations.
 - **Flexible Integration**: Easily integrate popular models like OpenAI and Anthropic, as well as custom models such as Perplexity.
+- **History Tracking:** Automatically logs the conversation history with model responses, allowing you to limit the number of historical messages with max_history.
 
 ## 📦 Installation
 
@@ -37,14 +38,22 @@ Here's a quick example to get you started:
 
     ```javascript
     import 'dotenv/config'
-    const env = process.env;
-
     import OpenAI from 'openai';
     import Anthropic from '@anthropic-ai/sdk';
 
     import { ModelMix, OpenAIModel, AnthropicModel, CustomModel } from 'model-mix';
 
-    const driver = new ModelMix({ system: "You are ALF from Melmac.", max_tokens: 200 });
+    const env = process.env;
+
+    const driver = new ModelMix({
+        options: {
+            max_tokens: 200,
+        },
+        config: {
+            system: "You are ALF from Melmac.",
+            max_history: 2
+        }
+    });
 
     driver.attach(new OpenAIModel(new OpenAI({ apiKey: env.OPENAI_API_KEY })));
     driver.attach(new AnthropicModel(new Anthropic({ apiKey: env.ANTHROPIC_API_KEY })));
@@ -52,7 +61,8 @@ Here's a quick example to get you started:
         config: {
             url: 'https://api.perplexity.ai/chat/completions',
             bearer: env.PPLX_API_KEY,
-            prefix: ["pplx", "llama", "mixtral"]
+            prefix: ["pplx", "llama", "mixtral"],
+            system: "You are my personal assistant."
         }
     }));
     ```
@@ -60,75 +70,84 @@ Here's a quick example to get you started:
 3. **Generate responses from different models**:
 
     ```javascript
-    const question = 'Have you ever eaten a cat?';
+    const claude = await driver.create('claude-3-sonnet-20240229', { temperature: 0.5 });
+    await claude.addImage("./watson.png")
+    const imageDescription = await claude.addText("describe the image").message();
+    console.log(imageDescription);
 
-    console.log("OpenAI - gpt-4o");
-    const txtGPT = await driver.create(question, 'gpt-4o', { max_tokens: 100 });
-    console.log(txtGPT);
+    const gpt = await driver.create('gpt-4o', { temperature: 0.5 });
+    const question = await gpt.addText("Have you ever eaten a cat?").message();
+    console.log(question);
 
-    console.log("-------\n");
-
-    console.log("Anthropic - claude-3-sonnet-20240229");
-    const txtClaude = await driver.create(question, 'claude-3-sonnet-20240229', { temperature: 0.5 });
-    console.log(txtClaude);
-
-    console.log("-------\n");
-
-    console.log("Perplexity - pplx-70b-online");
-    const txtPPLX = await driver.create(question, 'pplx-70b-online');
-    console.log(txtPPLX);
+    const pplx = await driver.create('pplx-70b-online', { max_tokens: 500 });
+    await pplx.addText('How much is ETH trading in USD?');
+    const news = await pplx.addText('What are the 3 most recent Ethereum news?').message();
+    console.log(news);
     ```
 
 ## 📚 ModelMix Class Overview
 
-### `ModelMix` Class
+#### ModelMix
 
-#### Constructor
-- **options**: An optional configuration object for setting default values.
+**Constructor**
 
-#### Methods
-- **`attach(modelInstance)`**: Attach a new model instance to the ModelMix.
-  - **modelInstance**: An instance of a model class (e.g., `OpenAIModel`, `AnthropicModel`, `CustomModel`).
+```javascript
+new ModelMix(args = { options: {}, config: {} })
+```
 
-- **`create(prompt, modelKey, options = {})`**: Create a request to a specific model.
-  - **prompt**: The input prompt to send to the model.
-  - **modelKey**: The model key to identify which model to use.
-  - **options**: Optional configuration overrides for the request.
+- **args**: Configuration object with `options` and `config` properties.
 
-- **`processQueue(modelEntry)`**: Process the request queue for a specific model instance.
-  - **modelEntry**: The model instance whose queue will be processed.
+**Methods**
 
-### `OpenAIModel` Class
+- `attach(modelInstance)`: Attaches a model instance to the `ModelMix`.
+- `create(modelKey, overOptions = {})`: Creates a new `MessageHandler` for the specified model.
 
-#### Constructor
-- **openai**: An instance of the OpenAI client.
-- **args**: Configuration and options for the model.
+#### MessageHandler
 
-#### Methods
-- **`create(prompt, options = {})`**: Send a prompt to the OpenAI model and return the response.
-  - **prompt**: The input prompt to send to the model.
-  - **options**: Optional configuration overrides for the request.
+- **mix**: Instance of `ModelMix`.
+- **modelEntry**: Model entry object.
+- **options**: Options for the message handler.
+- **config**: Configuration for the message handler.
 
-### `AnthropicModel` Class
+**Methods**
 
-#### Constructor
-- **anthropic**: An instance of the Anthropic client.
-- **args**: Configuration and options for the model.
+- `new()`: Initializes a new message handler instance.
+- `addText(text, config = { role: "user" })`: Adds a text message.
+- `addImage(filePath, config = { role: "user" })`: Adds an image message from a file path.
+- `message()`: Sends the message and returns the response.
+- `raw()`: Sends the message and returns the raw response data.
 
-#### Methods
-- **`create(prompt, options = {})`**: Send a prompt to the Anthropic model and return the response.
-  - **prompt**: The input prompt to send to the model.
-  - **options**: Optional configuration overrides for the request.
+#### OpenAIModel
 
-### `CustomModel` Class
+**Constructor**
 
-#### Constructor
-- **args**: Configuration and options for the model.
+```javascript
+new OpenAIModel(openai, args = { options: {}, config: {} })
+```
 
-#### Methods
-- **`create(prompt, options = {})`**: Send a prompt to a custom model and return the response.
-  - **prompt**: The input prompt to send to the model.
-  - **options**: Optional configuration overrides for the request.
+- **openai**: Instance of the OpenAI client.
+- **args**: Configuration object with `options` and `config` properties.
+
+#### AnthropicModel
+
+**Constructor**
+
+```javascript
+new AnthropicModel(anthropic, args = { options: {}, config: {} })
+```
+
+- **anthropic**: Instance of the Anthropic client.
+- **args**: Configuration object with `options` and `config` properties.
+
+#### CustomModel
+
+**Constructor**
+
+```javascript
+new CustomModel(args = { config: {}, options: {} })
+```
+
+- **args**: Configuration object with `config` and `options` properties.
 
 ## 🤝 Contributing
 

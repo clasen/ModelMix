@@ -38,7 +38,7 @@ const gpt = await driver.create('gpt-4o', { temperature: 0.5 });
 const question = await gpt.addText("Have you ever eaten a cat?").message();
 console.log(question);
 
-const pplx = await driver.create('pplx-70b-online', { max_tokens: 1000 });
+const pplx = await driver.create('pplx-70b-online', { max_tokens: 500 });
 await pplx.addText('How much is ETH trading in USD?');
 const news = await pplx.addText('What are the 3 most recent Ethereum news?').message();
 console.log(news);
