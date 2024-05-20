@@ -103,6 +103,7 @@ new ModelMix(args = { options: {}, config: {} })
     - `system`: Sets the default system message for the model, e.g., "You are an assistant."
     - `max_history`: Limits the number of historical messages to retain, e.g., 5.
     - `max_request`: Limits the number of parallel request.
+    - ...
 
 **Methods**
 
@@ -144,6 +145,16 @@ new CustomModel(args = { config: {}, options: {} })
 ```
 
 - **args**: Configuration object with `config` and `options` properties.
+  - **config**: 
+    - `url`: 
+    - `bearer`: 
+    - `prefix`: 
+    - ...
+  - **options**: This object contains default options that are applied to all models. These options can be overridden when creating a specific model instance. Examples of default options include:
+    - `max_tokens`: Sets the maximum number of tokens to generate, e.g., 2000.
+    - `temperature`: Controls the randomness of the model's output, e.g., 1.
+    - `top_p`: Controls the diversity of the output, e.g., 1.
+    - ...
 
 ## 🤝 Contributing
 
