@@ -90,10 +90,6 @@ Here's a quick example to get you started:
 
 ## 📚 ModelMix Class Overview
 
-#### ModelMix
-
-**Constructor**
-
 ```javascript
 new ModelMix(args = { options: {}, config: {} })
 ```
@@ -125,8 +121,6 @@ new ModelMix(args = { options: {}, config: {} })
 
 #### OpenAIModel
 
-**Constructor**
-
 ```javascript
 new OpenAIModel(openai, args = { options: {}, config: {} })
 ```
@@ -136,8 +130,6 @@ new OpenAIModel(openai, args = { options: {}, config: {} })
 
 #### AnthropicModel
 
-**Constructor**
-
 ```javascript
 new AnthropicModel(anthropic, args = { options: {}, config: {} })
 ```
@@ -146,8 +138,6 @@ new AnthropicModel(anthropic, args = { options: {}, config: {} })
 - **args**: Configuration object with `options` and `config` properties.
 
 #### CustomModel
-
-**Constructor**
 
 ```javascript
 new CustomModel(args = { config: {}, options: {} })
