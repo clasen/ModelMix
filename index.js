@@ -28,7 +28,7 @@ class ModelMix {
         modelInstance.active_requests = 0;
     }
 
-    create(modelKey, overOptions = {}) {
+    async create(modelKey, overOptions = {}) {
         const modelEntry = Object.values(this.models).find(entry =>
             entry.config.prefix.some(p => modelKey.startsWith(p))
         );
