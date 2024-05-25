@@ -20,7 +20,10 @@
     "llama",
     "mixtral",
     "nlp",
-    "chat"
+    "chat",
+    "multimodal",
+    "omni",
+    "4o"
   ],
   "author": "Martin Clasen",
   "license": "MIT",

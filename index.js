@@ -1,5 +1,5 @@
 const axios = require('axios');
-const fs = require('fs').promises;
+const fs = require('fs');
 const mime = require('mime-types');
 
 class ModelMix {
@@ -91,9 +91,9 @@ class MessageHandler {
         return this;
     }
 
-    async addImage(filePath, config = { role: "user" }) {
+    addImage(filePath, config = { role: "user" }) {
         try {
-            const imageBuffer = await fs.readFile(filePath);
+            const imageBuffer = fs.readFileSync(filePath);
             const mimeType = mime.lookup(filePath);
 
             if (!mimeType || !mimeType.startsWith('image/')) {
@@ -227,7 +227,7 @@ class AnthropicModel {
         }
 
         this.config = {
-            prefix: ["claude"],
+            prefix: ['claude'],
             max_request: 1,
             ...args.config || {}
         }
@@ -245,38 +245,114 @@ class AnthropicModel {
 }
 
 class CustomModel {
-    constructor(args = { config: {}, options: {} }) {
-        this.config = {
-            url: 'https://api.perplexity.ai/chat/completions',
-            bearer: '',
-            prefix: ["pplx", "llama", "mixtral"],
-            max_request: 1,
-            ...args.config
-        };
+    constructor(args = { config: {}, options: {}, headers: {} }) {
+        this.config = this.getDefaultConfig(args.config);
+        this.options = { ...args.options };
+        this.headers = { ...this.getDefaultHeaders(), ...args.headers };
+    }
 
-        this.options = {
-            return_citations: false,
-            return_images: false,
-            stream: false,
-            presence_penalty: 0,
-            frequency_penalty: 1,
-            ...args.options
+    getDefaultConfig(customConfig) {
+        return {
+            url: '',
+            apikey: '',
+            prefix: [],
+            ...customConfig
+        };
+    }
+
+    getDefaultHeaders() {
+        return {
+            'accept': 'application/json',
+            'content-type': 'application/json',
+            'authorization': `Bearer ${this.config.apikey}`
         };
     }
 
     async create(args = { config: {}, options: {} }) {
-        args.options.messages = [{ role: 'system', content: args.config.system }, ...args.options.messages || []];
-        
         const response = await axios.post(this.config.url, args.options, {
-            headers: {
-                'accept': 'application/json',
-                'authorization': `Bearer ${this.config.bearer}`,
-                'content-type': 'application/json'
-            }
+            headers: this.headers
         });
 
+        return this.processResponse(response);
+    }
+
+    processResponse(response) {
         return { response: response.data, message: response.data.choices[0].message.content };
     }
 }
 
-module.exports = { OpenAIModel, AnthropicModel, CustomModel, ModelMix };
+class CustomOpenAIModel extends CustomModel {
+    getDefaultConfig(customConfig) {
+        return {
+            ...super.getDefaultConfig(customConfig),
+            url: 'https://api.openai.com/v1/chat/completions',
+            prefix: ['gpt']
+        };
+    }
+
+    create(args = { config: {}, options: {} }) {
+        args.options.messages = [{ role: 'system', content: args.config.system }, ...args.options.messages || []];
+        args.options.messages = this.convertMessages(args.options.messages);
+        console.log(args.options.messages[1].content[0])
+        return super.create(args);
+    }
+
+    convertMessages(messages) {
+        return messages.map(message => {
+            if (message.role === 'user' && message.content instanceof Array) {
+                message.content = message.content.map(content => {
+                    if (content.type === 'image') {
+                        const { type, media_type, data } = content.source;
+                        return {
+                            type: 'image_url',
+                            image_url: {
+                                url: `data:${media_type};${type},${data}`
+                            }
+                        };
+                    }
+                    return content;
+                });
+            }
+            return message;
+        });
+    }    
+}
+
+class CustomAnthropicModel extends CustomModel {
+    getDefaultConfig(customConfig) {
+        return {
+            ...super.getDefaultConfig(customConfig),
+            url: 'https://api.anthropic.com/v1/messages',
+            prefix: ['claude']
+        };
+    }
+
+    getDefaultHeaders() {
+        return {
+            ...super.getDefaultHeaders(),
+            'x-api-key': this.config.apikey,
+            'anthropic-version': '2023-06-01'
+        };
+    }
+
+    processResponse(response) {
+        return { response: response.data, message: response.data.content[0].text };
+    }
+}
+
+class CustomPerplexityModel extends CustomModel {
+    getDefaultConfig(customConfig) {
+        return {
+            ...super.getDefaultConfig(customConfig),
+            url: 'https://api.perplexity.ai/chat/completions',
+            prefix: ['pplx', 'llama', 'mixtral']
+        };
+    }
+
+    create(args = { config: {}, options: {} }) {
+        args.options.messages = [{ role: 'system', content: args.config.system }, ...args.options.messages || []];
+        return super.create(args);
+    }
+}
+
+module.exports = { OpenAIModel, AnthropicModel, CustomModel, ModelMix, CustomAnthropicModel, CustomOpenAIModel, CustomPerplexityModel };
