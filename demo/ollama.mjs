@@ -1,4 +1,4 @@
-import { ModelMix, CustomOllamaModel } from '../index.js';
+import { ModelMix, MixOllama } from '../index.js';
 
 const mmix = new ModelMix({
     options: {
@@ -9,7 +9,7 @@ const mmix = new ModelMix({
     }
 });
 
-mmix.attach(new CustomOllamaModel({
+mmix.attach(new MixOllama({
     config: {
         url: 'http://localhost:11434/api/chat',
         prefix: ['openhermes2'],
@@ -20,7 +20,7 @@ mmix.attach(new CustomOllamaModel({
     }
 }));
 
-mmix.attach(new CustomOllamaModel({
+mmix.attach(new MixOllama({
     config: {
         url: 'http://localhost:11434/api/chat',
         prefix: ['llava'],

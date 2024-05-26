@@ -1,13 +1,13 @@
 # 🧬 ModelMix: Unified API for Diverse AI Language Models
 
-**ModelMix** is a versatile module that enables seamless integration of various language models from different providers through a unified interface. With ModelMix, you can effortlessly manage and utilize multiple AI models while controlling parallel requests to avoid provider restrictions. 
+**ModelMix** is a versatile module that enables seamless integration of various language models from different providers through a unified interface. With ModelMix, you can effortlessly manage and utilize multiple AI models while controlling parallel requests to avoid provider restrictions.
 
-## ✨ Features 
+## ✨ Features
 
 - **Unified Interface**: Interact with multiple AI models through a single, coherent API.
-- **Request Control**: Manage the number of parallel requests to adhere to provider limitations.
-- **Flexible Integration**: Easily integrate popular models like OpenAI and Anthropic, as well as custom models such as Perplexity.
-- **History Tracking:** Automatically logs the conversation history with model responses, allowing you to limit the number of historical messages with max_history.
+- **Request Control**: Manage the number of parallel requests to adhere to provider limitations (`max_request`).
+- **Flexible Integration**: Easily integrate popular models like OpenAI, Anthropic, Perplexity, Ollama, or custom models.
+- **History Tracking**: Automatically logs the conversation history with model responses, allowing you to limit the number of historical messages with `max_history`.
 
 ## 📦 Installation
 
@@ -17,10 +17,10 @@ First, install the ModelMix package:
 npm install modelmix
 ```
 
-You'll also need to install the respective SDKs for each model provider you plan to use:
+Also, install dotenv to manage environment variables:
 
 ```bash
-npm install openai @anthropic-ai/sdk dotenv
+npm install dotenv
 ```
 
 ## 🛠️ Usage
@@ -37,11 +37,8 @@ Here's a quick example to get you started:
 2. **Create and configure your models**:
 
     ```javascript
-    import 'dotenv/config'
-    import OpenAI from 'openai';
-    import Anthropic from '@anthropic-ai/sdk';
-
-    import { ModelMix, OpenAIModel, AnthropicModel, CustomModel } from 'modelmix';
+    import 'dotenv/config';
+    import { ModelMix, MixOpenAI, MixAnthropic, MixPerplexity, MixOllama } from 'modelmix';
 
     const env = process.env;
 
@@ -50,21 +47,29 @@ Here's a quick example to get you started:
             max_tokens: 200,
         },
         config: {
-            system: 'You are ALF from Melmac.',
-            max_history: 2
+            system: "You are ALF from Melmac.",
+            max_history: 2,
+            max_request: 1,
         }
     });
 
-    mmix.attach(new OpenAIModel(new OpenAI({ apiKey: env.OPENAI_API_KEY })));
-    mmix.attach(new AnthropicModel(new Anthropic({ apiKey: env.ANTHROPIC_API_KEY })));
-    mmix.attach(new CustomModel({
+    mmix.attach(new MixOpenAI({ config: { apiKey: env.OPENAI_API_KEY } }));
+    mmix.attach(new MixAnthropic({ config: { apiKey: env.ANTHROPIC_API_KEY } }));
+    mmix.attach(new MixPerplexity({
         config: {
-            url: 'https://api.perplexity.ai/chat/completions',
-            prefix: ['pplx', 'llama', 'mixtral'],
-            system: 'You are my personal assistant.'
+            apiKey: env.PPLX_API_KEY
         },
-        headers: {
-            'authorization': `Bearer ${env.PPLX_API_KEY}`
+        options: {
+            system: "You are my personal assistant."
+        }
+    }));
+    mmix.attach(new MixOllama({
+        config: {
+            url: 'http://localhost:11434/api/chat',
+            prefix: ['llava'],
+        },
+        options: {
+            temperature: 0.5,
         }
     }));
     ```
@@ -72,47 +77,53 @@ Here's a quick example to get you started:
 3. **Generate responses from different models**:
 
     ```javascript
-
+    console.log("\n" + '--------| gpt-4o |--------');
     const gpt = mmix.create('gpt-4o', { temperature: 0.5 }).addText("Have you ever eaten a cat?");
     console.log(await gpt.message());
 
+    console.log("\n" + '--------| claude-3-sonnet-20240229 |--------');
     const claude = mmix.create('claude-3-sonnet-20240229', { temperature: 0.5 });
-    claude.addImage("./watson.png").addText("describe the image")
-    const imageDescription = await claude.message();
+    claude.addImage("./watson.png");
+    const imageDescription = await claude.addText("Describe the image").message();
     console.log(imageDescription);
 
+    console.log("\n" + '--------| pplx-70b-online |--------');
     const pplx = mmix.create('pplx-70b-online', { max_tokens: 500 });
-    await pplx.addText('How much is ETH trading in USD?');
+    pplx.addText('How much is ETH trading in USD?');
     const news = await pplx.addText('What are the 3 most recent Ethereum news?').message();
     console.log(news);
+
+    console.log("\n" + '--------| ollama (llava:latest) |--------');
+    await mmix.create('llava:latest')
+        .addImage("./watson.png")
+        .addText("What is the predominant color?")
+        .stream((data) => { console.log(data.message); });
     ```
-
-4. Find the files for this example at: [/ModelMix/demo](https://github.com/clasen/ModelMix/tree/master/demo).
-
 
 ## 📚 ModelMix Class Overview
 
 ```javascript
 new ModelMix(args = { options: {}, config: {} })
 ```
+
 - **args**: Configuration object with `options` and `config` properties.
   - **options**: This object contains default options that are applied to all models. These options can be overridden when creating a specific model instance. Examples of default options include:
     - `max_tokens`: Sets the maximum number of tokens to generate, e.g., 2000.
     - `temperature`: Controls the randomness of the model's output, e.g., 1.
     - `top_p`: Controls the diversity of the output, e.g., 1.
-    - ...
+    - ...(Additional default options can be added as needed)
   - **config**: This object contains configuration settings that control the behavior of the `ModelMix` instance. These settings can also be overridden for specific model instances. Examples of configuration settings include:
     - `system`: Sets the default system message for the model, e.g., "You are an assistant."
     - `max_history`: Limits the number of historical messages to retain, e.g., 5.
-    - `max_request`: Limits the number of parallel request.
-    - ...
+    - `max_request`: Limits the number of parallel requests, e.g., 1.
+    - ...(Additional configuration parameters can be added as needed)
 
 **Methods**
 
 - `attach(modelInstance)`: Attaches a model instance to the `ModelMix`.
 - `create(modelKey, overOptions = {})`: Creates a new `MessageHandler` for the specified model.
 
-#### MessageHandler
+### MessageHandler Class Overview
 
 **Methods**
 
@@ -121,33 +132,16 @@ new ModelMix(args = { options: {}, config: {} })
 - `addImage(filePath, config = { role: "user" })`: Adds an image message from a file path.
 - `message()`: Sends the message and returns the response.
 - `raw()`: Sends the message and returns the raw response data.
+- `stream(callback)`: Sends the message and streams the response, invoking the callback with each streamed part.
 
-#### OpenAIModel
-
-```javascript
-new OpenAIModel(openai, args = { options: {}, config: {} })
-```
-
-- **openai**: Instance of the OpenAI client.
-- **args**: Configuration object with `options` and `config` properties.
-
-#### AnthropicModel
+### MixCustom Class Overview
 
 ```javascript
-new AnthropicModel(anthropic, args = { options: {}, config: {} })
+new MixCustom(args = { config: {}, options: {}, headers: {} })
 ```
 
-- **anthropic**: Instance of the Anthropic client.
-- **args**: Configuration object with `options` and `config` properties.
-
-#### CustomModel
-
-```javascript
-new CustomModel(args = { config: {}, options: {}, headers:{} })
-```
-
-- **args**: Configuration object with `config` and `options` properties.
-  - **config**: 
+- **args**: Configuration object with `config`, `options`, and `headers` properties.
+  - **config**:
     - `url`: The endpoint URL to which the model sends requests.
     - `prefix`: An array of strings used as a prefix for requests.
     - ...(Additional configuration parameters can be added as needed)
@@ -156,10 +150,51 @@ new CustomModel(args = { config: {}, options: {}, headers:{} })
     - `temperature`: Controls the randomness of the model's output, e.g., 1.
     - `top_p`: Controls the diversity of the output, e.g., 1.
     - ...(Additional default options can be added as needed)
-  - **headers**: 
+  - **headers**:
     - `authorization`: The authorization header, typically including a Bearer token for API access.
     - `x-api-key`: A custom header for API key if needed.
     - ...(Additional headers can be added as needed)
+
+### MixOpenAI Class Overview
+
+```javascript
+new MixOpenAI(args = { config: {}, options: {} })
+```
+
+- **args**: Configuration object with `config` and `options` properties.
+  - **config**: Specific configuration settings for OpenAI, including the `apiKey`.
+  - **options**: Default options for OpenAI model instances.
+
+### MixAnthropic Class Overview
+
+```javascript
+new MixAnthropic(args = { config: {}, options: {} })
+```
+
+- **args**: Configuration object with `config` and `options` properties.
+  - **config**: Specific configuration settings for Anthropic, including the `apiKey`.
+  - **options**: Default options for Anthropic model instances.
+
+### MixPerplexity Class Overview
+
+```javascript
+new MixPerplexity(args = { config: {}, options: {} })
+```
+
+- **args**: Configuration object with `config` and `options` properties.
+  - **config**: Specific configuration settings for Perplexity, including the `apiKey`.
+  - **options**: Default options for Perplexity model instances.
+
+### MixOllama Class Overview
+
+```javascript
+new MixOllama(args = { config: {}, options: {} })
+```
+
+- **args**: Configuration object with `config` and `options` properties.
+  - **config**: Specific configuration settings for Ollama.
+    - `url`: The endpoint URL to which the model sends requests.
+  - **options**: Default options for Ollama model instances.
 
 ## 🤝 Contributing
 

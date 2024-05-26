@@ -1,9 +1,5 @@
-
 import 'dotenv/config'
-import OpenAI from 'openai';
-import Anthropic from '@anthropic-ai/sdk';
-
-import { ModelMix, OpenAIModel, AnthropicModel, CustomModel } from '../index.js';
+import { ModelMix, MixOpenAI, MixAnthropic, MixPerplexity, MixOllama } from '../index.js';
 
 const env = process.env;
 
@@ -18,21 +14,28 @@ const mmix = new ModelMix({
     }
 });
 
-mmix.attach(new OpenAIModel(new OpenAI({ apiKey: env.OPENAI_API_KEY })));
-mmix.attach(new AnthropicModel(new Anthropic({ apiKey: env.ANTHROPIC_API_KEY })));
-mmix.attach(new CustomModel({
+
+mmix.attach(new MixOpenAI({ config: { apiKey: env.OPENAI_API_KEY } }));
+mmix.attach(new MixAnthropic({ config: { apiKey: env.ANTHROPIC_API_KEY } }));
+mmix.attach(new MixPerplexity({
     config: {
-        url: 'https://api.perplexity.ai/chat/completions',
-        prefix: ['pplx', 'llama', 'mixtral'],
-        system: 'You are my personal assistant.'
+        apiKey: env.PPLX_API_KEY
     },
-    headers: {
-        'authorization': `Bearer ${env.PPLX_API_KEY}`
+    system: 'You are my personal assistant.'
+}));
+mmix.attach(new MixOllama({
+    config: {
+        url: 'http://localhost:11434/api/chat',
+        prefix: ['llava'],
+    },
+    options: {
+        temperature: 0.5,
     }
 }));
 
+
 console.log("\n" + '--------| gpt-4o |--------');
-const gpt = mmix.create('gpt-4o', { temperature: 0.5 }).addText('Have you ever eaten a cat?');
+const gpt = mmix.create('gpt-4o', { temperature: 0.5 }).addText("Have you ever eaten a cat?");
 console.log(await gpt.message());
 
 console.log("\n" + '--------| claude-3-sonnet-20240229 |--------');
@@ -46,3 +49,9 @@ const pplx = mmix.create('pplx-70b-online', { max_tokens: 500 });
 pplx.addText('How much is ETH trading in USD?');
 const news = await pplx.addText('What are the 3 most recent Ethereum news?').message();
 console.log(news);
+
+console.log("\n" + '--------| ollama (llava:latest) |--------');
+await mmix.create('llava:latest')
+    .addImage('./watson.png')
+    .addText('what is the predominant color?')
+    .stream((data) => { console.log(data.message); });
