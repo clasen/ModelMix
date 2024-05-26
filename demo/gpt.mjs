@@ -1,12 +1,12 @@
 import 'dotenv/config'
 
-import { ModelMix, CustomOpenAIModel } from '../index.js';
+import { ModelMix, CustomOpenAIModel, CustomAnthropicModel, CustomPerplexityModel, CustomOllamaModel } from '../index_stream.js';
 
 const env = process.env;
 
 const mmix = new ModelMix({
     options: {
-        max_tokens: 200,
+        max_tokens: 100,
     },
     config: {
         system: 'You are ALF from Melmac.',
@@ -16,12 +16,47 @@ const mmix = new ModelMix({
 
 mmix.attach(new CustomOpenAIModel({
     config: {
-        apikey: env.OPENAI_API_KEY,
+        apiKey: env.OPENAI_API_KEY,
         system: 'Sos ALF de Melmac.'
     }
 }));
 
-const r = await mmix.create('gpt-4o')
-    .addImage("./watson.png")
-    .addText("describe the image").message();
-console.log(r)
+mmix.attach(new CustomAnthropicModel({ config: { apiKey: env.ANTHROPIC_API_KEY } }));
+
+mmix.attach(new CustomPerplexityModel({
+    config: {
+        apiKey: env.PPLX_API_KEY
+    },
+    system: "You are my personal assistant."
+}));
+
+mmix.attach(new CustomOllamaModel({
+    config: {
+        url: 'http://localhost:11434/api/chat',
+        prefix: ['openhermes2'],
+        system: 'You are ALF, soy de Melmac.',
+    },
+    options: {
+        temperature: 0,
+    }
+}));
+
+// const r = await mmix.create('gpt-4-turbo')
+// const r = await mmix.create('claude-3-haiku-20240307')
+// const r = await mmix.create('pplx-70b-online')
+const r = await mmix.create('openhermes2-mistral:latest')
+    // .addImage("./watson.png")
+    .addText("hola!")
+    // .stream((data) => { console.log(data.delta); });
+    .raw();
+console.log(r.message)
+
+
+
+// await mmix.create('claude-3-haiku-20240307')
+//     // .addImage("./watson.png")
+//     .addText("hola!").stream((data) => {
+//         console.log("Streaming data:", data);
+//     });
+
+// console.log(await gpt.raw());

@@ -14,11 +14,7 @@ const mmix = new ModelMix({
     }
 });
 
-mmix.attach(new CustomAnthropicModel({
-    config: {
-        apikey: env.ANTHROPIC_API_KEY,
-    },
-}));
+mmix.attach(new CustomAnthropicModel({ config: { apiKey: env.ANTHROPIC_API_KEY } }));
 
 const r = await mmix.create('claude-3-haiku-20240307')
     .addImage("./watson.png")

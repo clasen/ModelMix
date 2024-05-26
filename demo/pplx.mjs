@@ -16,7 +16,7 @@ const mmix = new ModelMix({
 
 mmix.attach(new CustomPerplexityModel({
     config: {
-        apikey: env.PPLX_API_KEY,
+        apiKey: env.PPLX_API_KEY,
     }
 }));
 

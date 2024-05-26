@@ -50,7 +50,7 @@ Here's a quick example to get you started:
             max_tokens: 200,
         },
         config: {
-            system: "You are ALF from Melmac.",
+            system: 'You are ALF from Melmac.',
             max_history: 2
         }
     });
@@ -60,9 +60,11 @@ Here's a quick example to get you started:
     mmix.attach(new CustomModel({
         config: {
             url: 'https://api.perplexity.ai/chat/completions',
-            bearer: env.PPLX_API_KEY,
-            prefix: ["pplx", "llama", "mixtral"],
-            system: "You are my personal assistant."
+            prefix: ['pplx', 'llama', 'mixtral'],
+            system: 'You are my personal assistant.'
+        },
+        headers: {
+            'authorization': `Bearer ${env.PPLX_API_KEY}`
         }
     }));
     ```
@@ -75,8 +77,8 @@ Here's a quick example to get you started:
     console.log(await gpt.message());
 
     const claude = mmix.create('claude-3-sonnet-20240229', { temperature: 0.5 });
-    await claude.addImage("./watson.png")
-    const imageDescription = await claude.addText("describe the image").message();
+    claude.addImage("./watson.png").addText("describe the image")
+    const imageDescription = await claude.message();
     console.log(imageDescription);
 
     const pplx = mmix.create('pplx-70b-online', { max_tokens: 500 });
@@ -141,20 +143,23 @@ new AnthropicModel(anthropic, args = { options: {}, config: {} })
 #### CustomModel
 
 ```javascript
-new CustomModel(args = { config: {}, options: {} })
+new CustomModel(args = { config: {}, options: {}, headers:{} })
 ```
 
 - **args**: Configuration object with `config` and `options` properties.
   - **config**: 
-    - `url`: 
-    - `bearer`: 
-    - `prefix`: 
-    - ...
+    - `url`: The endpoint URL to which the model sends requests.
+    - `prefix`: An array of strings used as a prefix for requests.
+    - ...(Additional configuration parameters can be added as needed)
   - **options**: This object contains default options that are applied to all models. These options can be overridden when creating a specific model instance. Examples of default options include:
     - `max_tokens`: Sets the maximum number of tokens to generate, e.g., 2000.
     - `temperature`: Controls the randomness of the model's output, e.g., 1.
     - `top_p`: Controls the diversity of the output, e.g., 1.
-    - ...
+    - ...(Additional default options can be added as needed)
+  - **headers**: 
+    - `authorization`: The authorization header, typically including a Bearer token for API access.
+    - `x-api-key`: A custom header for API key if needed.
+    - ...(Additional headers can be added as needed)
 
 ## 🤝 Contributing
 
