@@ -99,7 +99,8 @@ Here's a quick example to get you started:
         .addText("What is the predominant color?")
         .stream((data) => { console.log(data.message); });
     ```
-
+4. Find the files for this example at: [/ModelMix/demo](https://github.com/clasen/ModelMix/tree/master/demo).
+   
 ## 📚 ModelMix Class Overview
 
 ```javascript
