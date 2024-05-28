@@ -28,7 +28,7 @@ class ModelMix {
         return this;
     }
 
-    create(modelKey, overOptions = {}) {
+    create(modelKey, args = { config: {}, options: {} }) {
         const modelEntry = Object.values(this.models).find(entry =>
             entry.config.prefix.some(p => modelKey.startsWith(p))
         );
@@ -40,10 +40,15 @@ class ModelMix {
         const options = {
             ...this.defaultOptions,
             ...modelEntry.options,
-            ...overOptions,
+            ...args.options,
             model: modelKey
         };
-        const config = { ...this.config, ...modelEntry.config };
+
+        const config = {
+            ...this.config,
+            ...modelEntry.config,
+            ...args.config
+        };
 
         return new MessageHandler(this, modelEntry, options, config);
     }
