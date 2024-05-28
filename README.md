@@ -6,7 +6,7 @@
 
 - **Unified Interface**: Interact with multiple AI models through a single, coherent API.
 - **Request Control**: Manage the number of parallel requests to adhere to provider limitations (`max_request`).
-- **Flexible Integration**: Easily integrate popular models like OpenAI, Anthropic, Perplexity, Ollama, or custom models.
+- **Flexible Integration**: Easily integrate popular models like OpenAI, Anthropic, Perplexity, Ollama, LM Studio or custom models.
 - **History Tracking**: Automatically logs the conversation history with model responses, allowing you to limit the number of historical messages with `max_history`.
 
 ## 📦 Installation
@@ -190,6 +190,17 @@ new MixPerplexity(args = { config: {}, options: {} })
 
 ```javascript
 new MixOllama(args = { config: {}, options: {} })
+```
+
+- **args**: Configuration object with `config` and `options` properties.
+  - **config**: Specific configuration settings for Ollama.
+    - `url`: The endpoint URL to which the model sends requests.
+  - **options**: Default options for Ollama model instances.
+
+### MixLMStudio Class Overview
+
+```javascript
+new MixLMStudio(args = { config: {}, options: {} })
 ```
 
 - **args**: Configuration object with `config` and `options` properties.

@@ -1,6 +1,6 @@
 {
   "name": "modelmix",
-  "version": "2.0.0",
+  "version": "2.2.0",
   "description": "🧬 ModelMix - Unified API for Diverse AI Language Models.",
   "main": "index.js",
   "repository": {
@@ -24,7 +24,8 @@
     "multimodal",
     "omni",
     "4o",
-    "ollama"
+    "ollama",
+    "lmstudio"
   ],
   "author": "Martin Clasen",
   "license": "MIT",

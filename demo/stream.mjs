@@ -75,13 +75,3 @@ await mmix.create('openhermes2-mistral:latest')
     .stream((data) => { console.log(data.message); });
 
 console.log(r)
-
-
-
-// await mmix.create('claude-3-haiku-20240307')
-//     // .addImage("./watson.png")
-//     .addText("hola!").stream((data) => {
-//         console.log("Streaming data:", data);
-//     });
-
-// console.log(await gpt.raw());

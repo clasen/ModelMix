@@ -25,7 +25,6 @@ mmix.attach(new MixPerplexity({
 }));
 mmix.attach(new MixOllama({
     config: {
-        url: 'http://localhost:11434/api/chat',
         prefix: ['llava'],
     },
     options: {

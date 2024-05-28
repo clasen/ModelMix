@@ -25,6 +25,7 @@ class ModelMix {
         this.models[key] = modelInstance;
         modelInstance.queue = [];
         modelInstance.active_requests = 0;
+        return this;
     }
 
     create(modelKey, overOptions = {}) {
@@ -276,20 +277,20 @@ class MixCustom {
 
 class MixOpenAI extends MixCustom {
     getDefaultConfig(customConfig) {
-        return {
-            ...super.getDefaultConfig(customConfig),
+        return super.getDefaultConfig({
             url: 'https://api.openai.com/v1/chat/completions',
-            prefix: ['gpt']
-        };
+            prefix: ['gpt'],
+            ...customConfig
+        });
     }
 
     create(args = { config: {}, options: {} }) {
         args.options.messages = [{ role: 'system', content: args.config.system }, ...args.options.messages || []];
-        args.options.messages = this.convertMessages(args.options.messages);
+        args.options.messages = MixOpenAI.convertMessages(args.options.messages);
         return super.create(args);
     }
 
-    convertMessages(messages) {
+    static convertMessages(messages) {
         return messages.map(message => {
             if (message.role === 'user' && message.content instanceof Array) {
                 message.content = message.content.map(content => {
@@ -312,19 +313,19 @@ class MixOpenAI extends MixCustom {
 
 class MixAnthropic extends MixCustom {
     getDefaultConfig(customConfig) {
-        return {
-            ...super.getDefaultConfig(customConfig),
+        return super.getDefaultConfig({
             url: 'https://api.anthropic.com/v1/messages',
-            prefix: ['claude']
-        };
+            prefix: ['claude'],
+            ...customConfig
+        });
     }
 
-    getDefaultHeaders() {
-        return {
-            ...super.getDefaultHeaders(),
+    getDefaultHeaders(getDefaultHeaders) {
+        return super.getDefaultHeaders({
             'x-api-key': this.config.apiKey,
-            'anthropic-version': '2023-06-01'
-        };
+            'anthropic-version': '2023-06-01',
+            ...getDefaultHeaders
+        });
     }
 
     extractDelta(data) {
@@ -339,11 +340,11 @@ class MixAnthropic extends MixCustom {
 
 class MixPerplexity extends MixCustom {
     getDefaultConfig(customConfig) {
-        return {
-            ...super.getDefaultConfig(customConfig),
+        return super.getDefaultConfig({
             url: 'https://api.perplexity.ai/chat/completions',
-            prefix: ['pplx', 'llama', 'mixtral']
-        };
+            prefix: ['pplx', 'llama', 'mixtral'],
+            ...customConfig
+        });
     }
 
     create(args = { config: {}, options: {} }) {
@@ -353,6 +354,13 @@ class MixPerplexity extends MixCustom {
 }
 
 class MixOllama extends MixCustom {
+
+    getDefaultConfig(customConfig) {
+        return super.getDefaultConfig({
+            url: 'http://localhost:11434/api/chat',
+            ...customConfig
+        });
+    }
 
     getDefaultOptions(customOptions) {
         return {
@@ -367,7 +375,7 @@ class MixOllama extends MixCustom {
 
     create(args = { config: {}, options: {} }) {
 
-        args.options.messages = this.convertMessages(args.options.messages);
+        args.options.messages = MixOllama.convertMessages(args.options.messages);
         args.options.messages = [{ role: 'system', content: args.config.system }, ...args.options.messages || []];
         return super.create(args);
     }
@@ -376,7 +384,7 @@ class MixOllama extends MixCustom {
         return { response: response.data, message: response.data.message.content.trim() };
     }
 
-    convertMessages(messages) {
+    static convertMessages(messages) {
         return messages.map(entry => {
             let content = '';
             let images = [];
@@ -398,4 +406,21 @@ class MixOllama extends MixCustom {
     }
 }
 
-module.exports = { MixCustom, ModelMix, MixAnthropic, MixOpenAI, MixPerplexity, MixOllama };
+class MixLMStudio extends MixCustom {
+    getDefaultConfig(customConfig) {
+        return super.getDefaultConfig({
+            url: 'http://localhost:1234/v1/chat/completions',
+            ...customConfig
+        });
+    }
+
+    create(args = { config: {}, options: {} }) {
+        args.options.messages = [{ role: 'system', content: args.config.system }, ...args.options.messages || []];
+        args.options.messages = MixOpenAI.convertMessages(args.options.messages);
+        return super.create(args);
+    }
+
+
+}
+
+module.exports = { MixCustom, ModelMix, MixAnthropic, MixOpenAI, MixPerplexity, MixOllama, MixLMStudio };
