@@ -159,13 +159,13 @@ class MessageHandler {
     }
 
     async execute() {
+        this.messages = this.messages.slice(-this.config.max_history);
         this.messages = this.groupByRoles(this.messages);
 
         if (this.messages.length === 0) {
             throw new Error("No user messages have been added. Use addMessage(prompt) to add a message.");
         }
 
-        this.messages = this.messages.slice(-this.config.max_history);
         this.options.messages = this.messages;
 
         return new Promise((resolve, reject) => {
