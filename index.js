@@ -424,8 +424,22 @@ class MixLMStudio extends MixCustom {
         args.options.messages = MixOpenAI.convertMessages(args.options.messages);
         return super.create(args);
     }
-
-
 }
 
-module.exports = { MixCustom, ModelMix, MixAnthropic, MixOpenAI, MixPerplexity, MixOllama, MixLMStudio };
+class MixGroq extends MixCustom {
+    getDefaultConfig(customConfig) {
+        return super.getDefaultConfig({
+            url: 'https://api.groq.com/openai/v1/chat/completions',
+            prefix: ["llama", "mixtral", "gemma"],
+            ...customConfig
+        });
+    } 
+
+    create(args = { config: {}, options: {} }) {
+        args.options.messages = [{ role: 'system', content: args.config.system }, ...args.options.messages || []];
+        args.options.messages = MixOpenAI.convertMessages(args.options.messages);
+        return super.create(args);
+    }
+}
+
+module.exports = { MixCustom, ModelMix, MixAnthropic, MixOpenAI, MixPerplexity, MixOllama, MixLMStudio, MixGroq };

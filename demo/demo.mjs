@@ -1,4 +1,4 @@
-import 'dotenv/config'
+import 'dotenv/config';
 import { ModelMix, MixOpenAI, MixAnthropic, MixPerplexity, MixOllama } from '../index.js';
 
 const env = process.env;

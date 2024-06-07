@@ -6,7 +6,7 @@
 
 - **Unified Interface**: Interact with multiple AI models through a single, coherent API.
 - **Request Control**: Manage the number of parallel requests to adhere to provider limitations (`max_request`).
-- **Flexible Integration**: Easily integrate popular models like OpenAI, Anthropic, Perplexity, Ollama, LM Studio or custom models.
+- **Flexible Integration**: Easily integrate popular models like OpenAI, Anthropic, Perplexity, Groq, Ollama, LM Studio or custom models.
 - **History Tracking**: Automatically logs the conversation history with model responses, allowing you to limit the number of historical messages with `max_history`.
 
 ## 📦 Installation
@@ -180,6 +180,15 @@ new MixAnthropic(args = { config: {}, options: {} })
 
 ```javascript
 new MixPerplexity(args = { config: {}, options: {} })
+```
+
+- **args**: Configuration object with `config` and `options` properties.
+  - **config**: Specific configuration settings for Perplexity, including the `apiKey`.
+  - **options**: Default options for Perplexity model instances.
+### MixPerplexity Class Overview
+
+```javascript
+new MixGroq(args = { config: {}, options: {} })
 ```
 
 - **args**: Configuration object with `config` and `options` properties.
