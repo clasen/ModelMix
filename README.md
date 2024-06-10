@@ -29,9 +29,10 @@ Here's a quick example to get you started:
 
 1. **Setup your environment variables (.env file)**:
     ```plaintext
-    OPENAI_API_KEY=your_openai_api_key
-    ANTHROPIC_API_KEY=your_anthropic_api_key
-    PPLX_API_KEY=your_perplexity_api_key
+    OPENAI_API_KEY="your_openai_api_key"
+    ANTHROPIC_API_KEY="your_anthropic_api_key"
+    PPLX_API_KEY="your_perplexity_api_key"
+    GROQ_API_KEY="your_groq_api_key"
     ```
 
 2. **Create and configure your models**:

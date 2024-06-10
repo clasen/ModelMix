@@ -433,7 +433,7 @@ class MixGroq extends MixCustom {
             prefix: ["llama", "mixtral", "gemma"],
             ...customConfig
         });
-    } 
+    }
 
     create(args = { config: {}, options: {} }) {
         args.options.messages = [{ role: 'system', content: args.config.system }, ...args.options.messages || []];
