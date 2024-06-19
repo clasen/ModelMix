@@ -48,11 +48,13 @@ Here's a quick example to get you started:
             max_tokens: 200,
         },
         config: {
-            system: "You are ALF from Melmac.",
+            system: "You are {name} from Melmac.",
             max_history: 2,
             max_request: 1,
         }
     });
+
+    mmix.replace({ '{name}': 'ALF' });
 
     mmix.attach(new MixOpenAI({ config: { apiKey: env.OPENAI_API_KEY } }));
     mmix.attach(new MixAnthropic({ config: { apiKey: env.ANTHROPIC_API_KEY } }));
@@ -79,7 +81,8 @@ Here's a quick example to get you started:
 
     ```javascript
     console.log("\n" + '--------| gpt-4o |--------');
-    const gpt = mmix.create('gpt-4o', { temperature: 0.5 }).addText("Have you ever eaten a cat?");
+    const gpt = mmix.create('gpt-4o', { temperature: 0.5 }).addText("Have you ever eaten a {animal}?");
+    gpt.replace({ '{animal}': 'cat' });
     console.log(await gpt.message());
 
     console.log("\n" + '--------| claude-3-sonnet-20240229 |--------');

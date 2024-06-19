@@ -20,6 +20,11 @@ class ModelMix {
         }
     }
 
+    replace(keyValues) {
+        this.config.replace = keyValues;
+        return this;
+    }
+
     attach(modelInstance) {
         const key = modelInstance.config.prefix.join("_");
         this.models[key] = modelInstance;
@@ -151,6 +156,15 @@ class MessageHandler {
         return this.execute();
     }
 
+    replace(keyValues) {
+        this.config.replace = { ...this.config.replace, ...keyValues };
+        return this;
+    }
+
+    template(input, replace) {
+        return input.split(/([¿?¡!,"';:\.\s])/).map(x => x in replace ? replace[x] : x).join("");
+    }
+
     groupByRoles(messages) {
         return messages.reduce((acc, message) => {
             const existingRole = acc.find(item => item.role === message.role);
@@ -163,7 +177,27 @@ class MessageHandler {
         }, []);
     }
 
+    applyTemplate() {
+        if (!this.config.replace) return;
+
+        this.config.system = this.template(this.config.system, this.config.replace)
+
+        this.messages = this.messages.map(message => {
+            if (message.content instanceof Array) {
+                message.content = message.content.map(content => {
+                    if (content.type === 'text') {
+                        content.text = this.template(content.text, this.config.replace)
+                    }
+                    return content;
+                });
+            }
+            return message;
+        });
+    }
+
     async execute() {
+
+        this.applyTemplate();
         this.messages = this.messages.slice(-this.config.max_history);
         this.messages = this.groupByRoles(this.messages);
 
