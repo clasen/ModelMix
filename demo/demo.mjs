@@ -1,8 +1,6 @@
 import 'dotenv/config';
 import { ModelMix, MixOpenAI, MixAnthropic, MixPerplexity, MixOllama } from '../index.js';
 
-const env = process.env;
-
 const mmix = new ModelMix({
     options: {
         max_tokens: 200,
@@ -14,12 +12,11 @@ const mmix = new ModelMix({
     }
 });
 
-
-mmix.attach(new MixOpenAI({ config: { apiKey: env.OPENAI_API_KEY } }));
-mmix.attach(new MixAnthropic({ config: { apiKey: env.ANTHROPIC_API_KEY } }));
+mmix.attach(new MixOpenAI());
+mmix.attach(new MixAnthropic());
 mmix.attach(new MixPerplexity({
     config: {
-        apiKey: env.PPLX_API_KEY
+        apiKey: process.env.PPLX_API_KEY
     },
     system: 'You are my personal assistant.'
 }));
@@ -39,14 +36,14 @@ const gpt = mmix.create('gpt-4o', { temperature: 0.5 }).addText("Have you ever e
 gpt.replace({ '{animal}': 'cat' });
 console.log(await gpt.message());
 
-console.log("\n" + '--------| claude-3-sonnet-20240229 |--------');
-const claude = mmix.create('claude-3-sonnet-20240229', { temperature: 0.5 });
+console.log("\n" + '--------| claude-3-5-sonnet-20240620 |--------');
+const claude = mmix.create('claude-3-5-sonnet-20240620', { temperature: 0.5 });
 claude.addImage('./watson.png');
 const imageDescription = await claude.addText('describe the image').message();
 console.log(imageDescription);
 
-console.log("\n" + '--------| pplx-70b-online |--------');
-const pplx = mmix.create('pplx-70b-online', { max_tokens: 500 });
+console.log("\n" + '--------| llama-3-sonar-large-32k-online |--------');
+const pplx = mmix.create('llama-3-sonar-large-32k-online', { max_tokens: 500 });
 pplx.addText('How much is ETH trading in USD?');
 const news = await pplx.addText('What are the 3 most recent Ethereum news?').message();
 console.log(news);

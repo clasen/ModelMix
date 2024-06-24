@@ -1,6 +1,6 @@
 {
   "name": "modelmix",
-  "version": "2.2.8",
+  "version": "2.3.0",
   "description": "🧬 ModelMix - Unified API for Diverse AI Language Models.",
   "main": "index.js",
   "repository": {
@@ -15,6 +15,7 @@
     "anthropic",
     "pplx",
     "perplexity",
+    "sonnet-3-5",
     "gpt",
     "claude",
     "llama",

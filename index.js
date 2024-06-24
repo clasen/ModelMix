@@ -319,6 +319,7 @@ class MixOpenAI extends MixCustom {
         return super.getDefaultConfig({
             url: 'https://api.openai.com/v1/chat/completions',
             prefix: ['gpt'],
+            apiKey: process.env.OPENAI_API_KEY,
             ...customConfig
         });
     }
@@ -355,6 +356,7 @@ class MixAnthropic extends MixCustom {
         return super.getDefaultConfig({
             url: 'https://api.anthropic.com/v1/messages',
             prefix: ['claude'],
+            apiKey: process.env.ANTHROPIC_API_KEY,
             ...customConfig
         });
     }
@@ -381,7 +383,8 @@ class MixPerplexity extends MixCustom {
     getDefaultConfig(customConfig) {
         return super.getDefaultConfig({
             url: 'https://api.perplexity.ai/chat/completions',
-            prefix: ['pplx', 'llama', 'mixtral'],
+            prefix: ['llama-3', 'mixtral'],
+            apiKey: process.env.PPLX_API_KEY,
             ...customConfig
         });
     }
@@ -465,6 +468,7 @@ class MixGroq extends MixCustom {
         return super.getDefaultConfig({
             url: 'https://api.groq.com/openai/v1/chat/completions',
             prefix: ["llama", "mixtral", "gemma"],
+            apiKey: process.env.GROQ_API_KEY,
             ...customConfig
         });
     }
