@@ -87,7 +87,7 @@ Here's a quick example to get you started:
 
     console.log("\n" + '--------| claude-3-sonnet-20240229 |--------');
     const claude = mmix.create('claude-3-sonnet-20240229', { temperature: 0.5 });
-    claude.addImage("./watson.png");
+    claude.addImage("./watson.jpg");
     const imageDescription = await claude.addText("Describe the image").message();
     console.log(imageDescription);
 
@@ -99,7 +99,7 @@ Here's a quick example to get you started:
 
     console.log("\n" + '--------| ollama (llava:latest) |--------');
     await mmix.create('llava:latest')
-        .addImage("./watson.png")
+        .addImage("./watson.jpg")
         .addText("What is the predominant color?")
         .stream((data) => { console.log(data.message); });
     ```

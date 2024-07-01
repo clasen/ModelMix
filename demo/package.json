@@ -10,8 +10,6 @@
   "license": "ISC",
   "dependencies": {
     "@anthropic-ai/sdk": "^0.20.9",
-    "dotenv": "^16.4.5",
-    "lemonlog": "^1.1.2",
-    "openai": "^4.47.1"
+    "dotenv": "^16.4.5"
   }
 }

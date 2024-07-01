@@ -25,6 +25,6 @@ mmix.attach(model);
 
 const LMS = mmix.create('Orenguteng/Llama-3-8B-Lexi-Uncensored-GGUF');
 console.log(await LMS
-    .addImage('./watson.png')
+    .addImage('./watson.jpg')
     .addText('describir')
     .message());

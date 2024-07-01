@@ -38,7 +38,7 @@ console.log(await gpt.message());
 
 console.log("\n" + '--------| claude-3-5-sonnet-20240620 |--------');
 const claude = mmix.create('claude-3-5-sonnet-20240620', { temperature: 0.5 });
-claude.addImage('./watson.png');
+claude.addImage('./watson.jpg');
 const imageDescription = await claude.addText('describe the image').message();
 console.log(imageDescription);
 
@@ -50,6 +50,6 @@ console.log(news);
 
 console.log("\n" + '--------| ollama (llava:latest) |--------');
 await mmix.create('llava:latest')
-    .addImage('./watson.png')
+    .addImage('./watson.jpg')
     .addText('what is the predominant color?')
     .stream((data) => { console.log(data.message); });
