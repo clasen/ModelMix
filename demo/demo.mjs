@@ -49,8 +49,8 @@ const setup = {
     options: { temperature: 0.5 }
 }
 const writer = mmix.create('claude-3-5-sonnet-20240620', setup);
-writer.replace({ '{story_title}': 'The Mysterious Package' })
-const story = await writer.addTextFile('./prompt.md').message();
+writer.replaceKeyFromFile('{story_title}', './title.md');
+const story = await writer.addTextFromFile('./prompt.md').message();
 console.log(story);
 
 console.log("\n" + '--------| llama-3-sonar-large-32k-online |--------');

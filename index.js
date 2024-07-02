@@ -92,7 +92,6 @@ class MessageHandler {
         this.config = config;
         this.messages = [];
 
-        this.filesToProcess = [];
         this.imagesToProcess = [];
     }
 
@@ -111,8 +110,13 @@ class MessageHandler {
         return this;
     }
 
-    addTextFile(filePath, config = { role: "user" }) {
-        this.filesToProcess.push({ filePath, config });
+    addTextFromFile(filePath, config = { role: "user" }) {
+        try {
+            const content = fs.readFileSync(filePath, { encoding: 'utf8' });
+            this.addText(content, config);
+        } catch (error) {
+            console.error(`Error reading file ${filePath}:`, error);
+        }
         return this;
     }
 
@@ -152,26 +156,6 @@ class MessageHandler {
     addImageFromUrl(url, config = { role: "user" }) {
         this.imagesToProcess.push({ url, config });
         return this;
-    }
-
-    async processTextFiles() {
-        const fileContents = await Promise.all(
-            this.filesToProcess.map(async (file) => {
-                try {
-                    const content = fs.readFileSync(file.filePath).toString();
-                    return { content, config: file.config };
-                } catch (error) {
-                    console.error(`Error leyendo archivo ${file.filePath}:`, error);
-                    return null;
-                }
-            })
-        );
-
-        fileContents.forEach((file) => {
-            if (file) {
-                this.addText(file.content, file.config);
-            }
-        });
     }
 
     async processImageUrls() {
@@ -231,6 +215,16 @@ class MessageHandler {
         return this;
     }
 
+    replaceKeyFromFile(key, filePath) {
+        try {
+            const content = fs.readFileSync(filePath, { encoding: 'utf8' });
+            this.replace({ [key]: content });
+        } catch (error) {
+            console.error(`Error reading file ${filePath}:`, error);
+        }
+        return this;
+    }
+
     template(input, replace) {
         return input.split(/([¿?¡!,"';:\.\s])/).map(x => x in replace ? replace[x] : x).join("");
     }
@@ -267,17 +261,14 @@ class MessageHandler {
 
     async execute() {
 
-        await Promise.all([
-            this.processTextFiles(),
-            this.processImageUrls()
-        ]);
+        await this.processImageUrls();
 
         this.applyTemplate();
         this.messages = this.messages.slice(-this.config.max_history);
         this.messages = this.groupByRoles(this.messages);
 
         if (this.messages.length === 0) {
-            throw new Error("No user messages have been added. Use addText(prompt), addTextFile(filePath), addImage(filePath), or addImageFromUrl(url) to add a prompt.");
+            throw new Error("No user messages have been added. Use addText(prompt), addTextFromFile(filePath), addImage(filePath), or addImageFromUrl(url) to add a prompt.");
         }
 
         this.options.messages = this.messages;
