@@ -1,6 +1,7 @@
 const axios = require('axios');
 const fs = require('fs');
 const mime = require('mime-types');
+const log = require('lemonlog')('ModelMix');
 
 class ModelMix {
     constructor(args = { options: {}, config: {} }) {
@@ -16,6 +17,7 @@ class ModelMix {
             system: 'You are an assistant.',
             max_request: 1,
             max_history: 5, // Default max history
+            debug: false,
             ...args.config
         }
     }
@@ -89,6 +91,9 @@ class MessageHandler {
         this.options = options;
         this.config = config;
         this.messages = [];
+
+        this.filesToProcess = [];
+        this.imagesToProcess = [];
     }
 
     new() {
@@ -103,6 +108,11 @@ class MessageHandler {
         }];
 
         this.messages.push({ ...config, content });
+        return this;
+    }
+
+    addTextFile(filePath, config = { role: "user" }) {
+        this.filesToProcess.push({ filePath, config });
         return this;
     }
 
@@ -137,6 +147,66 @@ class MessageHandler {
         }
 
         return this;
+    }
+
+    addImageFromUrl(url, config = { role: "user" }) {
+        this.imagesToProcess.push({ url, config });
+        return this;
+    }
+
+    async processTextFiles() {
+        const fileContents = await Promise.all(
+            this.filesToProcess.map(async (file) => {
+                try {
+                    const content = fs.readFileSync(file.filePath).toString();
+                    return { content, config: file.config };
+                } catch (error) {
+                    console.error(`Error leyendo archivo ${file.filePath}:`, error);
+                    return null;
+                }
+            })
+        );
+
+        fileContents.forEach((file) => {
+            if (file) {
+                this.addText(file.content, file.config);
+            }
+        });
+    }
+
+    async processImageUrls() {
+        const imageContents = await Promise.all(
+            this.imagesToProcess.map(async (image) => {
+                try {
+                    const response = await axios.get(image.url, { responseType: 'arraybuffer' });
+                    const base64 = Buffer.from(response.data, 'binary').toString('base64');
+                    const mimeType = response.headers['content-type'];
+                    return { base64, mimeType, config: image.config };
+                } catch (error) {
+                    console.error(`Error descargando imagen desde ${image.url}:`, error);
+                    return null;
+                }
+            })
+        );
+
+        imageContents.forEach((image) => {
+            if (image) {
+                const imageMessage = {
+                    ...image.config,
+                    content: [
+                        {
+                            type: "image",
+                            "source": {
+                                type: "base64",
+                                media_type: image.mimeType,
+                                data: image.base64
+                            }
+                        }
+                    ]
+                };
+                this.messages.push(imageMessage);
+            }
+        });
     }
 
     async message() {
@@ -197,12 +267,17 @@ class MessageHandler {
 
     async execute() {
 
+        await Promise.all([
+            this.processTextFiles(),
+            this.processImageUrls()
+        ]);
+
         this.applyTemplate();
         this.messages = this.messages.slice(-this.config.max_history);
         this.messages = this.groupByRoles(this.messages);
 
         if (this.messages.length === 0) {
-            throw new Error("No user messages have been added. Use addMessage(prompt) to add a message.");
+            throw new Error("No user messages have been added. Use addText(prompt), addTextFile(filePath), addImage(filePath), or addImageFromUrl(url) to add a prompt.");
         }
 
         this.options.messages = this.messages;
@@ -254,6 +329,13 @@ class MixCustom {
     }
 
     async create(args = { config: {}, options: {} }) {
+
+        if (args.config.debug) {
+            log.info("config");
+            log.info(args.config);
+            log.inspect("options");
+            log.inspect(args.options);
+        }
 
         if (args.options.stream) {
             return this.processStream(await axios.post(this.config.url, args.options, {

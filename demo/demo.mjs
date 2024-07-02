@@ -9,6 +9,7 @@ const mmix = new ModelMix({
         system: 'You are {name} from Melmac.',
         max_history: 2,
         max_request: 1,
+        debug: true,
     }
 });
 
@@ -38,9 +39,19 @@ console.log(await gpt.message());
 
 console.log("\n" + '--------| claude-3-5-sonnet-20240620 |--------');
 const claude = mmix.create('claude-3-5-sonnet-20240620', { temperature: 0.5 });
-claude.addImage('./watson.jpg');
+claude.addImageFromUrl('https://pbs.twimg.com/media/F6-GsjraAAADDGy?format=jpg');
 const imageDescription = await claude.addText('describe the image').message();
 console.log(imageDescription);
+
+console.log("\n" + '--------| claude-3-5-sonnet-20240620 |--------');
+const setup = {
+    config: { system: "You are a writer like Stephen King" },
+    options: { temperature: 0.5 }
+}
+const writer = mmix.create('claude-3-5-sonnet-20240620', setup);
+writer.replace({ '{story_title}': 'The Mysterious Package' })
+const story = await writer.addTextFile('./prompt.md').message();
+console.log(story);
 
 console.log("\n" + '--------| llama-3-sonar-large-32k-online |--------');
 const pplx = mmix.create('llama-3-sonar-large-32k-online', { max_tokens: 500 });
@@ -48,8 +59,8 @@ pplx.addText('How much is ETH trading in USD?');
 const news = await pplx.addText('What are the 3 most recent Ethereum news?').message();
 console.log(news);
 
-console.log("\n" + '--------| ollama (llava:latest) |--------');
-await mmix.create('llava:latest')
-    .addImage('./watson.jpg')
-    .addText('what is the predominant color?')
-    .stream((data) => { console.log(data.message); });
+// console.log("\n" + '--------| ollama (llava:latest) |--------');
+// await mmix.create('llava:latest')
+//     .addImage('./watson.jpg')
+//     .addText('what is the predominant color?')
+//     .stream((data) => { console.log(data.message); });

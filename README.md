@@ -5,7 +5,7 @@
 ## ✨ Features
 
 - **Unified Interface**: Interact with multiple AI models through a single, coherent API.
-- **Request Control**: Manage the number of parallel requests to adhere to provider limitations (`max_request`).
+- **Request Control**: Manage the number of parallel requests to adhere to provider limitations with `max_request`.
 - **Flexible Integration**: Easily integrate popular models like OpenAI, Anthropic, Perplexity, Groq, Ollama, LM Studio or custom models.
 - **History Tracking**: Automatically logs the conversation history with model responses, allowing you to limit the number of historical messages with `max_history`.
 
@@ -17,7 +17,7 @@ First, install the ModelMix package:
 npm install modelmix
 ```
 
-Also, install dotenv to manage environment variables:
+Optional: install dotenv to manage environment variables:
 
 ```bash
 npm install dotenv
@@ -51,6 +51,7 @@ Here's a quick example to get you started:
             system: "You are {name} from Melmac.",
             max_history: 2,
             max_request: 1,
+            debug: true
         }
     });
 
@@ -85,9 +86,19 @@ Here's a quick example to get you started:
     gpt.replace({ '{animal}': 'cat' });
     console.log(await gpt.message());
 
-    console.log("\n" + '--------| claude-3-sonnet-20240229 |--------');
-    const claude = mmix.create('claude-3-sonnet-20240229', { temperature: 0.5 });
-    claude.addImage("./watson.jpg");
+    console.log("\n" + '--------| [writer] claude-3-5-sonnet-20240620 |--------');
+    const setup = {
+        config: { system: "You are a writer like Stephen King" },
+        options: { temperature: 0.5 }
+    }
+    const writer = mmix.create('claude-3-5-sonnet-20240620', setup);
+    writer.replace({ '{story_title}': 'The Mysterious Package' })
+    const story = await writer.addTextFile('./prompt.md').message();
+    console.log(story);
+
+    console.log("\n" + '--------| [image] claude-3-5-sonnet-20240620 |--------');
+    const claude = mmix.create('claude-3-5-sonnet-20240620', { temperature: 0.5 });
+    claude.addImage("./watson.jpg"); // or claude.addImageFromUrl(url)
     const imageDescription = await claude.addText("Describe the image").message();
     console.log(imageDescription);
 
@@ -134,7 +145,9 @@ new ModelMix(args = { options: {}, config: {} })
 
 - `new()`: Initializes a new message handler instance.
 - `addText(text, config = { role: "user" })`: Adds a text message.
+- `addTextFile(filePath, config = { role: "user" })`: Adds a text message from a file path.
 - `addImage(filePath, config = { role: "user" })`: Adds an image message from a file path.
+- `addImageFromUrl(url, config = { role: "user" })`: Adds an image message from URL.
 - `message()`: Sends the message and returns the response.
 - `raw()`: Sends the message and returns the raw response data.
 - `stream(callback)`: Sends the message and streams the response, invoking the callback with each streamed part.
