@@ -234,7 +234,7 @@ new MixLMStudio(args = { config: {}, options: {} })
     - `url`: The endpoint URL to which the model sends requests.
   - **options**: Default options for Ollama model instances.
 
-## Explanation of `replace` and `replaceKeyFromFile` Methods
+## 🔄 Templating Methods
 
 ### `replace` Method
 
@@ -284,7 +284,7 @@ This would replace `article_file_contents` with the entire content of 'article.t
 
 Both methods allow for flexible content insertion, enabling you to create dynamic and customizable prompts for your AI model interactions.
 
-## Enabling Debug Mode in ModelMix
+## 🐛 Enabling Debug Mode
 
 To activate debug mode in ModelMix and view detailed request information, follow these two steps:
 
