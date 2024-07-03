@@ -115,7 +115,82 @@ Here's a quick example to get you started:
         .stream((data) => { console.log(data.message); });
     ```
 4. Find the files for this example at: [/ModelMix/demo](https://github.com/clasen/ModelMix/tree/master/demo).
-   
+
+## 🔄 Templating Methods
+
+### `replace` Method
+
+The `replace` method is used to define key-value pairs for text replacement in the messages and system prompt. 
+
+#### Usage:
+```javascript
+gpt.replace({ '{{key1}}': 'value1', '{{key2}}': 'value2' });
+```
+
+#### How it works:
+1. It updates the `config.replace` object with the provided key-value pairs.
+2. In the template, placeholders like `{{key1}}` will be replaced with 'value1'.
+
+#### Example:
+```javascript
+gpt
+  .replace({ '{{name}}': 'Alice', '{{age}}': '30' })
+  .addText('Hello {{name}}, are you {{age}} years old?');
+```
+This would result in the message: "Hello Alice, are you 30 years old?"
+
+### `replaceKeyFromFile` Method
+
+The `replaceKeyFromFile` method is similar to `replace`, but it reads the replacement value from a file.
+
+#### Usage:
+```javascript
+messageHandler.replaceKeyFromFile('longText', './path/to/file.txt');
+```
+
+#### How it works:
+1. It reads the content of the specified file synchronously.
+2. It then calls the `replace` method, using the provided key and the file content as the value.
+
+#### Example:
+```javascript
+messageHandler
+  .replaceKeyFromFile('article_file_contents', './article.txt')
+  .addText('Please summarize this article: article_file_contents');
+```
+This would replace `article_file_contents` with the entire content of 'article.txt'.
+
+### When to use each method:
+- Use `replace` for short, inline replacements or dynamically generated content.
+- Use `replaceKeyFromFile` for longer texts or content that's stored externally.
+
+Both methods allow for flexible content insertion, enabling you to create dynamic and customizable prompts for your AI model interactions.
+
+## 🐛 Enabling Debug Mode
+
+To activate debug mode in ModelMix and view detailed request information, follow these two steps:
+
+1. In the ModelMix constructor, include `debug: true` in the configuration:
+
+   ```javascript
+   const mix = new ModelMix({
+     config: {
+       debug: true
+       // ... other configuration options ...
+     }
+   });
+   ```
+
+2. When running your script from the command line, use the `DEBUG=ModelMix*` prefix:
+
+   ```
+   DEBUG=ModelMix* node your_script.js
+   ```
+
+When you run your script this way, you'll see detailed information about the requests in the console, including the configuration and options used for each AI model request.
+
+This information is valuable for debugging and understanding how ModelMix is processing your requests.
+
 ## 📚 ModelMix Class Overview
 
 ```javascript
@@ -233,81 +308,6 @@ new MixLMStudio(args = { config: {}, options: {} })
   - **config**: Specific configuration settings for Ollama.
     - `url`: The endpoint URL to which the model sends requests.
   - **options**: Default options for Ollama model instances.
-
-## 🔄 Templating Methods
-
-### `replace` Method
-
-The `replace` method is used to define key-value pairs for text replacement in the messages and system prompt. 
-
-#### Usage:
-```javascript
-gpt.replace({ '{{key1}}': 'value1', '{{key2}}': 'value2' });
-```
-
-#### How it works:
--  It updates the `config.replace` object with the provided key-value pairs.
--  In the template, placeholders like `{{key1}}` will be replaced with 'value1'.
-
-#### Example:
-```javascript
-gpt
-  .replace({ '{{name}}': 'Alice', '{{age}}': '30' })
-  .addText('Hello {{name}}, are you {{age}} years old?');
-```
-This would result in the message: "Hello Alice, are you 30 years old?"
-
-### `replaceKeyFromFile` Method
-
-The `replaceKeyFromFile` method is similar to `replace`, but it reads the replacement value from a file.
-
-#### Usage:
-```javascript
-messageHandler.replaceKeyFromFile('longText', './path/to/file.txt');
-```
-
-#### How it works:
-1. It reads the content of the specified file synchronously.
-2. It then calls the `replace` method, using the provided key and the file content as the value.
-
-#### Example:
-```javascript
-messageHandler
-  .replaceKeyFromFile('article_file_contents', './article.txt')
-  .addText('Please summarize this article: article_file_contents');
-```
-This would replace `article_file_contents` with the entire content of 'article.txt'.
-
-### When to use each method:
-- Use `replace` for short, inline replacements or dynamically generated content.
-- Use `replaceKeyFromFile` for longer texts or content that's stored externally.
-
-Both methods allow for flexible content insertion, enabling you to create dynamic and customizable prompts for your AI model interactions.
-
-## 🐛 Enabling Debug Mode
-
-To activate debug mode in ModelMix and view detailed request information, follow these two steps:
-
-1. In the ModelMix constructor, include `debug: true` in the configuration:
-
-   ```javascript
-   const mix = new ModelMix({
-     config: {
-       debug: true
-       // ... other configuration options ...
-     }
-   });
-   ```
-
-2. When running your script from the command line, use the `DEBUG=ModelMix*` prefix:
-
-   ```
-   DEBUG=ModelMix* node your_script.js
-   ```
-
-When you run your script this way, you'll see detailed information about the requests in the console, including the configuration and options used for each AI model request.
-
-This information is valuable for debugging and understanding how ModelMix is processing your requests.
 
 ## 🤝 Contributing
 
