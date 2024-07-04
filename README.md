@@ -1,4 +1,4 @@
-# 🧬 ModelMix: Unified API for Diverse AI Language Models
+# 🧬 ModelMix: Unified API for Diverse AI LLM
 
 **ModelMix** is a versatile module that enables seamless integration of various language models from different providers through a unified interface. With ModelMix, you can effortlessly manage and utilize multiple AI models while controlling parallel requests to avoid provider restrictions.
 
