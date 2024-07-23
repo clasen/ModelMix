@@ -133,7 +133,7 @@ class MessageHandler {
             console.error(`Error reading system message file ${filePath}:`, error);
         }
         return this;
-    }    
+    }
 
     addImage(filePath, config = { role: "user" }) {
         try {
@@ -245,12 +245,14 @@ class MessageHandler {
     }
 
     groupByRoles(messages) {
-        return messages.reduce((acc, message) => {
-            const existingRole = acc.find(item => item.role === message.role);
-            if (existingRole) {
-                existingRole.content = existingRole.content.concat(message.content);
+        return messages.reduce((acc, currentMessage, index) => {
+            if (index === 0 || currentMessage.role !== messages[index - 1].role) {
+                acc.push({
+                    role: currentMessage.role,
+                    content: currentMessage.content
+                });
             } else {
-                acc.push({ role: message.role, content: Array.isArray(message.content) ? message.content : [message.content] });
+                acc[acc.length - 1].content = acc[acc.length - 1].content.concat(currentMessage.content);
             }
             return acc;
         }, []);
@@ -379,7 +381,7 @@ class MixCustom {
         };
 
         return formattedError;
-    } 
+    }
 
     processStream(response) {
         return new Promise((resolve, reject) => {
@@ -495,7 +497,7 @@ class MixAnthropic extends MixCustom {
     create(args = { config: {}, options: {} }) {
         args.options.system = args.config.system;
         return super.create(args);
-    }    
+    }
 }
 
 class MixPerplexity extends MixCustom {
