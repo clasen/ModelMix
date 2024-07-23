@@ -337,9 +337,9 @@ class MixCustom {
     async create(args = { config: {}, options: {} }) {
         try {
             if (args.config.debug) {
-                log.info("config");
+                log.debug("config");
                 log.info(args.config);
-                log.inspect("options");
+                log.debug("options");
                 log.inspect(args.options);
             }
 
@@ -475,11 +475,11 @@ class MixAnthropic extends MixCustom {
         });
     }
 
-    getDefaultHeaders(getDefaultHeaders) {
+    getDefaultHeaders(customHeaders) {
         return super.getDefaultHeaders({
             'x-api-key': this.config.apiKey,
             'anthropic-version': '2023-06-01',
-            ...getDefaultHeaders
+            ...customHeaders
         });
     }
 
@@ -491,6 +491,11 @@ class MixAnthropic extends MixCustom {
     processResponse(response) {
         return { response: response.data, message: response.data.content[0].text };
     }
+
+    create(args = { config: {}, options: {} }) {
+        args.options.system = args.config.system;
+        return super.create(args);
+    }    
 }
 
 class MixPerplexity extends MixCustom {

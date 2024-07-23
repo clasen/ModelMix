@@ -17,9 +17,10 @@ mmix.attach(new MixOpenAI());
 mmix.attach(new MixAnthropic());
 mmix.attach(new MixPerplexity({
     config: {
-        apiKey: process.env.PPLX_API_KEY
+        apiKey: process.env.PPLX_API_KEY,
+        system: 'You are my personal assistant.'
     },
-    system: 'You are my personal assistant.'
+    
 }));
 mmix.attach(new MixOllama({
     config: {
@@ -33,28 +34,25 @@ mmix.attach(new MixOllama({
 mmix.replace({ '{name}': 'ALF' });
 
 console.log("\n" + '--------| gpt-4o |--------');
-const gpt = mmix.create('gpt-4o', { temperature: 0.5 }).addText("Have you ever eaten a {animal}?");
+const gpt = mmix.create('gpt-4o', { options: { temperature: 0 } }).addText("Have you ever eaten a {animal}?");
 gpt.replace({ '{animal}': 'cat' });
 console.log(await gpt.message());
 
 console.log("\n" + '--------| claude-3-5-sonnet-20240620 |--------');
-const claude = mmix.create('claude-3-5-sonnet-20240620', { temperature: 0.5 });
+const claude = mmix.create('claude-3-5-sonnet-20240620', { options: { temperature: 0 } });
 claude.addImageFromUrl('https://pbs.twimg.com/media/F6-GsjraAAADDGy?format=jpg');
 const imageDescription = await claude.addText('describe the image').message();
 console.log(imageDescription);
 
 console.log("\n" + '--------| claude-3-5-sonnet-20240620 |--------');
-const setup = {
-    config: { system: "You are a writer like Stephen King" },
-    options: { temperature: 0.5 }
-}
-const writer = mmix.create('claude-3-5-sonnet-20240620', setup);
+const writer = mmix.create('claude-3-5-sonnet-20240620', { options: { temperature: 0.5 } });
+writer.setSystem('You are a writer like Stephen King');
 writer.replaceKeyFromFile('{story_title}', './title.md');
 const story = await writer.addTextFromFile('./prompt.md').message();
 console.log(story);
 
 console.log("\n" + '--------| llama-3-sonar-large-32k-online |--------');
-const pplx = mmix.create('llama-3-sonar-large-32k-online', { max_tokens: 500 });
+const pplx = mmix.create('llama-3-sonar-large-32k-online', { config: { max_tokens: 500 } });
 pplx.addText('How much is ETH trading in USD?');
 const news = await pplx.addText('What are the 3 most recent Ethereum news?').message();
 console.log(news);

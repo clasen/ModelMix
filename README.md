@@ -80,45 +80,42 @@ Here's a quick example to get you started:
 
 3. **Generate responses from different models**:
 
+    #### gpt-4o-mini
     ```javascript
-    console.log("\n" + '--------| gpt-4o |--------');
-    const gpt = mmix.create('gpt-4o', { temperature: 0.5 });
+    const gpt = mmix.create('gpt-4o-mini', { options: { temperature: 0 } });
     gpt.addText("Have you ever eaten a {animal}?");
     gpt.replace({ '{animal}': 'cat' });
     console.log(await gpt.message());
     ```
 
+    #### claude-3-5-sonnet-20240620 (writer)
     ```javascript
-    console.log("\n" + '--------| [writer] claude-3-5-sonnet-20240620 |--------');
-    const setup = {
-        config: { system: "You are a writer like Stephen King" },
-        options: { temperature: 0.5 }
-    }
-    const writer = mmix.create('claude-3-5-sonnet-20240620', setup);
+    const writer = mmix.create('claude-3-5-sonnet-20240620', { options: { temperature: 0.5 } });
+    writer.setSystem('You are a writer like Stephen King'); // or setSystemFromFile
     writer.replace({ '{story_title}': 'The Mysterious Package' })
     // or write.replaceKeyFromFile('{story_title}', './title.md');
     const story = await writer.addTextFromFile('./prompt.md').message();
     console.log(story);
     ```
-
+    #### claude-3-5-sonnet-20240620 (image)
     ```javascript
-    console.log("\n" + '--------| [image] claude-3-5-sonnet-20240620 |--------');
-    const claude = mmix.create('claude-3-5-sonnet-20240620', { temperature: 0.5 });
+    console.log("\n" + '--------|  |--------');
+    const claude = mmix.create('claude-3-5-sonnet-20240620', { options: { temperature: 0 } });
     claude.addImage("./watson.jpg"); // or claude.addImageFromUrl(url)
     const imageDescription = await claude.addText("Describe the image").message();
     console.log(imageDescription);
     ```
 
+    #### pplx-70b-online
     ```javascript
-    console.log("\n" + '--------| pplx-70b-online |--------');
-    const pplx = mmix.create('pplx-70b-online', { max_tokens: 500 });
+    const pplx = mmix.create('pplx-70b-online', { config: { max_tokens: 500 } });
     pplx.addText('How much is ETH trading in USD?');
     const news = await pplx.addText('What are the 3 most recent Ethereum news?').message();
     console.log(news);
     ```
 
+    #### ollama (llava:latest)
     ```javascript
-    console.log("\n" + '--------| ollama (llava:latest) |--------');
     await mmix.create('llava:latest')
         .addImage("./watson.jpg")
         .addText("What is the predominant color?")
