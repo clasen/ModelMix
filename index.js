@@ -320,25 +320,51 @@ class MixCustom {
     }
 
     async create(args = { config: {}, options: {} }) {
+        try {
+            if (args.config.debug) {
+                log.info("config");
+                log.info(args.config);
+                log.inspect("options");
+                log.inspect(args.options);
+            }
 
-        if (args.config.debug) {
-            log.info("config");
-            log.info(args.config);
-            log.inspect("options");
-            log.inspect(args.options);
-        }
-
-        if (args.options.stream) {
-            return this.processStream(await axios.post(this.config.url, args.options, {
-                headers: this.headers,
-                responseType: 'stream'
-            }));
-        } else {
-            return this.processResponse(await axios.post(this.config.url, args.options, {
-                headers: this.headers
-            }));
+            if (args.options.stream) {
+                return this.processStream(await axios.post(this.config.url, args.options, {
+                    headers: this.headers,
+                    responseType: 'stream'
+                }));
+            } else {
+                return this.processResponse(await axios.post(this.config.url, args.options, {
+                    headers: this.headers
+                }));
+            }
+        } catch (error) {
+            throw this.handleError(error, args);
         }
     }
+
+    handleError(error, args) {
+        let errorMessage = 'An error occurred in MixCustom';
+        let statusCode = null;
+        let errorDetails = null;
+
+        if (error.isAxiosError) {
+            statusCode = error.response ? error.response.status : null;
+            errorMessage = `Request to ${this.config.url} failed with status code ${statusCode}`;
+            errorDetails = error.response ? error.response.data : null;
+        }
+
+        const formattedError = {
+            message: errorMessage,
+            statusCode,
+            details: errorDetails,
+            stack: error.stack,
+            config: args.config,
+            options: args.options
+        };
+
+        return formattedError;
+    } 
 
     processStream(response) {
         return new Promise((resolve, reject) => {
