@@ -24,7 +24,7 @@
     "chat",
     "multimodal",
     "groq",
-    "omni",
+    "gpt-4o-mini",
     "4o",
     "ollama",
     "lmstudio"
