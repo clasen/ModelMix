@@ -120,6 +120,21 @@ class MessageHandler {
         return this;
     }
 
+    setSystem(text) {
+        this.config.system = text;
+        return this;
+    }
+
+    setSystemFromFile(filePath) {
+        try {
+            const content = fs.readFileSync(filePath, { encoding: 'utf8' });
+            this.setSystem(content);
+        } catch (error) {
+            console.error(`Error reading system message file ${filePath}:`, error);
+        }
+        return this;
+    }    
+
     addImage(filePath, config = { role: "user" }) {
         try {
             const imageBuffer = fs.readFileSync(filePath);
