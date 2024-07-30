@@ -233,7 +233,7 @@ class MessageHandler {
     replaceKeyFromFile(key, filePath) {
         try {
             const content = fs.readFileSync(filePath, { encoding: 'utf8' });
-            this.replace({ [key]: content });
+            this.replace({ [key]: this.template(content, this.config.replace) });
         } catch (error) {
             console.error(`Error reading file ${filePath}:`, error);
         }
