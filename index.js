@@ -2,6 +2,7 @@ const axios = require('axios');
 const fs = require('fs');
 const mime = require('mime-types');
 const log = require('lemonlog')('ModelMix');
+const pLimit = require('p-limit');
 
 class ModelMix {
     constructor(args = { options: {}, config: {} }) {
@@ -20,6 +21,8 @@ class ModelMix {
             debug: false,
             ...args.config
         }
+
+        this.limit = pLimit(this.config.max_request);
     }
 
     replace(keyValues) {
@@ -30,8 +33,6 @@ class ModelMix {
     attach(modelInstance) {
         const key = modelInstance.config.prefix.join("_");
         this.models[key] = modelInstance;
-        modelInstance.queue = [];
-        modelInstance.active_requests = 0;
         return this;
     }
 
@@ -58,29 +59,6 @@ class ModelMix {
         };
 
         return new MessageHandler(this, modelEntry, options, config);
-    }
-
-    async processQueue(modelEntry) {
-        if (modelEntry.active_requests >= modelEntry.config.max_request) {
-            return;
-        }
-
-        const nextTask = modelEntry.queue.shift();
-        if (!nextTask) {
-            return;
-        }
-
-        modelEntry.active_requests++;
-
-        try {
-            const result = await modelEntry.create(nextTask.args);
-            nextTask.resolve(result);
-        } catch (error) {
-            nextTask.reject(error);
-        } finally {
-            modelEntry.active_requests--;
-            this.processQueue(modelEntry);
-        }
     }
 }
 
@@ -277,33 +255,29 @@ class MessageHandler {
     }
 
     async execute() {
+        return this.mix.limit(() => new Promise(async (resolve, reject) => {
+            await this.processImageUrls();
 
-        await this.processImageUrls();
+            this.applyTemplate();
+            this.messages = this.messages.slice(-this.config.max_history);
+            this.messages = this.groupByRoles(this.messages);
 
-        this.applyTemplate();
-        this.messages = this.messages.slice(-this.config.max_history);
-        this.messages = this.groupByRoles(this.messages);
+            if (this.messages.length === 0) {
+                throw new Error("No user messages have been added. Use addText(prompt), addTextFromFile(filePath), addImage(filePath), or addImageFromUrl(url) to add a prompt.");
+            }
 
-        if (this.messages.length === 0) {
-            throw new Error("No user messages have been added. Use addText(prompt), addTextFromFile(filePath), addImage(filePath), or addImageFromUrl(url) to add a prompt.");
-        }
+            this.options.messages = this.messages;
 
-        this.options.messages = this.messages;
-
-        return new Promise((resolve, reject) => {
-            this.modelEntry.queue.push({
-                args: { options: this.options, config: this.config },
-                resolve: (result) => {
-                    this.messages.push({ role: "assistant", content: result.message });
-                    resolve(result);
-                },
-                reject
-            });
-            this.mix.processQueue(this.modelEntry);
-        });
+            try {
+                const result = await this.modelEntry.create({ options: this.options, config: this.config });
+                this.messages.push({ role: "assistant", content: result.message });
+                resolve(result);
+            } catch (error) {
+                reject(error);
+            }
+        }));
     }
 }
-
 class MixCustom {
     constructor(args = { config: {}, options: {}, headers: {} }) {
         this.config = this.getDefaultConfig(args.config);

@@ -33,8 +33,8 @@ mmix.attach(new MixOllama({
 
 mmix.replace({ '{name}': 'ALF' });
 
-console.log("\n" + '--------| gpt-4o |--------');
-const gpt = mmix.create('gpt-4o', { options: { temperature: 0 } }).addText("Have you ever eaten a {animal}?");
+console.log("\n" + '--------| gpt-4o-mini |--------');
+const gpt = mmix.create('gpt-4o-mini', { options: { temperature: 0 } }).addText("Have you ever eaten a {animal}?");
 gpt.replace({ '{animal}': 'cat' });
 console.log(await gpt.message());
 
