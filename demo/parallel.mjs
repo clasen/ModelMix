@@ -1,12 +1,11 @@
 import 'dotenv/config';
-import { ModelMix, MixOpenAI, MixAnthropic, MixPerplexity, MixOllama } from '../index.js';
+import { ModelMix, MixOpenAI } from '../index.js';
 
 const mix = new ModelMix({
     options: {
         max_tokens: 200,
     },
     config: {
-        system: 'You are {name} from Melmac.',
         max_history: 2,
         max_request: 3,
         debug: true,
@@ -15,36 +14,36 @@ const mix = new ModelMix({
 
 mix.attach(new MixOpenAI());
 
-// Función para crear una promesa que se resuelve después de un tiempo aleatorio
+// Function to create a promise that resolves after a random time
 const randomDelay = () => new Promise(resolve => setTimeout(resolve, Math.random() * 2000 + 1000));
 
-// Función para realizar una solicitud al modelo
+// Function to make a request to the model
 async function makeRequest(id) {
     const start = Date.now();
-    console.log(`Iniciando solicitud ${id}`);
+    console.log(`Starting request ${id}`);
     
     const message = await mix.create('gpt-4o-mini')
-        .addText(`Genera un hecho interesante sobre el número ${id}.`)
+        .addText(`Generate an interesting fact about the number ${id}.`)
         .message();
     
-    // await randomDelay(); // Simula algún procesamiento adicional
+    await randomDelay(); // Simulates some additional processing
     
     const duration = Date.now() - start;
-    console.log(`Solicitud ${id} completada en ${duration}ms: ${message}`);
+    console.log(`Request ${id} finished in ${duration}ms: ${message}`);
 }
 
-// Función principal para ejecutar el ejemplo
+// Main function to run the example
 async function runExample() {
-    console.log("Iniciando ejemplo de concurrencia...");
+    console.log("Starting concurrency example...");
     
-    // Crear un array de promesas para 5 solicitudes
+    // Create a promise array for 5 requests
     const requests = Array.from({ length: 5 }, (_, i) => makeRequest(i + 1));
     
-    // Ejecutar todas las solicitudes y esperar a que se completen
+    // Execute all requests and wait for them to complete
     await Promise.all(requests);
     
-    console.log("Ejemplo de concurrencia completado.");
+    console.log("Completed concurrency example.");
 }
 
-// Ejecutar el ejemplo
+// Run the example
 runExample().catch(console.error);
