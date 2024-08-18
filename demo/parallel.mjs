@@ -7,7 +7,9 @@ const mix = new ModelMix({
     },
     config: {
         max_history: 2,
-        max_request: 3,
+        bottleneck: {
+            maxConcurrent: 1,     // Maximum number of concurrent requests
+        },
         debug: true,
     }
 });
@@ -21,13 +23,13 @@ const randomDelay = () => new Promise(resolve => setTimeout(resolve, Math.random
 async function makeRequest(id) {
     const start = Date.now();
     console.log(`Starting request ${id}`);
-    
+
     const message = await mix.create('gpt-4o-mini')
         .addText(`Generate an interesting fact about the number ${id}.`)
         .message();
-    
+
     await randomDelay(); // Simulates some additional processing
-    
+
     const duration = Date.now() - start;
     console.log(`Request ${id} finished in ${duration}ms: ${message}`);
 }
@@ -35,13 +37,13 @@ async function makeRequest(id) {
 // Main function to run the example
 async function runExample() {
     console.log("Starting concurrency example...");
-    
+
     // Create a promise array for 5 requests
     const requests = Array.from({ length: 5 }, (_, i) => makeRequest(i + 1));
-    
+
     // Execute all requests and wait for them to complete
     await Promise.all(requests);
-    
+
     console.log("Completed concurrency example.");
 }
 

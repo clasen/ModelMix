@@ -2,7 +2,7 @@ const axios = require('axios');
 const fs = require('fs');
 const mime = require('mime-types');
 const log = require('lemonlog')('ModelMix');
-const pLimit = require('p-limit');
+const Bottleneck = require('bottleneck');
 
 class ModelMix {
     constructor(args = { options: {}, config: {} }) {
@@ -14,15 +14,24 @@ class ModelMix {
             ...args.options
         };
 
+        // Standard Bottleneck configuration
+        const defaultBottleneckConfig = {
+            maxConcurrent: 5,     // Maximum number of concurrent requests
+            minTime: 200,         // Minimum time between requests (in ms)
+            reservoir: 60,        // Number of requests allowed in the reservoir period
+            reservoirRefreshAmount: 60, // How many requests are added when the reservoir refreshes
+            reservoirRefreshInterval: 60 * 1000 // Reservoir refresh interval (60 seconds)
+        };        
+
         this.config = {
             system: 'You are an assistant.',
-            max_request: 1,
             max_history: 5, // Default max history
             debug: false,
+            bottleneck: defaultBottleneckConfig,
             ...args.config
         }
 
-        this.limit = pLimit(this.config.max_request);
+        this.limiter = new Bottleneck(this.config.bottleneck);
     }
 
     replace(keyValues) {
@@ -60,6 +69,21 @@ class ModelMix {
 
         return new MessageHandler(this, modelEntry, options, config);
     }
+
+    setSystem(text) {
+        this.config.system = text;
+        return this;
+    }
+
+    setSystemFromFile(filePath) {
+        try {
+            const content = fs.readFileSync(filePath, { encoding: 'utf8' });
+            this.setSystem(content);
+        } catch (error) {
+            console.error(`Error reading system message file ${filePath}:`, error);
+        }
+        return this;
+    }    
 }
 
 class MessageHandler {
@@ -255,7 +279,7 @@ class MessageHandler {
     }
 
     async execute() {
-        return this.mix.limit(() => new Promise(async (resolve, reject) => {
+        return this.mix.limiter.schedule(async () => {
             await this.processImageUrls();
 
             this.applyTemplate();
@@ -271,11 +295,11 @@ class MessageHandler {
             try {
                 const result = await this.modelEntry.create({ options: this.options, config: this.config });
                 this.messages.push({ role: "assistant", content: result.message });
-                resolve(result);
+                return result;
             } catch (error) {
-                reject(error);
+                throw error;
             }
-        }));
+        });
     }
 }
 class MixCustom {

@@ -1,6 +1,6 @@
 {
   "name": "modelmix",
-  "version": "2.6.0",
+  "version": "2.6.2",
   "description": "🧬 ModelMix - Unified API for Diverse AI LLM.",
   "main": "index.js",
   "repository": {
@@ -27,7 +27,8 @@
     "gpt-4o-mini",
     "4o",
     "ollama",
-    "lmstudio"
+    "lmstudio",
+    "bottleneck"
   ],
   "author": "Martin Clasen",
   "license": "MIT",
@@ -37,7 +38,7 @@
   "homepage": "https://github.com/clasen/ModelMix#readme",
   "dependencies": {
     "axios": "^1.7.4",
-    "lemonlog": "^1.1.2",
-    "p-limit": "^3.1.0"
+    "bottleneck": "^2.19.5",
+    "lemonlog": "^1.1.2"
   }
 }

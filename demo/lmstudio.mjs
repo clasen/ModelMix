@@ -6,7 +6,7 @@ const mmix = new ModelMix({
     },
     config: {
         max_history: 2,
-        max_request: 1,
+        bottleneck: { maxConcurrent: 1 },
     }
 });
 

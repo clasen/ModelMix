@@ -8,7 +8,7 @@ const mmix = new ModelMix({
     config: {
         system: 'You are {name} from Melmac.',
         max_history: 2,
-        max_request: 1,
+        bottleneck: { maxConcurrent: 1 },
         debug: true,
     }
 });

@@ -1,11 +1,11 @@
 # 🧬 ModelMix: Unified API for Diverse AI LLM
 
-**ModelMix** is a versatile module that enables seamless integration of various language models from different providers through a unified interface. With ModelMix, you can effortlessly manage and utilize multiple AI models while controlling parallel requests to avoid provider restrictions.
+**ModelMix** is a versatile module that enables seamless integration of various language models from different providers through a unified interface. With ModelMix, you can effortlessly manage and utilize multiple AI models while controlling request rates to avoid provider restrictions.
 
 ## ✨ Features
 
 - **Unified Interface**: Interact with multiple AI models through a single, coherent API.
-- **Request Control**: Manage the number of parallel requests to adhere to provider limitations with `max_request`.
+- **Request Rate Control**: Manage the rate of requests to adhere to provider limitations using Bottleneck.
 - **Flexible Integration**: Easily integrate popular models like OpenAI, Anthropic, Perplexity, Groq, Ollama, LM Studio or custom models.
 - **History Tracking**: Automatically logs the conversation history with model responses, allowing you to limit the number of historical messages with `max_history`.
 
@@ -50,7 +50,13 @@ Here's a quick example to get you started:
         config: {
             system: "You are {name} from Melmac.",
             max_history: 2,
-            max_request: 1,
+            bottleneck: {
+                maxConcurrent: 5,
+                minTime: 200,
+                reservoir: 60,
+                reservoirRefreshAmount: 60,
+                reservoirRefreshInterval: 60 * 1000
+            },
             debug: true
         }
     });
@@ -198,6 +204,47 @@ When you run your script this way, you'll see detailed information about the req
 
 This information is valuable for debugging and understanding how ModelMix is processing your requests.
 
+## 🚦 Bottleneck Integration
+
+ModelMix now uses Bottleneck for efficient rate limiting of API requests. This integration helps prevent exceeding API rate limits and ensures smooth operation when working with multiple models or high request volumes.
+
+### How it works:
+
+1. **Configuration**: Bottleneck is configured in the ModelMix constructor. You can customize the settings or use the default configuration:
+
+    ```javascript
+    const mmix = new ModelMix({
+        config: {
+            bottleneck: {
+                maxConcurrent: 5,     // Maximum number of concurrent requests
+                minTime: 200,         // Minimum time between requests (in ms)
+                reservoir: 60,        // Number of requests allowed in the reservoir period
+                reservoirRefreshAmount: 60, // How many requests are added when the reservoir refreshes
+                reservoirRefreshInterval: 60 * 1000 // Reservoir refresh interval (60 seconds)
+            }
+        }
+    });
+    ```
+
+2. **Rate Limiting**: When you make a request using any of the attached models, Bottleneck automatically manages the request flow based on the configured settings.
+
+3. **Flexibility**: You can adjust the Bottleneck configuration for each model creation if needed:
+
+    ```javascript
+    const gpt = mmix.create('gpt-4o-mini', { 
+        config: {
+            bottleneck: {
+                maxConcurrent: 3,
+                minTime: 500
+            }
+        }
+    });
+    ```
+
+4. **Automatic Queueing**: If the rate limit is reached, Bottleneck will automatically queue subsequent requests and process them as capacity becomes available.
+
+This integration ensures that your application respects API rate limits while maximizing throughput, providing a robust solution for managing multiple AI model interactions.
+
 ## 📚 ModelMix Class Overview
 
 ```javascript
@@ -213,7 +260,12 @@ new ModelMix(args = { options: {}, config: {} })
   - **config**: This object contains configuration settings that control the behavior of the `ModelMix` instance. These settings can also be overridden for specific model instances. Examples of configuration settings include:
     - `system`: Sets the default system message for the model, e.g., "You are an assistant."
     - `max_history`: Limits the number of historical messages to retain, e.g., 5.
-    - `max_request`: Limits the number of parallel requests, e.g., 1.
+    - `bottleneck`: Configures the rate limiting behavior using Bottleneck. For example:
+      - `maxConcurrent`: 5 Maximum number of concurrent requests
+      - `minTime`: 200 Minimum time between requests (in ms)
+      - `reservoir`: 60 Number of requests allowed in the reservoir period
+      - `reservoirRefreshAmount`: 60 How many requests are added when the reservoir refreshes
+      - `reservoirRefreshInterval`: 60 * 1000 // Reservoir refresh interval (60 seconds)
     - ...(Additional configuration parameters can be added as needed)
 
 **Methods**
