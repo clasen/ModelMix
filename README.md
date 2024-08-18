@@ -222,20 +222,7 @@ ModelMix now uses Bottleneck for efficient rate limiting of API requests. This i
 
 2. **Rate Limiting**: When you make a request using any of the attached models, Bottleneck automatically manages the request flow based on the configured settings.
 
-3. **Flexibility**: You can adjust the Bottleneck configuration for each model creation if needed:
-
-    ```javascript
-    const gpt = mmix.create('gpt-4o-mini', { 
-        config: {
-            bottleneck: {
-                maxConcurrent: 3,
-                minTime: 500
-            }
-        }
-    });
-    ```
-
-4. **Automatic Queueing**: If the rate limit is reached, Bottleneck will automatically queue subsequent requests and process them as capacity becomes available.
+3. **Automatic Queueing**: If the rate limit is reached, Bottleneck will automatically queue subsequent requests and process them as capacity becomes available.
 
 This integration ensures that your application respects API rate limits while maximizing throughput, providing a robust solution for managing multiple AI model interactions.
 
