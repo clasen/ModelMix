@@ -50,13 +50,7 @@ Here's a quick example to get you started:
         config: {
             system: "You are {name} from Melmac.",
             max_history: 2,
-            bottleneck: {
-                maxConcurrent: 5,
-                minTime: 200,
-                reservoir: 60,
-                reservoirRefreshAmount: 60,
-                reservoirRefreshInterval: 60 * 1000
-            },
+            bottleneck: { maxConcurrent: 2 },
             debug: true
         }
     });
