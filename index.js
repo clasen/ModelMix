@@ -3,6 +3,7 @@ const fs = require('fs');
 const mime = require('mime-types');
 const log = require('lemonlog')('ModelMix');
 const Bottleneck = require('bottleneck');
+const path = require('path');
 
 class ModelMix {
     constructor(args = { options: {}, config: {} }) {
@@ -16,12 +17,9 @@ class ModelMix {
 
         // Standard Bottleneck configuration
         const defaultBottleneckConfig = {
-            maxConcurrent: 5,     // Maximum number of concurrent requests
-            minTime: 200,         // Minimum time between requests (in ms)
-            reservoir: 60,        // Number of requests allowed in the reservoir period
-            reservoirRefreshAmount: 60, // How many requests are added when the reservoir refreshes
-            reservoirRefreshInterval: 60 * 1000 // Reservoir refresh interval (60 seconds)
-        };        
+            maxConcurrent: 8,     // Maximum number of concurrent requests
+            minTime: 500,         // Minimum time between requests (in ms)
+        };
 
         this.config = {
             system: 'You are an assistant.',
@@ -76,14 +74,25 @@ class ModelMix {
     }
 
     setSystemFromFile(filePath) {
-        try {
-            const content = fs.readFileSync(filePath, { encoding: 'utf8' });
-            this.setSystem(content);
-        } catch (error) {
-            console.error(`Error reading system message file ${filePath}:`, error);
-        }
+        const content = this.readFile(filePath);
+        this.setSystem(content);
         return this;
-    }    
+    }
+
+    readFile(filePath, options = { encoding: 'utf8' }) {
+        try {
+            const absolutePath = path.resolve(process.cwd(), filePath);
+            return fs.readFileSync(absolutePath, options);
+        } catch (error) {
+            if (error.code === 'ENOENT') {
+                throw new Error(`File not found: ${filePath}`);
+            } else if (error.code === 'EACCES') {
+                throw new Error(`Permission denied: ${filePath}`);
+            } else {
+                throw new Error(`Error reading file ${filePath}: ${error.message}`);
+            }
+        }
+    }
 }
 
 class MessageHandler {
@@ -113,12 +122,8 @@ class MessageHandler {
     }
 
     addTextFromFile(filePath, config = { role: "user" }) {
-        try {
-            const content = fs.readFileSync(filePath, { encoding: 'utf8' });
-            this.addText(content, config);
-        } catch (error) {
-            console.error(`Error reading file ${filePath}:`, error);
-        }
+        const content = this.mix.readFile(filePath);
+        this.addText(content, config);
         return this;
     }
 
@@ -128,44 +133,36 @@ class MessageHandler {
     }
 
     setSystemFromFile(filePath) {
-        try {
-            const content = fs.readFileSync(filePath, { encoding: 'utf8' });
-            this.setSystem(content);
-        } catch (error) {
-            console.error(`Error reading system message file ${filePath}:`, error);
-        }
+        const content = this.mix.readFile(filePath);
+        this.setSystem(content);
         return this;
     }
 
     addImage(filePath, config = { role: "user" }) {
-        try {
-            const imageBuffer = fs.readFileSync(filePath);
-            const mimeType = mime.lookup(filePath);
+        const imageBuffer = this.mix.readFile(filePath, { encoding: null });
+        const mimeType = mime.lookup(filePath);
 
-            if (!mimeType || !mimeType.startsWith('image/')) {
-                throw new Error('Invalid image file type');
-            }
-
-            const data = imageBuffer.toString('base64');
-
-            const imageMessage = {
-                ...config,
-                content: [
-                    {
-                        type: "image",
-                        "source": {
-                            type: "base64",
-                            media_type: mimeType,
-                            data
-                        }
-                    }
-                ]
-            };
-
-            this.messages.push(imageMessage);
-        } catch (error) {
-            console.error('Error reading the image file:', error);
+        if (!mimeType || !mimeType.startsWith('image/')) {
+            throw new Error('Invalid image file type');
         }
+
+        const data = imageBuffer.toString('base64');
+
+        const imageMessage = {
+            ...config,
+            content: [
+                {
+                    type: "image",
+                    "source": {
+                        type: "base64",
+                        media_type: mimeType,
+                        data
+                    }
+                }
+            ]
+        };
+
+        this.messages.push(imageMessage);
 
         return this;
     }
@@ -233,17 +230,13 @@ class MessageHandler {
     }
 
     replaceKeyFromFile(key, filePath) {
-        try {
-            const content = fs.readFileSync(filePath, { encoding: 'utf8' });
-            this.replace({ [key]: this.template(content, this.config.replace) });
-        } catch (error) {
-            console.error(`Error reading file ${filePath}:`, error);
-        }
+        const content = this.mix.readFile(filePath);
+        this.replace({ [key]: this.template(content, this.config.replace) });
         return this;
     }
 
     template(input, replace) {
-        return input.split(/([¿?¡!,"';:\.\s])/).map(x => x in replace ? replace[x] : x).join("");
+        return input.split(/([¿?¡!,"';:\(\)\.\s])/).map(x => x in replace ? replace[x] : x).join("");
     }
 
     groupByRoles(messages) {

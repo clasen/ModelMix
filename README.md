@@ -210,11 +210,8 @@ ModelMix now uses Bottleneck for efficient rate limiting of API requests. This i
     const mmix = new ModelMix({
         config: {
             bottleneck: {
-                maxConcurrent: 5,     // Maximum number of concurrent requests
-                minTime: 200,         // Minimum time between requests (in ms)
-                reservoir: 60,        // Number of requests allowed in the reservoir period
-                reservoirRefreshAmount: 60, // How many requests are added when the reservoir refreshes
-                reservoirRefreshInterval: 60 * 1000 // Reservoir refresh interval (60 seconds)
+                maxConcurrent: 8,     // Maximum number of concurrent requests
+                minTime: 500          // Minimum time between requests (in ms)
             }
         }
     });
@@ -242,11 +239,11 @@ new ModelMix(args = { options: {}, config: {} })
     - `system`: Sets the default system message for the model, e.g., "You are an assistant."
     - `max_history`: Limits the number of historical messages to retain, e.g., 5.
     - `bottleneck`: Configures the rate limiting behavior using Bottleneck. For example:
-      - `maxConcurrent`: 5 Maximum number of concurrent requests
-      - `minTime`: 200 Minimum time between requests (in ms)
-      - `reservoir`: 60 Number of requests allowed in the reservoir period
-      - `reservoirRefreshAmount`: 60 How many requests are added when the reservoir refreshes
-      - `reservoirRefreshInterval`: 60 * 1000 // Reservoir refresh interval (60 seconds)
+      - `maxConcurrent`: Maximum number of concurrent requests
+      - `minTime`: Minimum time between requests (in ms)
+      - `reservoir`: Number of requests allowed in the reservoir period
+      - `reservoirRefreshAmount`: How many requests are added when the reservoir refreshes
+      - `reservoirRefreshInterval`: Reservoir refresh interval
     - ...(Additional configuration parameters can be added as needed)
 
 **Methods**
