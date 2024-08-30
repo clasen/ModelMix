@@ -236,7 +236,10 @@ class MessageHandler {
     }
 
     template(input, replace) {
-        return input.split(/([¿?¡!,"';:\(\)\.\s])/).map(x => x in replace ? replace[x] : x).join("");
+        for (const k in replace) {
+            input = input.split(/([¿?¡!,"';:\(\)\.\s])/).map(x => x === k ? replace[k] : x).join("");
+        }
+        return input;
     }
 
     groupByRoles(messages) {
