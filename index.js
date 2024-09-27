@@ -595,4 +595,38 @@ class MixGroq extends MixCustom {
     }
 }
 
-module.exports = { MixCustom, ModelMix, MixAnthropic, MixOpenAI, MixPerplexity, MixOllama, MixLMStudio, MixGroq };
+class MixTogether extends MixCustom {
+    getDefaultConfig(customConfig) {
+        return super.getDefaultConfig({
+            url: 'https://api.together.xyz/v1/chat/completions',
+            prefix: ["meta-llama", "google", "NousResearch"],
+            apiKey: process.env.TOGETHER_API_KEY,
+            ...customConfig
+        });
+    }
+
+    getDefaultOptions(customOptions) {
+        return {
+            stop: ["<|eot_id|>", "<|eom_id|>"],
+            ...customOptions
+        };
+    }
+
+    convertMessages(messages) {
+        return messages.map(message => {
+            if (message.content instanceof Array) {
+                message.content = message.content.map(content => content.text).join("\n\n");
+            }
+            return message;
+        });
+    }
+
+    create(args = { config: {}, options: {} }) {
+        args.options.messages = [{ role: 'system', content: args.config.system }, ...args.options.messages || []];
+        args.options.messages = this.convertMessages(args.options.messages);
+
+        return super.create(args);
+    }
+}
+
+module.exports = { MixCustom, ModelMix, MixAnthropic, MixOpenAI, MixPerplexity, MixOllama, MixLMStudio, MixGroq, MixTogether };
