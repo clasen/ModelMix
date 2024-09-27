@@ -33,13 +33,14 @@ Here's a quick example to get you started:
     ANTHROPIC_API_KEY="your_anthropic_api_key"
     PPLX_API_KEY="your_perplexity_api_key"
     GROQ_API_KEY="your_groq_api_key"
+    TOGETHER_API_KEY="your_together_api_key"
     ```
 
 2. **Create and configure your models**:
 
     ```javascript
     import 'dotenv/config';
-    import { ModelMix, MixOpenAI, MixAnthropic, MixPerplexity, MixOllama } from 'modelmix';
+    import { ModelMix, MixOpenAI, MixAnthropic, MixPerplexity, MixOllama, MixTogether } from 'modelmix';
 
     const env = process.env;
 
@@ -58,7 +59,7 @@ Here's a quick example to get you started:
     mmix.replace({ '{name}': 'ALF' });
 
     mmix.attach(new MixOpenAI({ config: { apiKey: env.OPENAI_API_KEY } }));
-    mmix.attach(new MixAnthropic({ config: { apiKey: env.ANTHROPIC_API_KEY } }));
+    mmix.attach(new MixAnthropic()); // it will use the default apiKey from process.env
     mmix.attach(new MixPerplexity({
         config: {
             apiKey: env.PPLX_API_KEY
@@ -76,6 +77,7 @@ Here's a quick example to get you started:
             temperature: 0.5,
         }
     }));
+    mmix.attach(new MixTogether());
     ```
 
 3. **Generate responses from different models**:
@@ -120,6 +122,14 @@ Here's a quick example to get you started:
         .addImage("./watson.jpg")
         .addText("What is the predominant color?")
         .stream((data) => { console.log(data.message); });
+    ```
+
+    #### Together AI (meta-llama/Llama-3.2-3B-Instruct-Turbo)
+    ```javascript
+    const together = mmix.create('meta-llama/Llama-3.2-3B-Instruct-Turbo', { options: { temperature: 0.7 } });
+    together.addText('What are the main differences between Python and JavaScript?');
+    const comparison = await together.message();
+    console.log(comparison);
     ```
 4. Find the files for this example at: [/ModelMix/demo](https://github.com/clasen/ModelMix/tree/master/demo).
 
@@ -345,6 +355,16 @@ new MixLMStudio(args = { config: {}, options: {} })
   - **config**: Specific configuration settings for Ollama.
     - `url`: The endpoint URL to which the model sends requests.
   - **options**: Default options for Ollama model instances.
+
+### MixTogether Class Overview
+
+```javascript
+new MixTogether(args = { config: {}, options: {} })
+```
+
+- **args**: Configuration object with `config` and `options` properties.
+  - **config**: Specific configuration settings for Together AI, including the `apiKey`.
+  - **options**: Default options for Together AI model instances.
 
 ## 🤝 Contributing
 
