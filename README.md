@@ -6,7 +6,7 @@
 
 - **Unified Interface**: Interact with multiple AI models through a single, coherent API.
 - **Request Rate Control**: Manage the rate of requests to adhere to provider limitations using Bottleneck.
-- **Flexible Integration**: Easily integrate popular models like OpenAI, Anthropic, Perplexity, Groq, Ollama, LM Studio or custom models.
+- **Flexible Integration**: Easily integrate popular models like OpenAI, Anthropic, Perplexity, Groq, Together AI, Ollama, LM Studio or custom models.
 - **History Tracking**: Automatically logs the conversation history with model responses, allowing you to limit the number of historical messages with `max_history`.
 
 ## 📦 Installation
