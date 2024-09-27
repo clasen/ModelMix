@@ -15,6 +15,6 @@ const mmix = new ModelMix({
 
 mmix.attach(new MixTogether());
 
-let r = mmix.create('NousResearch/Hermes-3-Llama-3.1-405B-Turbo').addText('hi there')
-r = await r.addText('do you like cats?').message()
-console.log(r)
+let r = mmix.create('NousResearch/Hermes-3-Llama-3.1-405B-Turbo').addText('hi there');
+r = await r.addText('do you like cats?').message();
+console.log(r);
