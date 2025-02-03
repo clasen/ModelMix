@@ -1,6 +1,6 @@
 {
   "name": "modelmix",
-  "version": "2.7.2",
+  "version": "2.7.4",
   "description": "🧬 ModelMix - Unified API for Diverse AI LLM.",
   "main": "index.js",
   "repository": {
@@ -31,6 +31,9 @@
     "together",
     "gpt-o1",
     "gpt-o1-mini",
+    "deepseek",
+    "o3",
+    "o3-mini",    
     "nousresearch",
     "hermes",
     "bottleneck",

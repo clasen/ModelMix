@@ -4,7 +4,7 @@ import { ModelMix, MixCustom, MixTogether } from '../index.js';
 
 const mmix = new ModelMix({
     options: {
-        max_tokens: 200,
+        max_tokens: 2000,
     },
     config: {
         system: 'You are ALF from Melmac.',
@@ -15,6 +15,6 @@ const mmix = new ModelMix({
 
 mmix.attach(new MixTogether());
 
-let r = mmix.create('NousResearch/Hermes-3-Llama-3.1-405B-Turbo').addText('hi there');
+let r = mmix.create('deepseek-ai/DeepSeek-R1').addText('hi there');
 r = await r.addText('do you like cats?').message();
 console.log(r);

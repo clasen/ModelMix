@@ -428,7 +428,7 @@ class MixOpenAI extends MixCustom {
     getDefaultConfig(customConfig) {
         return super.getDefaultConfig({
             url: 'https://api.openai.com/v1/chat/completions',
-            prefix: ['gpt'],
+            prefix: ['gpt', 'ft:', 'o3'],
             apiKey: process.env.OPENAI_API_KEY,
             ...customConfig
         });
@@ -582,7 +582,7 @@ class MixGroq extends MixCustom {
     getDefaultConfig(customConfig) {
         return super.getDefaultConfig({
             url: 'https://api.groq.com/openai/v1/chat/completions',
-            prefix: ["llama", "mixtral", "gemma"],
+            prefix: ["llama", "mixtral", "gemma", "deepseek-r1-distill"],
             apiKey: process.env.GROQ_API_KEY,
             ...customConfig
         });
@@ -599,7 +599,7 @@ class MixTogether extends MixCustom {
     getDefaultConfig(customConfig) {
         return super.getDefaultConfig({
             url: 'https://api.together.xyz/v1/chat/completions',
-            prefix: ["meta-llama", "google", "NousResearch"],
+            prefix: ["meta-llama", "google", "NousResearch", "deepseek-ai"],
             apiKey: process.env.TOGETHER_API_KEY,
             ...customConfig
         });

@@ -124,9 +124,9 @@ Here's a quick example to get you started:
         .stream((data) => { console.log(data.message); });
     ```
 
-    #### Together AI (meta-llama/Llama-3.2-3B-Instruct-Turbo)
+    #### Together AI (deepseek-ai/DeepSeek-R1)
     ```javascript
-    const together = mmix.create('meta-llama/Llama-3.2-3B-Instruct-Turbo', { options: { temperature: 0.7 } });
+    const together = mmix.create('deepseek-ai/DeepSeek-R1', { options: { temperature: 0.7 } });
     together.addText('What are the main differences between Python and JavaScript?');
     const comparison = await together.message();
     console.log(comparison);

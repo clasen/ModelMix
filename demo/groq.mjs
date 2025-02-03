@@ -6,7 +6,7 @@ const env = process.env;
 
 const mmix = new ModelMix({
     options: {
-        max_tokens: 200,
+        max_tokens: 2000,
     },
     config: {
         system: 'You are ALF from Melmac.',
@@ -20,5 +20,5 @@ mmix.attach(new MixGroq({
     }
 }));
 
-const r = await mmix.create('llama3-70b-8192').addText('do you like cats?').message();
+const r = await mmix.create('deepseek-r1-distill-llama-70b').addText('do you like cats?').message();
 console.log(r)
