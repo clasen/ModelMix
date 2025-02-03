@@ -59,12 +59,6 @@ class ModelMix {
             model: modelKey
         };
 
-        // Remove max_tokens for o3 models
-        if (modelKey.startsWith('o3')) {
-            delete options.max_tokens;
-            delete options.temperature;
-        }
-
         const config = {
             ...this.config,
             ...modelEntry.config,
@@ -434,13 +428,19 @@ class MixOpenAI extends MixCustom {
     getDefaultConfig(customConfig) {
         return super.getDefaultConfig({
             url: 'https://api.openai.com/v1/chat/completions',
-            prefix: ['gpt', 'ft:', 'o3'],
+            prefix: ['gpt', 'ft:', 'o3', 'o1'],
             apiKey: process.env.OPENAI_API_KEY,
             ...customConfig
         });
     }
 
     create(args = { config: {}, options: {} }) {
+        // Remove max_tokens and temperature for o1/o3 models
+        if (args.options.model?.startsWith('o')) {
+            delete args.options.max_tokens;
+            delete args.options.temperature;
+        }
+
         args.options.messages = [{ role: 'system', content: args.config.system }, ...args.options.messages || []];
         args.options.messages = MixOpenAI.convertMessages(args.options.messages);
         return super.create(args);

@@ -1,6 +1,6 @@
 {
   "name": "modelmix",
-  "version": "2.7.6",
+  "version": "2.8.0",
   "description": "🧬 ModelMix - Unified API for Diverse AI LLM.",
   "main": "index.js",
   "repository": {
@@ -29,8 +29,8 @@
     "ollama",
     "lmstudio",
     "together",
-    "gpt-o1",
-    "gpt-o1-mini",
+    "o1",
+    "o1-mini",
     "deepseek",
     "o3",
     "o3-mini",    
