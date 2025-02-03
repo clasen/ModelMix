@@ -59,6 +59,12 @@ class ModelMix {
             model: modelKey
         };
 
+        // Remove max_tokens for o3 models
+        if (modelKey.startsWith('o3')) {
+            delete options.max_tokens;
+            delete options.temperature;
+        }
+
         const config = {
             ...this.config,
             ...modelEntry.config,
