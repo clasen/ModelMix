@@ -426,6 +426,9 @@ class MixCustom {
 
 class MixOpenAI extends MixCustom {
     getDefaultConfig(customConfig) {
+        if (!customConfig.apiKey && !process.env.OPENAI_API_KEY) {
+            throw new Error('OpenAI API key not found. Please provide it in customConfig or set OPENAI_API_KEY environment variable.');
+        }
         return super.getDefaultConfig({
             url: 'https://api.openai.com/v1/chat/completions',
             prefix: ['gpt', 'ft:', 'o3', 'o1'],
@@ -469,6 +472,9 @@ class MixOpenAI extends MixCustom {
 
 class MixAnthropic extends MixCustom {
     getDefaultConfig(customConfig) {
+        if (!customConfig.apiKey && !process.env.ANTHROPIC_API_KEY) {
+            throw new Error('Anthropic API key not found. Please provide it in customConfig or set ANTHROPIC_API_KEY environment variable.');
+        }
         return super.getDefaultConfig({
             url: 'https://api.anthropic.com/v1/messages',
             prefix: ['claude'],
@@ -502,6 +508,9 @@ class MixAnthropic extends MixCustom {
 
 class MixPerplexity extends MixCustom {
     getDefaultConfig(customConfig) {
+        if (!customConfig.apiKey && !process.env.PPLX_API_KEY) {
+            throw new Error('Perplexity API key not found. Please provide it in customConfig or set PPLX_API_KEY environment variable.');
+        }
         return super.getDefaultConfig({
             url: 'https://api.perplexity.ai/chat/completions',
             prefix: ['llama-3', 'mixtral'],
@@ -586,6 +595,9 @@ class MixLMStudio extends MixCustom {
 
 class MixGroq extends MixCustom {
     getDefaultConfig(customConfig) {
+        if (!customConfig.apiKey && !process.env.GROQ_API_KEY) {
+            throw new Error('Groq API key not found. Please provide it in customConfig or set GROQ_API_KEY environment variable.');
+        }
         return super.getDefaultConfig({
             url: 'https://api.groq.com/openai/v1/chat/completions',
             prefix: ["llama", "mixtral", "gemma", "deepseek-r1-distill"],
@@ -603,6 +615,9 @@ class MixGroq extends MixCustom {
 
 class MixTogether extends MixCustom {
     getDefaultConfig(customConfig) {
+        if (!customConfig.apiKey && !process.env.TOGETHER_API_KEY) {
+            throw new Error('Together API key not found. Please provide it in customConfig or set TOGETHER_API_KEY environment variable.');
+        }
         return super.getDefaultConfig({
             url: 'https://api.together.xyz/v1/chat/completions',
             prefix: ["meta-llama", "google", "NousResearch", "deepseek-ai"],
