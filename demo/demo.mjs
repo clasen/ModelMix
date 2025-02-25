@@ -44,8 +44,8 @@ claude.addImageFromUrl('https://pbs.twimg.com/media/F6-GsjraAAADDGy?format=jpg')
 const imageDescription = await claude.addText('describe the image').message();
 console.log(imageDescription);
 
-console.log("\n" + '--------| claude-3-5-sonnet-20240620 |--------');
-const writer = mmix.create('claude-3-5-sonnet-20240620', { options: { temperature: 0.5 } });
+console.log("\n" + '--------| claude-3-7-sonnet-20250219 |--------');
+const writer = mmix.create('claude-3-7-sonnet-20250219', { options: { temperature: 0.5 } });
 writer.setSystem('You are a writer like Stephen King');
 writer.replaceKeyFromFile('{story_title}', './title.md');
 const story = await writer.addTextFromFile('./prompt.md').message();
