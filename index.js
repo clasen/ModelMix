@@ -23,7 +23,7 @@ class ModelMix {
 
         this.config = {
             system: 'You are an assistant.',
-            max_history: 5, // Default max history
+            max_history: 1, // Default max history
             debug: false,
             bottleneck: defaultBottleneckConfig,
             ...args.config
@@ -43,14 +43,30 @@ class ModelMix {
         return this;
     }
 
-    create(modelKey, args = { config: {}, options: {} }) {
+    create(modelKeys, args = { config: {}, options: {} }) {
+        // If modelKeys is a string, convert it to an array for backwards compatibility
+        const modelArray = Array.isArray(modelKeys) ? modelKeys : [modelKeys];
+
+        if (modelArray.length === 0) {
+            throw new Error('No model keys provided');
+        }
+
+        // Verificar que todos los modelos estén disponibles
+        const unavailableModels = modelArray.filter(modelKey => {
+            return !Object.values(this.models).some(entry =>
+                entry.config.prefix.some(p => modelKey.startsWith(p))
+            );
+        });
+
+        if (unavailableModels.length > 0) {
+            throw new Error(`The following models are not available: ${unavailableModels.join(', ')}`);
+        }
+
+        // Una vez verificado que todos están disponibles, obtener el primer modelo
+        const modelKey = modelArray[0];
         const modelEntry = Object.values(this.models).find(entry =>
             entry.config.prefix.some(p => modelKey.startsWith(p))
         );
-
-        if (!modelEntry) {
-            throw new Error(`Model with prefix matching ${modelKey} is not attached.`);
-        }
 
         const options = {
             ...this.defaultOptions,
@@ -65,7 +81,8 @@ class ModelMix {
             ...args.config
         };
 
-        return new MessageHandler(this, modelEntry, options, config);
+        // Pass remaining models array for fallback
+        return new MessageHandler(this, modelEntry, options, config, modelArray.slice(1));
     }
 
     setSystem(text) {
@@ -81,7 +98,7 @@ class ModelMix {
 
     readFile(filePath, options = { encoding: 'utf8' }) {
         try {
-            const absolutePath = path.resolve(process.cwd(), filePath);
+            const absolutePath = path.resolve(filePath);
             return fs.readFileSync(absolutePath, options);
         } catch (error) {
             if (error.code === 'ENOENT') {
@@ -96,13 +113,13 @@ class ModelMix {
 }
 
 class MessageHandler {
-    constructor(mix, modelEntry, options, config) {
+    constructor(mix, modelEntry, options, config, fallbackModels = []) {
         this.mix = mix;
         this.modelEntry = modelEntry;
         this.options = options;
         this.config = config;
         this.messages = [];
-
+        this.fallbackModels = fallbackModels;
         this.imagesToProcess = [];
     }
 
@@ -276,22 +293,42 @@ class MessageHandler {
 
     async execute() {
         return this.mix.limiter.schedule(async () => {
-            await this.processImageUrls();
-
-            this.applyTemplate();
-            this.messages = this.messages.slice(-this.config.max_history);
-            this.messages = this.groupByRoles(this.messages);
-
-            if (this.messages.length === 0) {
-                throw new Error("No user messages have been added. Use addText(prompt), addTextFromFile(filePath), addImage(filePath), or addImageFromUrl(url) to add a prompt.");
-            }
-
-            this.options.messages = this.messages;
-
             try {
-                const result = await this.modelEntry.create({ options: this.options, config: this.config });
-                this.messages.push({ role: "assistant", content: result.message });
-                return result;
+                await this.processImageUrls();
+                this.applyTemplate();
+                this.messages = this.messages.slice(-this.config.max_history);
+                this.messages = this.groupByRoles(this.messages);
+
+                if (this.messages.length === 0) {
+                    throw new Error("No user messages have been added. Use addText(prompt), addTextFromFile(filePath), addImage(filePath), or addImageFromUrl(url) to add a prompt.");
+                }
+
+                this.options.messages = this.messages;
+
+                try {
+                    const result = await this.modelEntry.create({ options: this.options, config: this.config });
+                    this.messages.push({ role: "assistant", content: result.message });
+                    return result;
+                } catch (error) {
+                    // If there are fallback models available, try the next one
+                    if (this.fallbackModels.length > 0) {
+                        const nextModelKey = this.fallbackModels[0];
+                        log.warn(`Model ${this.options.model} failed, trying fallback model ${nextModelKey}...`);
+                        
+                        // Create new handler with remaining fallback models
+                        const nextHandler = this.mix.create(nextModelKey, {
+                            options: this.options,
+                            config: this.config
+                        });
+                        
+                        // Copy current messages to new handler
+                        nextHandler.messages = [...this.messages];
+                        
+                        // Try with next model
+                        return nextHandler.execute();
+                    }
+                    throw error;
+                }
             } catch (error) {
                 throw error;
             }
@@ -581,6 +618,17 @@ class MixOllama extends MixCustom {
     }
 }
 
+class MixGrok extends MixOpenAI {
+    getDefaultConfig(customConfig) {
+        return super.getDefaultConfig({
+            url: 'https://api.x.ai/v1/chat/completions',
+            prefix: ['grok'],
+            apiKey: process.env.XAI_API_KEY,            
+            ...customConfig
+        });
+    }
+}
+
 class MixLMStudio extends MixCustom {
     getDefaultConfig(customConfig) {
         return super.getDefaultConfig({
@@ -655,4 +703,4 @@ class MixTogether extends MixCustom {
     }
 }
 
-module.exports = { MixCustom, ModelMix, MixAnthropic, MixOpenAI, MixPerplexity, MixOllama, MixLMStudio, MixGroq, MixTogether };
+module.exports = { MixCustom, ModelMix, MixAnthropic, MixOpenAI, MixPerplexity, MixOllama, MixLMStudio, MixGroq, MixTogether, MixGrok };

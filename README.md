@@ -8,6 +8,7 @@
 - **Request Rate Control**: Manage the rate of requests to adhere to provider limitations using Bottleneck.
 - **Flexible Integration**: Easily integrate popular models like OpenAI, Anthropic, Perplexity, Groq, Together AI, Ollama, LM Studio or custom models.
 - **History Tracking**: Automatically logs the conversation history with model responses, allowing you to limit the number of historical messages with `max_history`.
+- **Model Fallbacks**: Automatically try different models if one fails or is unavailable.
 
 ## 📦 Installation
 
@@ -81,6 +82,21 @@ Here's a quick example to get you started:
     ```
 
 3. **Generate responses from different models**:
+
+    #### Model Fallbacks
+    ```javascript
+    // Create a message handler with multiple fallback models
+    const handler = mmix.create(['grok-2-latest', 'claude-3-7-sonnet-20250219']);
+    
+    // If the first model (grok-2-latest) fails or is unavailable,
+    // ModelMix will automatically try the next model (claude-3-7-sonnet)
+    const response = await handler.addText('do you like cats?').message();
+    ```
+
+    The `create()` method accepts either a single model name as a string or an array of model names. When an array is provided, ModelMix will attempt to use each model in order until a successful response is received. This is useful for:
+    - Implementing fallback options when a primary model is unavailable
+    - Load balancing across different providers
+    - Ensuring high availability in your application
 
     #### gpt-4o-mini
     ```javascript
@@ -247,7 +263,7 @@ new ModelMix(args = { options: {}, config: {} })
     - ...(Additional default options can be added as needed)
   - **config**: This object contains configuration settings that control the behavior of the `ModelMix` instance. These settings can also be overridden for specific model instances. Examples of configuration settings include:
     - `system`: Sets the default system message for the model, e.g., "You are an assistant."
-    - `max_history`: Limits the number of historical messages to retain, e.g., 5.
+    - `max_history`: Limits the number of historical messages to retain, e.g., 1.
     - `bottleneck`: Configures the rate limiting behavior using Bottleneck. For example:
       - `maxConcurrent`: Maximum number of concurrent requests
       - `minTime`: Minimum time between requests (in ms)

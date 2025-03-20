@@ -1,6 +1,6 @@
 {
   "name": "modelmix",
-  "version": "2.8.8",
+  "version": "2.9.2",
   "description": "🧬 ModelMix - Unified API for Diverse AI LLM.",
   "main": "index.js",
   "repository": {
@@ -15,6 +15,7 @@
     "anthropic",
     "agent",
     "perplexity",
+    "grok",
     "sonnet-3",
     "gpt",
     "claude",
@@ -28,6 +29,7 @@
     "together",
     "o1",
     "deepseek",
+    "fallback",
     "o3",
     "o3-mini",    
     "nousresearch",
