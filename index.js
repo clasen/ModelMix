@@ -37,9 +37,11 @@ class ModelMix {
         return this;
     }
 
-    attach(modelInstance) {
-        const key = modelInstance.config.prefix.join("_");
-        this.models[key] = modelInstance;
+    attach(...modelInstances) {
+        for (const modelInstance of modelInstances) {
+            const key = modelInstance.config.prefix.join("_");
+            this.models[key] = modelInstance;
+        }
         return this;
     }
 
@@ -315,14 +317,28 @@ class MessageHandler {
                         const nextModelKey = this.fallbackModels[0];
                         log.warn(`Model ${this.options.model} failed, trying fallback model ${nextModelKey}...`);
                         
-                        // Create new handler with remaining fallback models
-                        const nextHandler = this.mix.create(nextModelKey, {
-                            options: this.options,
-                            config: this.config
-                        });
+                        // Create a completely new handler with the fallback model
+                        const nextHandler = this.mix.create(
+                            [nextModelKey, ...this.fallbackModels.slice(1)], 
+                            {
+                                options: {
+                                    // Keep only generic options, not model-specific ones
+                                    max_tokens: this.options.max_tokens,
+                                    temperature: this.options.temperature,
+                                    top_p: this.options.top_p,
+                                    stream: this.options.stream
+                                }
+                            }
+                        );
                         
-                        // Copy current messages to new handler
+                        // Asignar directamente todos los mensajes
                         nextHandler.messages = [...this.messages];
+                        
+                        // Mantener el mismo sistema y reemplazos
+                        nextHandler.setSystem(this.config.system);
+                        if (this.config.replace) {
+                            nextHandler.replace(this.config.replace);
+                        }
                         
                         // Try with next model
                         return nextHandler.execute();

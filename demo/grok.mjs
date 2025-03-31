@@ -1,6 +1,6 @@
 import 'dotenv/config'
 
-import { ModelMix, MixGrok, MixAnthropic } from '../index.js';
+import { ModelMix, MixGrok, MixAnthropic, MixOpenAI } from '../index.js';
 
 const mmix = new ModelMix({
     options: {
@@ -12,8 +12,7 @@ const mmix = new ModelMix({
     }
 });
 
-mmix.attach(new MixGrok());
-mmix.attach(new MixAnthropic());
+mmix.attach(new MixGrok(), new MixAnthropic(), new MixOpenAI());
 
-const r = await mmix.create(['grok-2-latest', 'claude-3-7-sonnet-20250219']).addText('do you like cats?').message();
-console.log(r)
+const r = await mmix.create(['claude-3-7-sonnet-20250219', 'o3-mini', 'grok-2-latest']).addText('do you like cats?').message();
+console.log(r);
