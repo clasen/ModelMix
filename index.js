@@ -316,7 +316,8 @@ class MessageHandler {
                     if (this.fallbackModels.length > 0) {
                         const nextModelKey = this.fallbackModels[0];
                         log.warn(`Model ${this.options.model} failed, trying fallback model ${nextModelKey}...`);
-                        
+                        log.warn(error.details);
+
                         // Create a completely new handler with the fallback model
                         const nextHandler = this.mix.create(
                             [nextModelKey, ...this.fallbackModels.slice(1)], 
