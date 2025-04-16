@@ -293,19 +293,22 @@ class MessageHandler {
         });
     }
 
+    async prepareMessages() {
+        await this.processImageUrls();
+        this.applyTemplate();
+        this.messages = this.messages.slice(-this.config.max_history);
+        this.messages = this.groupByRoles(this.messages);
+        this.options.messages = this.messages;
+    }
+
     async execute() {
         return this.mix.limiter.schedule(async () => {
             try {
-                await this.processImageUrls();
-                this.applyTemplate();
-                this.messages = this.messages.slice(-this.config.max_history);
-                this.messages = this.groupByRoles(this.messages);
+                await this.prepareMessages();
 
                 if (this.messages.length === 0) {
                     throw new Error("No user messages have been added. Use addText(prompt), addTextFromFile(filePath), addImage(filePath), or addImageFromUrl(url) to add a prompt.");
                 }
-
-                this.options.messages = this.messages;
 
                 try {
                     const result = await this.modelEntry.create({ options: this.options, config: this.config });
@@ -316,7 +319,7 @@ class MessageHandler {
                     if (this.fallbackModels.length > 0) {
                         const nextModelKey = this.fallbackModels[0];
                         log.warn(`Model ${this.options.model} failed, trying fallback model ${nextModelKey}...`);
-                        log.warn(error.details);
+                        error.details && log.warn(error.details);
 
                         // Create a completely new handler with the fallback model
                         const nextHandler = this.mix.create(
@@ -332,17 +335,23 @@ class MessageHandler {
                             }
                         );
                         
-                        // Asignar directamente todos los mensajes
+                        // Assign all messages directly
                         nextHandler.messages = [...this.messages];
                         
-                        // Mantener el mismo sistema y reemplazos
+                        // Keep same system and replacements
                         nextHandler.setSystem(this.config.system);
                         if (this.config.replace) {
                             nextHandler.replace(this.config.replace);
                         }
                         
-                        // Try with next model
-                        return nextHandler.execute();
+                        await nextHandler.prepareMessages();
+                        
+                        const result = await nextHandler.modelEntry.create({ 
+                            options: nextHandler.options, 
+                            config: nextHandler.config 
+                        });
+                        nextHandler.messages.push({ role: "assistant", content: result.message });
+                        return result;
                     }
                     throw error;
                 }
