@@ -1,6 +1,6 @@
 {
   "name": "modelmix",
-  "version": "2.9.6",
+  "version": "2.9.8",
   "description": "🧬 ModelMix - Unified API for Diverse AI LLM.",
   "main": "index.js",
   "repository": {
@@ -31,11 +31,13 @@
     "deepseek",
     "fallback",
     "o3",
-    "o3-mini",    
+    "o3-mini",
     "nousresearch",
     "reasoning",
     "bottleneck",
     "claude-3-7-sonnet",
+    "cerebras",
+    "scout",
     "clasen"
   ],
   "author": "Martin Clasen",
@@ -45,7 +47,7 @@
   },
   "homepage": "https://github.com/clasen/ModelMix#readme",
   "dependencies": {
-    "axios": "^1.7.4",
+    "axios": "^1.8.4",
     "bottleneck": "^2.19.5",
     "lemonlog": "^1.1.2"
   }

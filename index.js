@@ -720,4 +720,20 @@ class MixTogether extends MixCustom {
     }
 }
 
-module.exports = { MixCustom, ModelMix, MixAnthropic, MixOpenAI, MixPerplexity, MixOllama, MixLMStudio, MixGroq, MixTogether, MixGrok };
+class MixCerebras extends MixCustom {
+    getDefaultConfig(customConfig) {
+        return super.getDefaultConfig({
+            url: 'https://api.cerebras.ai/v1/chat/completions',
+            prefix: ["llama"],
+            apiKey: process.env.CEREBRAS_API_KEY,
+            ...customConfig
+        });
+    }
+
+    create(args = { config: {}, options: {} }) {
+        args.options.messages = [{ role: 'system', content: args.config.system }, ...args.options.messages || []];
+        return super.create(args);
+    }
+}
+
+module.exports = { MixCustom, ModelMix, MixAnthropic, MixOpenAI, MixPerplexity, MixOllama, MixLMStudio, MixGroq, MixTogether, MixGrok, MixCerebras };

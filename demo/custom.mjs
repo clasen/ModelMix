@@ -1,6 +1,6 @@
 import 'dotenv/config'
 
-import { ModelMix, MixCustom, MixTogether } from '../index.js';
+import { ModelMix, MixCerebras, MixTogether } from '../index.js';
 
 const mmix = new ModelMix({
     options: {
@@ -13,8 +13,8 @@ const mmix = new ModelMix({
     }
 });
 
-mmix.attach(new MixTogether());
+mmix.attach(new MixCerebras());
 
-let r = mmix.create('deepseek-ai/DeepSeek-R1').addText('hi there');
+let r = mmix.create('llama-4-scout-17b-16e-instruct').addText('hi there');
 r = await r.addText('do you like cats?').message();
 console.log(r);
