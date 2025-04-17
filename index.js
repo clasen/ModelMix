@@ -491,7 +491,7 @@ class MixOpenAI extends MixCustom {
     getDefaultConfig(customConfig) {
         return super.getDefaultConfig({
             url: 'https://api.openai.com/v1/chat/completions',
-            prefix: ['gpt', 'ft:', 'o3', 'o1'],
+            prefix: ['gpt', 'ft:', 'o'],
             apiKey: process.env.OPENAI_API_KEY,
             ...customConfig
         });
