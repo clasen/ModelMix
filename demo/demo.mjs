@@ -1,6 +1,7 @@
 import 'dotenv/config';
 import { ModelMix, MixOpenAI, MixAnthropic, MixPerplexity, MixOllama } from '../index.js';
 
+
 const mmix = new ModelMix({
     options: {
         max_tokens: 200,
@@ -20,7 +21,7 @@ mmix.attach(new MixPerplexity({
         apiKey: process.env.PPLX_API_KEY,
         system: 'You are my personal assistant.'
     },
-    
+
 }));
 mmix.attach(new MixOllama({
     config: {
@@ -33,16 +34,16 @@ mmix.attach(new MixOllama({
 
 mmix.replace({ '{name}': 'ALF' });
 
-console.log("\n" + '--------| o3-mini |--------');
-const gpt = mmix.create('o3-mini', { options: { temperature: 0 } }).addText("Have you ever eaten a {animal}?");
+console.log("\n" + '--------| gpt-4.1-nano |--------');
+const gpt = mmix.create('gpt-4.1-nano', { options: { temperature: 0 } }).addText("Have you ever eaten a {animal}?");
 gpt.replace({ '{animal}': 'cat' });
-console.log(await gpt.message());
+console.log(await gpt.json({ time: '24:00:00', message: 'Hello' }, { time: 'Time in format HH:MM:SS' }));
 
-console.log("\n" + '--------| claude-3-5-sonnet-20240620 |--------');
-const claude = mmix.create('claude-3-5-sonnet-20240620', { options: { temperature: 0 } });
-claude.addImageFromUrl('https://pbs.twimg.com/media/F6-GsjraAAADDGy?format=jpg');
-const imageDescription = await claude.addText('describe the image').message();
-console.log(imageDescription);
+// console.log("\n" + '--------| claude-3-5-sonnet-20240620 |--------');
+// const claude = mmix.create('claude-3-5-sonnet-20240620', { options: { temperature: 0 } });
+// claude.addImageFromUrl('https://pbs.twimg.com/media/F6-GsjraAAADDGy?format=jpg');
+// const imageDescription = await claude.addText('describe the image').message();
+// console.log(imageDescription);
 
 console.log("\n" + '--------| claude-3-7-sonnet-20250219 |--------');
 const writer = mmix.create('claude-3-7-sonnet-20250219', { options: { temperature: 0.5 } });

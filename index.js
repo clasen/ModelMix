@@ -4,6 +4,7 @@ const mime = require('mime-types');
 const log = require('lemonlog')('ModelMix');
 const Bottleneck = require('bottleneck');
 const path = require('path');
+const generateJsonSchema = require('./schema');
 
 class ModelMix {
     constructor(args = { options: {}, config: {} }) {
@@ -232,6 +233,24 @@ class MessageHandler {
         return response.message;
     }
 
+    async json(schemaExample = null, schemaDescription = {}) {
+        this.options.response_format = { type: "json_object" };
+        if (schemaExample) {
+            const schema = generateJsonSchema(schemaExample, schemaDescription);
+            this.addText("Output expected JSON Schema: \n```\n" + JSON.stringify(schema, null, 2) + "\n```");
+        }
+        return JSON.parse(await this.message());
+    }
+
+    async block({ addText = true } = {}) {
+        if (addText) {
+            this.addText("Output expected between triple backtick block code tags: \n```\n");
+        }
+        const response = await this.message();
+        const block = response.match(/```(?:\w+)?\s*([\s\S]*?)```/);
+        return block ? block[1].trim() : response;
+    }
+
     async raw() {
         this.options.stream = false;
         return this.execute();
@@ -323,7 +342,7 @@ class MessageHandler {
 
                         // Create a completely new handler with the fallback model
                         const nextHandler = this.mix.create(
-                            [nextModelKey, ...this.fallbackModels.slice(1)], 
+                            [nextModelKey, ...this.fallbackModels.slice(1)],
                             {
                                 options: {
                                     // Keep only generic options, not model-specific ones
@@ -334,21 +353,21 @@ class MessageHandler {
                                 }
                             }
                         );
-                        
+
                         // Assign all messages directly
                         nextHandler.messages = [...this.messages];
-                        
+
                         // Keep same system and replacements
                         nextHandler.setSystem(this.config.system);
                         if (this.config.replace) {
                             nextHandler.replace(this.config.replace);
                         }
-                        
+
                         await nextHandler.prepareMessages();
-                        
-                        const result = await nextHandler.modelEntry.create({ 
-                            options: nextHandler.options, 
-                            config: nextHandler.config 
+
+                        const result = await nextHandler.modelEntry.create({
+                            options: nextHandler.options,
+                            config: nextHandler.config
                         });
                         nextHandler.messages.push({ role: "assistant", content: result.message });
                         return result;
@@ -649,7 +668,7 @@ class MixGrok extends MixOpenAI {
         return super.getDefaultConfig({
             url: 'https://api.x.ai/v1/chat/completions',
             prefix: ['grok'],
-            apiKey: process.env.XAI_API_KEY,            
+            apiKey: process.env.XAI_API_KEY,
             ...customConfig
         });
     }

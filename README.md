@@ -106,6 +106,16 @@ Here's a quick example to get you started:
     console.log(await gpt.message());
     ```
 
+    #### gpt-4.1-nano (json)
+    ```javascript
+    console.log("\n" + '--------| gpt-4.1-nano |--------');
+    const gpt = mmix.create('gpt-4.1-nano', { options: { temperature: 0 } }).addText("Have you ever eaten a {animal}?");
+    gpt.replace({ '{animal}': 'cat' });
+    const schemaExample = { time: '24:00:00', message: 'Hello' };
+    const schemaDescription = { time: 'Time in format HH:MM:SS' }; // optional
+    console.log(await gpt.json(schemaExample, schemaDescription));
+    ```
+
     #### claude-3-5-sonnet-20240620 (writer)
     ```javascript
     const writer = mmix.create('claude-3-5-sonnet-20240620', { options: { temperature: 0.5 } });
@@ -289,6 +299,18 @@ new ModelMix(args = { options: {}, config: {} })
 - `message()`: Sends the message and returns the response.
 - `raw()`: Sends the message and returns the raw response data.
 - `stream(callback)`: Sends the message and streams the response, invoking the callback with each streamed part.
+- `json(schemaExample, descriptions = {})`: Forces the model to return a response in a specific JSON format.
+  - `schemaExample`: Optional example of the JSON structure to be returned.
+  - `descriptions`: Optional descriptions for each field in the JSON structure
+  - Returns a Promise that resolves to the structured JSON response
+  - Example:
+    ```javascript
+    const response = await handler.json(
+      { time: '24:00:00', message: 'Hello' },
+      { time: 'Time in format HH:MM:SS' }
+    );
+    ```
+- `block({ addText = true })`: Forces the model to return a response in a specific block format.
 
 ### MixCustom Class Overview
 
