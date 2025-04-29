@@ -24,6 +24,7 @@ class ModelMix {
 
         this.config = {
             system: 'You are an assistant.',
+            systemExtra: '',
             max_history: 1, // Default max history
             debug: false,
             bottleneck: defaultBottleneckConfig,
@@ -237,16 +238,19 @@ class MessageHandler {
         this.options.response_format = { type: "json_object" };
         if (schemaExample) {
             const schema = generateJsonSchema(schemaExample, schemaDescription);
-            this.addText("Output expected JSON Schema: \n```\n" + JSON.stringify(schema) + "\n```");
+            this.config.systemExtra = "\nOutput JSON Schema: \n```\n" + JSON.stringify(schema) + "\n```";
         }
-        return JSON.parse(await this.message());
+        const response = await this.message();
+        this.config.systemExtra = "";
+        return JSON.parse(response);
     }
 
     async block({ addText = true } = {}) {
         if (addText) {
-            this.addText("Output expected between triple backtick block code tags: \n```\n");
+            this.config.systemExtra = "\nOutput results between triple backtick block code tags: \n```\n";
         }
         const response = await this.message();
+        this.config.systemExtra = "";
         const block = response.match(/```(?:\w+)?\s*([\s\S]*?)```/);
         return block ? block[1].trim() : response;
     }
@@ -315,6 +319,7 @@ class MessageHandler {
     async prepareMessages() {
         await this.processImageUrls();
         this.applyTemplate();
+        this.messages = this.messages.slice(-this.config.max_history);
         this.messages = this.groupByRoles(this.messages);
         this.options.messages = this.messages;
     }
@@ -331,7 +336,6 @@ class MessageHandler {
                 try {
                     const result = await this.modelEntry.create({ options: this.options, config: this.config });
                     this.messages.push({ role: "assistant", content: result.message });
-                    this.messages = this.messages.slice(-this.config.max_history);
                     return result;
                 } catch (error) {
                     // If there are fallback models available, try the next one
@@ -359,6 +363,7 @@ class MessageHandler {
 
                         // Keep same system and replacements
                         nextHandler.setSystem(this.config.system);
+                        nextHandler.config.systemExtra = this.config.systemExtra;
                         if (this.config.replace) {
                             nextHandler.replace(this.config.replace);
                         }
@@ -527,7 +532,8 @@ class MixOpenAI extends MixCustom {
             delete args.options.temperature;
         }
 
-        args.options.messages = [{ role: 'system', content: args.config.system }, ...args.options.messages || []];
+        const content = args.config.system + args.config.systemExtra;
+        args.options.messages = [{ role: 'system', content }, ...args.options.messages || []];
         args.options.messages = MixOpenAI.convertMessages(args.options.messages);
         return super.create(args);
     }
@@ -568,7 +574,7 @@ class MixAnthropic extends MixCustom {
             throw new Error('Anthropic API key not found. Please provide it in config or set ANTHROPIC_API_KEY environment variable.');
         }
 
-        args.options.system = args.config.system;
+        args.options.system = args.config.system + args.config.systemExtra;
         return super.create(args);
     }
 
@@ -605,7 +611,8 @@ class MixPerplexity extends MixCustom {
             throw new Error('Perplexity API key not found. Please provide it in config or set PPLX_API_KEY environment variable.');
         }
 
-        args.options.messages = [{ role: 'system', content: args.config.system }, ...args.options.messages || []];
+        const content = args.config.system + args.config.systemExtra;
+        args.options.messages = [{ role: 'system', content }, ...args.options.messages || []];
         return super.create(args);
     }
 }
@@ -633,7 +640,8 @@ class MixOllama extends MixCustom {
     create(args = { config: {}, options: {} }) {
 
         args.options.messages = MixOllama.convertMessages(args.options.messages);
-        args.options.messages = [{ role: 'system', content: args.config.system }, ...args.options.messages || []];
+        const content = args.config.system + args.config.systemExtra;
+        args.options.messages = [{ role: 'system', content }, ...args.options.messages || []];
         return super.create(args);
     }
 
@@ -683,7 +691,8 @@ class MixLMStudio extends MixCustom {
     }
 
     create(args = { config: {}, options: {} }) {
-        args.options.messages = [{ role: 'system', content: args.config.system }, ...args.options.messages || []];
+        const content = args.config.system + args.config.systemExtra;
+        args.options.messages = [{ role: 'system', content }, ...args.options.messages || []];
         args.options.messages = MixOpenAI.convertMessages(args.options.messages);
         return super.create(args);
     }
@@ -704,7 +713,8 @@ class MixGroq extends MixCustom {
             throw new Error('Groq API key not found. Please provide it in config or set GROQ_API_KEY environment variable.');
         }
 
-        args.options.messages = [{ role: 'system', content: args.config.system }, ...args.options.messages || []];
+        const content = args.config.system + args.config.systemExtra;
+        args.options.messages = [{ role: 'system', content }, ...args.options.messages || []];
         args.options.messages = MixOpenAI.convertMessages(args.options.messages);
         return super.create(args);
     }
@@ -741,7 +751,8 @@ class MixTogether extends MixCustom {
             throw new Error('Together API key not found. Please provide it in config or set TOGETHER_API_KEY environment variable.');
         }
 
-        args.options.messages = [{ role: 'system', content: args.config.system }, ...args.options.messages || []];
+        const content = args.config.system + args.config.systemExtra;
+        args.options.messages = [{ role: 'system', content }, ...args.options.messages || []];
         args.options.messages = MixTogether.convertMessages(args.options.messages);
 
         return super.create(args);
@@ -759,7 +770,8 @@ class MixCerebras extends MixCustom {
     }
 
     create(args = { config: {}, options: {} }) {
-        args.options.messages = [{ role: 'system', content: args.config.system }, ...args.options.messages || []];
+        const content = args.config.system + args.config.systemExtra;
+        args.options.messages = [{ role: 'system', content }, ...args.options.messages || []];
         args.options.messages = MixTogether.convertMessages(args.options.messages);
         return super.create(args);
     }

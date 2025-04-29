@@ -26,17 +26,18 @@ function generateJsonSchema(example, descriptions = {}) {
             return schema;
         }
         if (Array.isArray(value)) {
-            if (value.length > 0 && typeof value[0] === 'object' && !Array.isArray(value[0])) {
-                // Es un array de objetos
+            if (value.length === 0) {
+                return { type: 'array', items: {} };
+            }
+            if (typeof value[0] === 'object' && !Array.isArray(value[0])) {
                 return {
                     type: 'array',
                     items: generateJsonSchema(value[0], descriptions[key] || {})
                 };
             } else {
-                // Es un array de valores simples
                 return {
                     type: 'array',
-                    items: value.length > 0 ? detectType(key, value[0]) : {}
+                    items: detectType(key, value[0])
                 };
             }
         }
@@ -47,10 +48,12 @@ function generateJsonSchema(example, descriptions = {}) {
     }
 
     if (Array.isArray(example)) {
-        // Si el ejemplo raíz es un array
+        if (example.length === 0) {
+            return { type: 'array', items: {} };
+        }
         return {
             type: 'array',
-            items: generateJsonSchema(example[0], descriptions)
+            items: detectType('', example[0])
         };
     }
 
