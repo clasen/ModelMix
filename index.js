@@ -727,7 +727,7 @@ class MixTogether extends MixCustom {
         };
     }
 
-    convertMessages(messages) {
+    static convertMessages(messages) {
         return messages.map(message => {
             if (message.content instanceof Array) {
                 message.content = message.content.map(content => content.text).join("\n\n");
@@ -742,7 +742,7 @@ class MixTogether extends MixCustom {
         }
 
         args.options.messages = [{ role: 'system', content: args.config.system }, ...args.options.messages || []];
-        args.options.messages = this.convertMessages(args.options.messages);
+        args.options.messages = MixTogether.convertMessages(args.options.messages);
 
         return super.create(args);
     }
@@ -760,6 +760,7 @@ class MixCerebras extends MixCustom {
 
     create(args = { config: {}, options: {} }) {
         args.options.messages = [{ role: 'system', content: args.config.system }, ...args.options.messages || []];
+        args.options.messages = MixTogether.convertMessages(args.options.messages);
         return super.create(args);
     }
 }
