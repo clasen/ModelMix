@@ -237,7 +237,7 @@ class MessageHandler {
         this.options.response_format = { type: "json_object" };
         if (schemaExample) {
             const schema = generateJsonSchema(schemaExample, schemaDescription);
-            this.addText("Output expected JSON Schema: \n```\n" + JSON.stringify(schema, null, 2) + "\n```");
+            this.addText("Output expected JSON Schema: \n```\n" + JSON.stringify(schema) + "\n```");
         }
         return JSON.parse(await this.message());
     }
@@ -315,7 +315,6 @@ class MessageHandler {
     async prepareMessages() {
         await this.processImageUrls();
         this.applyTemplate();
-        this.messages = this.messages.slice(-this.config.max_history);
         this.messages = this.groupByRoles(this.messages);
         this.options.messages = this.messages;
     }
@@ -332,6 +331,7 @@ class MessageHandler {
                 try {
                     const result = await this.modelEntry.create({ options: this.options, config: this.config });
                     this.messages.push({ role: "assistant", content: result.message });
+                    this.messages = this.messages.slice(-this.config.max_history);
                     return result;
                 } catch (error) {
                     // If there are fallback models available, try the next one
