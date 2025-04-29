@@ -245,9 +245,9 @@ class MessageHandler {
         return JSON.parse(response);
     }
 
-    async block({ addText = true } = {}) {
-        if (addText) {
-            this.config.systemExtra = "\nOutput results between triple backtick block code tags: \n```\n";
+    async block({ addSystemExtra = true } = {}) {
+        if (addSystemExtra) {
+            this.config.systemExtra = "\nReturn the result of the task between triple backtick block code tags: ```";
         }
         const response = await this.message();
         this.config.systemExtra = "";

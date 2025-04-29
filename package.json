@@ -1,6 +1,6 @@
 {
   "name": "modelmix",
-  "version": "3.1.0",
+  "version": "3.1.2",
   "description": "🧬 ModelMix - Unified API for Diverse AI LLM.",
   "main": "index.js",
   "repository": {
