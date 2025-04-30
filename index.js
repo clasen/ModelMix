@@ -234,25 +234,34 @@ class MessageHandler {
         return response.message;
     }
 
-    async json(schemaExample = null, schemaDescription = {}) {
-        this.options.response_format = { type: "json_object" };
+    async json(schemaExample = null, schemaDescription = {}, { type = 'json_object', addExample = false } = {}) {
+        this.options.response_format = { type };
         if (schemaExample) {
             const schema = generateJsonSchema(schemaExample, schemaDescription);
             this.config.systemExtra = "\nOutput JSON Schema: \n```\n" + JSON.stringify(schema) + "\n```";
+
+            if (addExample) {
+                this.config.systemExtra += "\nOutput Example: \n```\n" + JSON.stringify(schemaExample) + "\n```";
+            }
         }
         const response = await this.message();
         this.config.systemExtra = "";
-        return JSON.parse(response);
+        console.log(response);
+        return JSON.parse(this._extractBlock(response));
+    }
+
+    _extractBlock(response) {
+        const block = response.match(/```(?:\w+)?\s*([\s\S]*?)```/);
+        return block ? block[1].trim() : response;
     }
 
     async block({ addSystemExtra = true } = {}) {
         if (addSystemExtra) {
-            this.config.systemExtra = "\nReturn the result of the task between triple backtick block code tags: ```";
+            this.config.systemExtra = "\nReturn the result of the task between triple backtick block code tags ```";
         }
         const response = await this.message();
         this.config.systemExtra = "";
-        const block = response.match(/```(?:\w+)?\s*([\s\S]*?)```/);
-        return block ? block[1].trim() : response;
+        return this._extractBlock(response);
     }
 
     async raw() {
@@ -573,6 +582,8 @@ class MixAnthropic extends MixCustom {
         if (!this.config.apiKey) {
             throw new Error('Anthropic API key not found. Please provide it in config or set ANTHROPIC_API_KEY environment variable.');
         }
+
+        delete args.options.response_format;
 
         args.options.system = args.config.system + args.config.systemExtra;
         return super.create(args);
