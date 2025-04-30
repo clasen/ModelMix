@@ -246,7 +246,6 @@ class MessageHandler {
         }
         const response = await this.message();
         this.config.systemExtra = "";
-        console.log(response);
         return JSON.parse(this._extractBlock(response));
     }
 
