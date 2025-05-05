@@ -7,13 +7,13 @@ const path = require('path');
 const generateJsonSchema = require('./schema');
 
 class ModelMix {
-    constructor(args = { options: {}, config: {} }) {
+    constructor({ options = {}, config = {} } = {}) {
         this.models = {};
         this.defaultOptions = {
-            max_tokens: 2000,
-            temperature: 1,
-            top_p: 1,
-            ...args.options
+            max_tokens: 5000,
+            temperature: 1, // 1 --> More creative, 0 --> More deterministic.
+            top_p: 1, // 100% --> The model considers all possible tokens.
+            ...options
         };
 
         // Standard Bottleneck configuration
@@ -28,7 +28,7 @@ class ModelMix {
             max_history: 1, // Default max history
             debug: false,
             bottleneck: defaultBottleneckConfig,
-            ...args.config
+            ...config
         }
 
         this.limiter = new Bottleneck(this.config.bottleneck);
@@ -47,7 +47,7 @@ class ModelMix {
         return this;
     }
 
-    create(modelKeys, args = { config: {}, options: {} }) {
+    create(modelKeys, { config = {}, options = {} } = {}) {
         // If modelKeys is a string, convert it to an array for backwards compatibility
         const modelArray = Array.isArray(modelKeys) ? modelKeys : [modelKeys];
 
@@ -72,21 +72,21 @@ class ModelMix {
             entry.config.prefix.some(p => modelKey.startsWith(p))
         );
 
-        const options = {
+        const optionsHandler = {
             ...this.defaultOptions,
             ...modelEntry.options,
-            ...args.options,
+            ...options,
             model: modelKey
         };
 
-        const config = {
+        const configHandler = {
             ...this.config,
             ...modelEntry.config,
-            ...args.config
+            ...config
         };
 
         // Pass remaining models array for fallback
-        return new MessageHandler(this, modelEntry, options, config, modelArray.slice(1));
+        return new MessageHandler(this, modelEntry, optionsHandler, configHandler, modelArray.slice(1));
     }
 
     setSystem(text) {
@@ -100,10 +100,10 @@ class ModelMix {
         return this;
     }
 
-    readFile(filePath, options = { encoding: 'utf8' }) {
+    readFile(filePath, { encoding = 'utf8' } = {}) {
         try {
             const absolutePath = path.resolve(filePath);
-            return fs.readFileSync(absolutePath, options);
+            return fs.readFileSync(absolutePath, { encoding });
         } catch (error) {
             if (error.code === 'ENOENT') {
                 throw new Error(`File not found: ${filePath}`);
@@ -113,6 +113,49 @@ class ModelMix {
                 throw new Error(`Error reading file ${filePath}: ${error.message}`);
             }
         }
+    }
+
+    static ao({
+        options = {},
+        config = {},
+        models = ['claude-3-7-sonnet-20250219', 'gpt-4.1-mini']
+    } = {}) {
+        return this.factory({ options, config, models });
+    }
+
+    static aor({
+        options = {
+            thinking: {
+                "type": "enabled",
+                "budget_tokens": 1024
+            }
+        },
+        config = {},
+        models = ['claude-3-7-sonnet-20250219', 'gpt-4.1-mini']
+    } = {}) {
+        return this.factory({ options, config, models });
+    }
+
+    static oa({
+        options = {},
+        config = {},
+        models = ['gpt-4.1-mini', 'claude-3-7-sonnet-20250219']
+    } = {}) {
+        return this.factory({ options, config, models });
+    }
+
+    static factory({
+        options = {},
+        config = {},
+        models = ['claude-3-7-sonnet-20250219', 'gpt-4.1-mini']
+    } = {}) {
+        const mmix = new ModelMix({ options, config });
+        mmix.attach(
+            new MixOpenAI(),
+            new MixAnthropic()
+        )
+
+        return mmix.create(models);
     }
 }
 
@@ -142,9 +185,9 @@ class MessageHandler {
         return this;
     }
 
-    addTextFromFile(filePath, config = { role: "user" }) {
+    addTextFromFile(filePath, { role = "user" } = {}) {
         const content = this.mix.readFile(filePath);
-        this.addText(content, config);
+        this.addText(content, { role });
         return this;
     }
 
@@ -159,7 +202,7 @@ class MessageHandler {
         return this;
     }
 
-    addImage(filePath, config = { role: "user" }) {
+    addImage(filePath, { role = "user" } = {}) {
         const imageBuffer = this.mix.readFile(filePath, { encoding: null });
         const mimeType = mime.lookup(filePath);
 
@@ -170,7 +213,7 @@ class MessageHandler {
         const data = imageBuffer.toString('base64');
 
         const imageMessage = {
-            ...config,
+            ...{ role },
             content: [
                 {
                     type: "image",
@@ -230,18 +273,25 @@ class MessageHandler {
 
     async message() {
         this.options.stream = false;
-        const response = await this.execute();
-        return response.message;
+        let raw = await this.execute();
+        if (!raw.message && raw.response?.content?.[1]?.text) {
+            return raw.response.content[1].text;
+        }
+
+        return raw.message;
     }
 
-    async json(schemaExample = null, schemaDescription = {}, { type = 'json_object', addExample = false } = {}) {
+    async json(schemaExample = null, schemaDescription = {}, { type = 'json_object', addExample = false, addSchema = true } = {}) {
         this.options.response_format = { type };
         if (schemaExample) {
-            const schema = generateJsonSchema(schemaExample, schemaDescription);
-            this.config.systemExtra = "\nOutput JSON Schema: \n```\n" + JSON.stringify(schema) + "\n```";
+
+            if (addSchema) {
+                const schema = generateJsonSchema(schemaExample, schemaDescription);
+                this.config.systemExtra = "\nOutput JSON Schema: \n```\n" + JSON.stringify(schema) + "\n```";
+            }
 
             if (addExample) {
-                this.config.systemExtra += "\nOutput Example: \n```\n" + JSON.stringify(schemaExample) + "\n```";
+                this.config.systemExtra += "\nOutput JSON Example: \n```\n" + JSON.stringify(schemaExample) + "\n```";
             }
         }
         const response = await this.message();
@@ -394,10 +444,10 @@ class MessageHandler {
     }
 }
 class MixCustom {
-    constructor(args = { config: {}, options: {}, headers: {} }) {
-        this.config = this.getDefaultConfig(args.config);
-        this.options = this.getDefaultOptions(args.options);
-        this.headers = this.getDefaultHeaders(args.headers);
+    constructor({ config = {}, options = {}, headers = {} } = {}) {
+        this.config = this.getDefaultConfig(config);
+        this.options = this.getDefaultOptions(options);
+        this.headers = this.getDefaultHeaders(headers);
         this.streamCallback = null; // Definimos streamCallback aquí
     }
 
@@ -425,31 +475,31 @@ class MixCustom {
         };
     }
 
-    async create(args = { config: {}, options: {} }) {
+    async create({ config = {}, options = {} } = {}) {
         try {
-            if (args.config.debug) {
+            if (config.debug) {
                 log.debug("config");
-                log.info(args.config);
+                log.info(config);
                 log.debug("options");
-                log.inspect(args.options);
+                log.inspect(options);
             }
 
-            if (args.options.stream) {
-                return this.processStream(await axios.post(this.config.url, args.options, {
+            if (options.stream) {
+                return this.processStream(await axios.post(this.config.url, options, {
                     headers: this.headers,
                     responseType: 'stream'
                 }));
             } else {
-                return this.processResponse(await axios.post(this.config.url, args.options, {
+                return this.processResponse(await axios.post(this.config.url, options, {
                     headers: this.headers
                 }));
             }
         } catch (error) {
-            throw this.handleError(error, args);
+            throw this.handleError(error, { config, options });
         }
     }
 
-    handleError(error, args) {
+    handleError(error, { config, options }) {
         let errorMessage = 'An error occurred in MixCustom';
         let statusCode = null;
         let errorDetails = null;
@@ -465,8 +515,8 @@ class MixCustom {
             statusCode,
             details: errorDetails,
             stack: error.stack,
-            config: args.config,
-            options: args.options
+            config: config,
+            options: options
         };
 
         return formattedError;
@@ -529,21 +579,21 @@ class MixOpenAI extends MixCustom {
         });
     }
 
-    create(args = { config: {}, options: {} }) {
+    async create({ config = {}, options = {} } = {}) {
         if (!this.config.apiKey) {
             throw new Error('OpenAI API key not found. Please provide it in config or set OPENAI_API_KEY environment variable.');
         }
 
         // Remove max_tokens and temperature for o1/o3 models
-        if (args.options.model?.startsWith('o')) {
-            delete args.options.max_tokens;
-            delete args.options.temperature;
+        if (options.model?.startsWith('o')) {
+            delete options.max_tokens;
+            delete options.temperature;
         }
 
-        const content = args.config.system + args.config.systemExtra;
-        args.options.messages = [{ role: 'system', content }, ...args.options.messages || []];
-        args.options.messages = MixOpenAI.convertMessages(args.options.messages);
-        return super.create(args);
+        const content = config.system + config.systemExtra;
+        options.messages = [{ role: 'system', content }, ...options.messages || []];
+        options.messages = MixOpenAI.convertMessages(options.messages);
+        return super.create({ config, options });
     }
 
     static convertMessages(messages) {
@@ -577,15 +627,20 @@ class MixAnthropic extends MixCustom {
         });
     }
 
-    create(args = { config: {}, options: {} }) {
+    async create({ config = {}, options = {} } = {}) {
         if (!this.config.apiKey) {
             throw new Error('Anthropic API key not found. Please provide it in config or set ANTHROPIC_API_KEY environment variable.');
         }
 
-        delete args.options.response_format;
+        // Remove top_p for thinking
+        if (options.thinking) {
+            delete options.top_p;
+        }
 
-        args.options.system = args.config.system + args.config.systemExtra;
-        return super.create(args);
+        delete options.response_format;
+
+        options.system = config.system + config.systemExtra;
+        return super.create({ config, options });
     }
 
     getDefaultHeaders(customHeaders) {
@@ -616,14 +671,14 @@ class MixPerplexity extends MixCustom {
         });
     }
 
-    create(args = { config: {}, options: {} }) {
+    async create({ config = {}, options = {} } = {}) {
         if (!this.config.apiKey) {
             throw new Error('Perplexity API key not found. Please provide it in config or set PPLX_API_KEY environment variable.');
         }
 
-        const content = args.config.system + args.config.systemExtra;
-        args.options.messages = [{ role: 'system', content }, ...args.options.messages || []];
-        return super.create(args);
+        const content = config.system + config.systemExtra;
+        options.messages = [{ role: 'system', content }, ...options.messages || []];
+        return super.create({ config, options });
     }
 }
 
@@ -647,12 +702,12 @@ class MixOllama extends MixCustom {
         return '';
     }
 
-    create(args = { config: {}, options: {} }) {
+    async create({ config = {}, options = {} } = {}) {
 
-        args.options.messages = MixOllama.convertMessages(args.options.messages);
-        const content = args.config.system + args.config.systemExtra;
-        args.options.messages = [{ role: 'system', content }, ...args.options.messages || []];
-        return super.create(args);
+        options.messages = MixOllama.convertMessages(options.messages);
+        const content = config.system + config.systemExtra;
+        options.messages = [{ role: 'system', content }, ...options.messages || []];
+        return super.create({ config, options });
     }
 
     processResponse(response) {
@@ -700,11 +755,11 @@ class MixLMStudio extends MixCustom {
         });
     }
 
-    create(args = { config: {}, options: {} }) {
-        const content = args.config.system + args.config.systemExtra;
-        args.options.messages = [{ role: 'system', content }, ...args.options.messages || []];
-        args.options.messages = MixOpenAI.convertMessages(args.options.messages);
-        return super.create(args);
+    async create({ config = {}, options = {} } = {}) {
+        const content = config.system + config.systemExtra;
+        options.messages = [{ role: 'system', content }, ...options.messages || []];
+        options.messages = MixOpenAI.convertMessages(options.messages);
+        return super.create({ config, options });
     }
 }
 
@@ -718,15 +773,15 @@ class MixGroq extends MixCustom {
         });
     }
 
-    create(args = { config: {}, options: {} }) {
+    async create({ config = {}, options = {} } = {}) {
         if (!this.config.apiKey) {
             throw new Error('Groq API key not found. Please provide it in config or set GROQ_API_KEY environment variable.');
         }
 
-        const content = args.config.system + args.config.systemExtra;
-        args.options.messages = [{ role: 'system', content }, ...args.options.messages || []];
-        args.options.messages = MixOpenAI.convertMessages(args.options.messages);
-        return super.create(args);
+        const content = config.system + config.systemExtra;
+        options.messages = [{ role: 'system', content }, ...options.messages || []];
+        options.messages = MixOpenAI.convertMessages(options.messages);
+        return super.create({ config, options });
     }
 }
 
@@ -756,16 +811,16 @@ class MixTogether extends MixCustom {
         });
     }
 
-    create(args = { config: {}, options: {} }) {
+    async create({ config = {}, options = {} } = {}) {
         if (!this.config.apiKey) {
             throw new Error('Together API key not found. Please provide it in config or set TOGETHER_API_KEY environment variable.');
         }
 
-        const content = args.config.system + args.config.systemExtra;
-        args.options.messages = [{ role: 'system', content }, ...args.options.messages || []];
-        args.options.messages = MixTogether.convertMessages(args.options.messages);
+        const content = config.system + config.systemExtra;
+        options.messages = [{ role: 'system', content }, ...options.messages || []];
+        options.messages = MixTogether.convertMessages(options.messages);
 
-        return super.create(args);
+        return super.create({ config, options });
     }
 }
 
@@ -779,11 +834,11 @@ class MixCerebras extends MixCustom {
         });
     }
 
-    create(args = { config: {}, options: {} }) {
-        const content = args.config.system + args.config.systemExtra;
-        args.options.messages = [{ role: 'system', content }, ...args.options.messages || []];
-        args.options.messages = MixTogether.convertMessages(args.options.messages);
-        return super.create(args);
+    async create({ config = {}, options = {} } = {}) {
+        const content = config.system + config.systemExtra;
+        options.messages = [{ role: 'system', content }, ...options.messages || []];
+        options.messages = MixTogether.convertMessages(options.messages);
+        return super.create({ config, options });
     }
 }
 
