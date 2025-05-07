@@ -2,13 +2,16 @@
 
 **ModelMix** is a versatile module that enables seamless integration of various language models from different providers through a unified interface. With ModelMix, you can effortlessly manage and utilize multiple AI models while controlling request rates to avoid provider restrictions.
 
+Are you one of those developers who wants to apply language models to everything? Do you need a reliable fallback system to ensure your application never fails? ModelMix is the answer! It allows you to chain multiple models together, automatically falling back to the next model if one fails, ensuring your application always gets a response.
+
 ## ✨ Features
 
 - **Unified Interface**: Interact with multiple AI models through a single, coherent API.
 - **Request Rate Control**: Manage the rate of requests to adhere to provider limitations using Bottleneck.
-- **Flexible Integration**: Easily integrate popular models like OpenAI, Anthropic, Perplexity, Groq, Together AI, Ollama, LM Studio or custom models.
+- **Flexible Integration**: Easily integrate popular models like OpenAI, Anthropic, Perplexity, Groq, Together AI, Ollama, LM Studio, Google Gemini or custom models.
 - **History Tracking**: Automatically logs the conversation history with model responses, allowing you to limit the number of historical messages with `max_history`.
 - **Model Fallbacks**: Automatically try different models if one fails or is unavailable.
+- **Chain Multiple Models**: Create powerful chains of models that work together, with automatic fallback if one fails.
 
 ## 📦 Installation
 
@@ -18,7 +21,7 @@ First, install the ModelMix package:
 npm install modelmix
 ```
 
-Optional: install dotenv to manage environment variables:
+Recommended: install dotenv to manage environment variables:
 
 ```bash
 npm install dotenv
@@ -35,129 +38,49 @@ Here's a quick example to get you started:
     PPLX_API_KEY="your_perplexity_api_key"
     GROQ_API_KEY="your_groq_api_key"
     TOGETHER_API_KEY="your_together_api_key"
+    GOOGLE_API_KEY="your_google_api_key"
     ```
 
 2. **Create and configure your models**:
 
-    ```javascript
-    import 'dotenv/config';
-    import { ModelMix, MixOpenAI, MixAnthropic, MixPerplexity, MixOllama, MixTogether } from 'modelmix';
+```javascript
+import 'dotenv/config';
+import { ModelMix } from 'modelmix';
 
-    const env = process.env;
+// Basic setup with system prompt and debug mode
+const setup = {
+    config: {
+        system: "You are ALF, if they ask your name, respond with 'ALF'.",
+        debug: true
+    }
+};
 
-    const mmix = new ModelMix({
-        options: {
-            max_tokens: 200,
-        },
-        config: {
-            system: "You are {name} from Melmac.",
-            max_history: 2,
-            bottleneck: { maxConcurrent: 2 },
-            debug: true
-        }
-    });
+// Chain multiple models with automatic fallback
+const result = await ModelMix.create(setup)
+    .sonnet37think()
+    .o4mini({ config: { temperature: 0 } })
+    .gemini25proExp()
+    .gpt41nano()
+    .grok3mini()
+    .addText("What's your name?")
+    .message();
 
-    mmix.replace({ '{name}': 'ALF' });
+console.log(result);
 
-    mmix.attach(new MixOpenAI({ config: { apiKey: env.OPENAI_API_KEY } }));
-    mmix.attach(new MixAnthropic()); // it will use the default apiKey from process.env
-    mmix.attach(new MixPerplexity({
-        config: {
-            apiKey: env.PPLX_API_KEY
-        },
-        options: {
-            system: "You are my personal assistant."
-        }
-    }));
-    mmix.attach(new MixOllama({
-        config: {
-            url: 'http://localhost:11434/api/chat',
-            prefix: ['llava'],
-        },
-        options: {
-            temperature: 0.5,
-        }
-    }));
-    mmix.attach(new MixTogether());
-    ```
+// Get structured JSON responses
+const jsonResult = await ModelMix.create()
+    .sonnet37()
+    .addText("Name and capital of 3 South American countries.")
+    .json({ countries: [{ name: "", capital: "" }] });
 
-3. **Generate responses from different models**:
+console.log(jsonResult);
+```
 
-    #### Model Fallbacks
-    ```javascript
-    // Create a message handler with multiple fallback models
-    const handler = mmix.create(['grok-2-latest', 'claude-3-7-sonnet-20250219']);
-    
-    // If the first model (grok-2-latest) fails or is unavailable,
-    // ModelMix will automatically try the next model (claude-3-7-sonnet)
-    const response = await handler.addText('do you like cats?').message();
-    ```
-
-    The `create()` method accepts either a single model name as a string or an array of model names. When an array is provided, ModelMix will attempt to use each model in order until a successful response is received. This is useful for:
-    - Implementing fallback options when a primary model is unavailable
-    - Load balancing across different providers
-    - Ensuring high availability in your application
-
-    #### gpt-4o-mini
-    ```javascript
-    const gpt = mmix.create('gpt-4o-mini', { options: { temperature: 0 } });
-    gpt.addText("Have you ever eaten a {animal}?");
-    gpt.replace({ '{animal}': 'cat' });
-    console.log(await gpt.message());
-    ```
-
-    #### gpt-4.1-nano (json)
-    ```javascript
-    console.log("\n" + '--------| gpt-4.1-nano |--------');
-    const gpt = mmix.create('gpt-4.1-nano', { options: { temperature: 0 } }).addText("Have you ever eaten a {animal}?");
-    gpt.replace({ '{animal}': 'cat' });
-    const schemaExample = { time: '24:00:00', message: 'Hello' };
-    const schemaDescription = { time: 'Time in format HH:MM:SS' }; // optional
-    console.log(await gpt.json(schemaExample, schemaDescription));
-    ```
-
-    #### claude-3-5-sonnet-20240620 (writer)
-    ```javascript
-    const writer = mmix.create('claude-3-5-sonnet-20240620', { options: { temperature: 0.5 } });
-    writer.setSystem('You are a writer like Stephen King'); // or setSystemFromFile
-    writer.replace({ '{story_title}': 'The Mysterious Package' })
-    // or write.replaceKeyFromFile('{story_title}', './title.md');
-    const story = await writer.addTextFromFile('./prompt.md').message();
-    console.log(story);
-    ```
-    #### claude-3-5-sonnet-20240620 (image)
-    ```javascript
-    console.log("\n" + '--------|  |--------');
-    const claude = mmix.create('claude-3-5-sonnet-20240620', { options: { temperature: 0 } });
-    claude.addImage("./watson.jpg"); // or claude.addImageFromUrl(url)
-    const imageDescription = await claude.addText("Describe the image").message();
-    console.log(imageDescription);
-    ```
-
-    #### pplx-70b-online
-    ```javascript
-    const pplx = mmix.create('pplx-70b-online', { config: { max_tokens: 500 } });
-    pplx.addText('How much is ETH trading in USD?');
-    const news = await pplx.addText('What are the 3 most recent Ethereum news?').message();
-    console.log(news);
-    ```
-
-    #### ollama (llava:latest)
-    ```javascript
-    await mmix.create('llava:latest')
-        .addImage("./watson.jpg")
-        .addText("What is the predominant color?")
-        .stream((data) => { console.log(data.message); });
-    ```
-
-    #### Together AI (deepseek-ai/DeepSeek-R1)
-    ```javascript
-    const together = mmix.create('deepseek-ai/DeepSeek-R1', { options: { temperature: 0.7 } });
-    together.addText('What are the main differences between Python and JavaScript?');
-    const comparison = await together.message();
-    console.log(comparison);
-    ```
-4. Find the files for this example at: [/ModelMix/demo](https://github.com/clasen/ModelMix/tree/master/demo).
+This pattern allows you to:
+- Chain multiple models together
+- Automatically fall back to the next model if one fails
+- Get structured JSON responses when needed
+- Keep your code clean and maintainable
 
 ## 🔄 Templating Methods
 
@@ -243,14 +166,14 @@ ModelMix now uses Bottleneck for efficient rate limiting of API requests. This i
 1. **Configuration**: Bottleneck is configured in the ModelMix constructor. You can customize the settings or use the default configuration:
 
     ```javascript
-    const mmix = new ModelMix({
+    const setup = {
         config: {
             bottleneck: {
                 maxConcurrent: 8,     // Maximum number of concurrent requests
                 minTime: 500          // Minimum time between requests (in ms)
             }
         }
-    });
+    };
     ```
 
 2. **Rate Limiting**: When you make a request using any of the attached models, Bottleneck automatically manages the request flow based on the configured settings.
@@ -281,6 +204,43 @@ new ModelMix(args = { options: {}, config: {} })
       - `reservoirRefreshAmount`: How many requests are added when the reservoir refreshes
       - `reservoirRefreshInterval`: Reservoir refresh interval
     - ...(Additional configuration parameters can be added as needed)
+
+### Shorthand Methods
+
+ModelMix provides convenient shorthand methods for quickly accessing different AI models. Here's a comprehensive list of available methods:
+
+| Method             | Provider    | Model                          | Description                                  |
+| ------------------ | ----------- | ------------------------------ | -------------------------------------------- |
+| `gpt41()`          | OpenAI      | gpt-4.1                        | OpenAI's GPT-4.1 model                       |
+| `gpt41mini()`      | OpenAI      | gpt-4.1-mini                   | OpenAI's GPT-4.1 Mini model                  |
+| `gpt41nano()`      | OpenAI      | gpt-4.1-nano                   | OpenAI's GPT-4.1 Nano model                  |
+| `gpt4o()`          | OpenAI      | gpt-4o                         | OpenAI's GPT-4 Optimized model               |
+| `o4mini()`         | OpenAI      | o4-mini                        | OpenAI's O4 Mini model                       |
+| `o3()`             | OpenAI      | o3                             | OpenAI's O3 model                            |
+| `sonnet37()`       | Anthropic   | claude-3-7-sonnet-20250219     | Anthropic's Claude 3.7 Sonnet model          |
+| `sonnet37think()`  | Anthropic   | claude-3-7-sonnet-20250219     | Claude 3.7 Sonnet with thinking mode enabled |
+| `sonnet35()`       | Anthropic   | claude-3-5-sonnet-20241022     | Anthropic's Claude 3.5 Sonnet model          |
+| `haiku35()`        | Anthropic   | claude-3-5-haiku-20241022      | Anthropic's Claude 3.5 Haiku model           |
+| `gemini25flash()`  | Google      | gemini-2.5-flash-preview-04-17 | Google's Gemini 2.5 Flash model              |
+| `gemini25proExp()` | Google      | gemini-2.5-pro-exp-03-25       | Google's Gemini 2.5 Pro Experimental model   |
+| `gemini25pro()`    | Google      | gemini-2.5-pro-preview-05-06   | Google's Gemini 2.5 Pro model                |
+| `sonar()`          | Perplexity  | sonar-pro                      | Perplexity's Sonar Pro model                 |
+| `qwen3()`          | Together AI | Qwen/Qwen3-235B-A22B-fp8-tput  | Together AI's Qwen 3 model                   |
+| `grok2()`          | Grok        | grok-2-latest                  | Grok's latest version 2 model                |
+| `grok3()`          | Grok        | grok-3-beta                    | Grok's version 3 beta model                  |
+| `grok3mini()`      | Grok        | grok-3-mini-beta               | Grok's version 3 mini beta model             |
+| `scout()`          | Cerebras    | llama-4-scout-17b-16e-instruct | Cerebras' Llama 4 Scout model                |
+
+Each method accepts optional `options` and `config` parameters to customize the model's behavior. For example:
+
+```javascript
+const result = await ModelMix.create()
+    .sonnet37({ 
+        options: { temperature: 0.7 },
+        config: { system: "You are a helpful assistant" }
+    })
+    .message();
+```
 
 **Methods**
 
@@ -403,6 +363,16 @@ new MixTogether(args = { config: {}, options: {} })
 - **args**: Configuration object with `config` and `options` properties.
   - **config**: Specific configuration settings for Together AI, including the `apiKey`.
   - **options**: Default options for Together AI model instances.
+
+### MixGoogle Class Overview
+
+```javascript
+new MixGoogle(args = { config: {}, options: {} })
+```
+
+- **args**: Configuration object with `config` and `options` properties.
+  - **config**: Specific configuration settings for Google Gemini, including the `apiKey`.
+  - **options**: Default options for Google Gemini model instances.
 
 ## 🤝 Contributing
 

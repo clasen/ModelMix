@@ -52,17 +52,17 @@ mmix.attach(new MixOllama({
 
 
 await mmix.create('gpt-4o')
-    .addImage('./watson.jpg')
+    .addImageFromUrl('https://pbs.twimg.com/media/F6-GsjraAAADDGy?format=jpg')
     .addText('describe')
     .stream((data) => { console.log(data.message); });
 
 await mmix.create('claude-3-haiku-20240307')
-    .addImage('./watson.jpg')
+    .addImageFromUrl('https://pbs.twimg.com/media/F6-GsjraAAADDGy?format=jpg')
     .addText('describe')
     .stream((data) => { console.log(data.message); });
 
 await mmix.create('llava:latest')
-    .addImage('./watson.jpg')
+    .addImageFromUrl('https://pbs.twimg.com/media/F6-GsjraAAADDGy?format=jpg')
     .addText('describe')
     .stream((data) => { console.log(data.message); });
 

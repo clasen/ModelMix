@@ -1,6 +1,6 @@
 import 'dotenv/config'
 
-import { ModelMix, MixCerebras, MixTogether } from '../index.js';
+import { ModelMix, MixCerebras } from '../index.js';
 
 const mmix = new ModelMix({
     options: {

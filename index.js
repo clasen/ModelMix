@@ -100,12 +100,21 @@ class ModelMixBuilder {
     }, config = {} } = {}) {
         return this.addModel(model, MixAnthropic, { options, config });
     }
-    sonnet35({ model = 'claude-3-5-sonnet-20240620', options = {}, config = {} } = {}) {
+    sonnet35({ model = 'claude-3-5-sonnet-20241022', options = {}, config = {} } = {}) {
         return this.addModel(model, MixAnthropic, { options, config });
     }
-    haiku({ model = 'claude-3-haiku-20240307', options = {}, config = {} } = {}) {
+    haiku35({ model = 'claude-3-5-haiku-20241022', options = {}, config = {} } = {}) {
         return this.addModel(model, MixAnthropic, { options, config });
     }
+    gemini25flash({ model = 'gemini-2.5-flash-preview-04-17', options = {}, config = {} } = {}) {
+        return this.addModel(model, MixGoogle, { options, config });
+    }
+    gemini25proExp({ model = 'gemini-2.5-pro-exp-03-25', options = {}, config = {} } = {}) {
+        return this.addModel(model, MixGoogle, { options, config });
+    }        
+    gemini25pro({ model = 'gemini-2.5-pro-preview-05-06', options = {}, config = {} } = {}) {
+        return this.addModel(model, MixGoogle, { options, config });
+    }    
     sonar({ model = 'sonar-pro', options = {}, config = {} } = {}) {
         return this.addModel(model, MixPerplexity, { options, config });
     }
@@ -1066,4 +1075,118 @@ class MixCerebras extends MixCustom {
     }
 }
 
-module.exports = { MixCustom, ModelMix, MixAnthropic, MixOpenAI, MixPerplexity, MixOllama, MixLMStudio, MixGroq, MixTogether, MixGrok, MixCerebras };
+class MixGoogle extends MixCustom {
+    getDefaultConfig(customConfig) {
+        return super.getDefaultConfig({
+            url: 'https://generativelanguage.googleapis.com/v1beta/models',
+            prefix: ['gemini'],
+            apiKey: process.env.GOOGLE_API_KEY,
+            ...customConfig
+        });
+    }
+
+    getDefaultHeaders(customHeaders) {
+        // Remove the authorization header as we'll use the API key as a query parameter
+        return {
+            'Content-Type': 'application/json',
+            ...customHeaders
+        };
+    }
+
+    getDefaultOptions(customOptions) {
+        return {
+            generationConfig: {
+                responseMimeType: "text/plain"
+            },
+            ...customOptions
+        };
+    }
+
+    static convertMessages(messages) {
+        return messages.map(message => {
+            const parts = [];
+            
+            if (message.content instanceof Array) {
+                message.content.forEach(content => {
+                    if (content.type === 'text') {
+                        parts.push({ text: content.text });
+                    } else if (content.type === 'image') {
+                        parts.push({
+                            inline_data: {
+                                mime_type: content.source.media_type,
+                                data: content.source.data
+                            }
+                        });
+                    }
+                });
+            } else {
+                parts.push({ text: message.content });
+            }
+
+            return {
+                role: message.role === 'assistant' ? 'model' : 'user',
+                parts
+            };
+        });
+    }
+
+    async create({ config = {}, options = {} } = {}) {
+        if (!this.config.apiKey) {
+            throw new Error('Google API key not found. Please provide it in config or set GOOGLE_API_KEY environment variable.');
+        }
+
+        const modelId = options.model || 'gemini-2.5-flash-preview-04-17';
+        const generateContentApi = options.stream ? 'streamGenerateContent' : 'generateContent';
+        
+        // Construct the full URL with model ID, API endpoint, and API key
+        const fullUrl = `${this.config.url}/${modelId}:${generateContentApi}?key=${this.config.apiKey}`;
+
+        // Convert messages to Gemini format
+        const contents = MixGoogle.convertMessages(options.messages);
+        
+        // Add system message if present
+        if (config.system || config.systemExtra) {
+            contents.unshift({
+                role: 'user',
+                parts: [{ text: (config.system || '') + (config.systemExtra || '') }]
+            });
+        }
+
+        // Prepare the request payload
+        const payload = {
+            contents,
+            generationConfig: options.generationConfig || this.getDefaultOptions().generationConfig
+        };
+
+        try {
+            if (options.stream) {
+                throw new Error('Stream is not supported for Gemini');
+            } else {
+                return this.processResponse(await axios.post(fullUrl, payload, {
+                    headers: this.headers
+                }));
+            }
+        } catch (error) {
+            throw this.handleError(error, { config, options });
+        }
+    }
+
+    extractDelta(data) {
+        try {
+            const parsed = JSON.parse(data);
+            if (parsed.candidates?.[0]?.content?.parts?.[0]?.text) {
+                return parsed.candidates[0].content.parts[0].text;
+            }
+        } catch (e) {
+            // If parsing fails, return empty string
+        }
+        return '';
+    }
+
+    processResponse(response) {
+        const content = response.data.candidates?.[0]?.content?.parts?.[0]?.text || '';
+        return { response: response.data, message: content };
+    }
+}
+
+module.exports = { MixCustom, ModelMix, MixAnthropic, MixOpenAI, MixPerplexity, MixOllama, MixLMStudio, MixGroq, MixTogether, MixGrok, MixCerebras, MixGoogle };
