@@ -47,6 +47,16 @@ Here's a quick example to get you started:
 import 'dotenv/config';
 import { ModelMix } from 'modelmix';
 
+// Get structured JSON responses
+const model = ModelMix.create()
+    .sonnet37() // Anthropic claude-3-7-sonnet-20250219
+    .addText("Name and capital of 3 South American countries.");
+
+const outputExample = { countries: [{ name: "", capital: "" }] };
+console.log(await model.json(outputExample));
+```
+
+```javascript
 // Basic setup with system prompt and debug mode
 const setup = {
     config: {
@@ -56,24 +66,15 @@ const setup = {
 };
 
 // Chain multiple models with automatic fallback
-const result = await ModelMix.create(setup)
-    .sonnet37think()
-    .o4mini({ config: { temperature: 0 } })
-    .gemini25proExp()
-    .gpt41nano()
-    .grok3mini()
-    .addText("What's your name?")
-    .message();
+const model = await ModelMix.create(setup)
+    .sonnet37think() // (main model) Anthropic claude-3-7-sonnet-20250219
+    .o4mini() // (fallback 1) OpenAI o4-mini
+    .gemini25proExp({ config: { temperature: 0 } }) // (fallback 2) Google gemini-2.5-pro-exp-03-25
+    .gpt41nano() // (fallback 3) OpenAI gpt-4.1-nano
+    .grok3mini() // (fallback 4) Grok grok-3-mini-beta
+    .addText("What's your name?");
 
-console.log(result);
-
-// Get structured JSON responses
-const jsonResult = await ModelMix.create()
-    .sonnet37()
-    .addText("Name and capital of 3 South American countries.")
-    .json({ countries: [{ name: "", capital: "" }] });
-
-console.log(jsonResult);
+console.log(await model.message());
 ```
 
 This pattern allows you to:
@@ -244,12 +245,8 @@ const result = await ModelMix.create()
 
 **Methods**
 
-- `attach(modelInstance)`: Attaches a model instance to the `ModelMix`.
-- `create(modelKey, overOptions = {})`: Creates a new `MessageHandler` for the specified model.
-
-### MessageHandler Class Overview
-
-**Methods**
+- `attach(modelKey, modelInstance)`: Attaches a model instance to the `ModelMix`.
+- `create()`: Creates a new `ModelMix` for the specified model.
 
 - `new()`: Initializes a new message handler instance.
 - `addText(text, config = { role: "user" })`: Adds a text message.

@@ -12,7 +12,9 @@ const mix = new ModelMix({
         },
         debug: true,
     }
-});
+})
+
+mix.gpt41nano();
 
 // Function to create a promise that resolves after a random time
 const randomDelay = () => new Promise(resolve => setTimeout(resolve, Math.random() * 2000 + 1000));
@@ -22,7 +24,7 @@ async function makeRequest(id) {
     const start = Date.now();
     console.log(`Starting request ${id}`);
 
-    const message = await mix.gpt41nano()
+    const message = await mix
         .addText(`Generate an interesting fact about the number ${id}.`)
         .message();
 
