@@ -15,24 +15,13 @@ const mmix = new ModelMix({
         max_tokens: 8192,
     }
 });
-const an = new MixAnthropic();
-an.config.url = 'fail';
-mmix.attach(new MixOpenAI(), an, new MixGrok());
 
-
-const modelOptionsRef = ['claude-3-5-sonnet-20241022', 'gpt-4.1-nano'];
+mmix.sonnet37({ config: { url: 'fail' } }).gpt41nano();
 
 async function main() {
-    const response = await generateThread(modelOptionsRef);
+    mmix.addText('hola, como estas?');
+    const response = await mmix.message();
     console.log(response);
-}
-
-async function generateThread(modelOptionsRef) {
-    const model = mmix.create(modelOptionsRef, { options: { temperature: 0.5 } });
-    model.addText('hola, como estas?');
-    const response = await model.message();
-
-    return response.split('---').map(section => section.trim());
 }
 
 main();

@@ -23,7 +23,7 @@ console.log(model.config)
 mmix.attach(model);
 
 
-const LMS = mmix.create('Orenguteng/Llama-3-8B-Lexi-Uncensored-GGUF');
+const LMS = mmix.attach('Orenguteng/Llama-3-8B-Lexi-Uncensored-GGUF', model);
 console.log(await LMS
     .addImage('./watson.jpg')
     .addText('describir')

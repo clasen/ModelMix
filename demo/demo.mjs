@@ -5,6 +5,7 @@ import { ModelMix, MixOpenAI, MixAnthropic, MixPerplexity, MixOllama } from '../
 const mmix = new ModelMix({
     options: {
         max_tokens: 200,
+        temperature: 0.5,
     },
     config: {
         system: 'You are {name} from Melmac.',
@@ -14,49 +15,41 @@ const mmix = new ModelMix({
     }
 });
 
-mmix.attach(new MixOpenAI());
-mmix.attach(new MixAnthropic());
-mmix.attach(new MixPerplexity({
+
+const pplxSettings = {
     config: {
         apiKey: process.env.PPLX_API_KEY,
-        system: 'You are my personal assistant.'
-    },
-
-}));
-mmix.attach(new MixOllama({
-    config: {
-        prefix: ['llava'],
-    },
-    options: {
-        temperature: 0.5,
+        system: 'You are my personal assistant.',
+        max_tokens: 500
     }
-}));
+};
+
 
 mmix.replace({ '{name}': 'ALF' });
 
 console.log("\n" + '--------| gpt-4.1-nano |--------');
-const gpt = mmix.create('gpt-4.1-nano', { options: { temperature: 0 } }).addText("Have you ever eaten a {animal}?");
+const gpt = mmix.attach('gpt-4.1-nano', new MixOpenAI({ options: { temperature: 0 } })).addText("Have you ever eaten a {animal}?");
 gpt.replace({ '{animal}': 'cat' });
 console.log(await gpt.json({ time: '24:00:00', message: 'Hello' }, { time: 'Time in format HH:MM:SS' }));
 
-// console.log("\n" + '--------| claude-3-5-sonnet-20240620 |--------');
-// const claude = mmix.create('claude-3-5-sonnet-20240620', { options: { temperature: 0 } });
-// claude.addImageFromUrl('https://pbs.twimg.com/media/F6-GsjraAAADDGy?format=jpg');
-// const imageDescription = await claude.addText('describe the image').message();
-// console.log(imageDescription);
+console.log("\n" + '--------| claude-3-5-sonnet-20240620 |--------');
+const claude = mmix.create().attach('claude-3-5-sonnet-20240620', new MixAnthropic());
+claude.addImageFromUrl('https://pbs.twimg.com/media/F6-GsjraAAADDGy?format=jpg');
+const imageDescription = await claude.addText('describe the image').message();
+console.log(imageDescription);
 
 console.log("\n" + '--------| claude-3-7-sonnet-20250219 |--------');
-const writer = mmix.create('claude-3-7-sonnet-20250219', { options: { temperature: 0.5 } });
+const writer = mmix.create().attach('claude-3-7-sonnet-20250219', new MixAnthropic());
 writer.setSystem('You are a writer like Stephen King');
 writer.replaceKeyFromFile('{story_title}', './title.md');
 const story = await writer.addTextFromFile('./prompt.md').message();
 console.log(story);
 
-// console.log("\n" + '--------| llama-3-sonar-large-32k-online |--------');
-// const pplx = mmix.create('llama-3-sonar-large-32k-online', { config: { max_tokens: 500 } });
-// pplx.addText('How much is ETH trading in USD?');
-// const news = await pplx.addText('What are the 3 most recent Ethereum news?').message();
-// console.log(news);
+console.log("\n" + '--------| llama-3-sonar-large-32k-online |--------');
+const pplx = mmix.create().sonar(pplxSettings);
+pplx.addText('How much is ETH trading in USD?');
+const news = await pplx.addText('What are the 3 most recent Ethereum news?').message();
+console.log(news);
 
 // console.log("\n" + '--------| ollama (llava:latest) |--------');
 // await mmix.create('llava:latest')

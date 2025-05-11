@@ -6,159 +6,11 @@ const Bottleneck = require('bottleneck');
 const path = require('path');
 const generateJsonSchema = require('./schema');
 
-class ModelMixBuilder {
-    constructor(args = {}) {
-        this.models = []; // Array of { key: string, providerClass: class, options: {}, config: {} }
-        this.mix = new ModelMix(args);
-        this.handler = null;
-        this._messageHandlerMethods = [ // Methods to delegate after handler creation
-            'new', 'addText', 'addTextFromFile', 'setSystem', 'setSystemFromFile',
-            'addImage', 'addImageFromUrl', 'message', 'json', 'block', 'raw',
-            'stream', 'replace', 'replaceKeyFromFile'
-        ];
-    }
-
-    addModel(key, providerClass, { options = {}, config = {} } = {}) {
-        if (this.handler) {
-            throw new Error("Cannot add models after message generation has started.");
-        }
-
-        // Attach provider if not already attached
-        const providerInstance = new providerClass();
-        const mainPrefix = providerInstance.config.prefix[0];
-        if (!Object.values(this.mix.models).some(p => p.config.prefix.includes(mainPrefix))) {
-            this.mix.attach(providerInstance);
-        }
-
-        if (!key) {
-            throw new Error(`Model key is required when adding a model via ${providerClass.name}.`);
-        }
-        this.models.push({ key, providerClass, options, config });
-        return this;
-    }
-
-    _getHandler() {
-        if (!this.handler) {
-            if (!this.mix || this.models.length === 0) {
-                throw new Error("No models specified. Use methods like .gpt(), .sonnet() first.");
-            }
-
-            // Pass all model definitions. The create method will handle it appropriately
-            this.handler = this.mix.createByDef(this.models);
-
-            // Delegate chainable methods to the handler
-            this._messageHandlerMethods.forEach(methodName => {
-                if (typeof this.handler[methodName] === 'function') {
-                    this[methodName] = (...args) => {
-                        const result = this.handler[methodName](...args);
-                        // Return the handler instance for chainable methods, otherwise the result
-                        return result === this.handler ? this : result;
-                    };
-                }
-            });
-            // Special handling for async methods that return results
-            ['message', 'json', 'block', 'raw', 'stream'].forEach(asyncMethodName => {
-                if (typeof this.handler[asyncMethodName] === 'function') {
-                    this[asyncMethodName] = async (...args) => {
-                        return await this.handler[asyncMethodName](...args);
-                    };
-                }
-            });
-        }
-        return this.handler;
-    }
-
-    // --- Instance methods for adding models (primary or fallback) ---
-    // These will be mirrored by static methods on ModelMix
-    gpt41({ model = 'gpt-4.1', options = {}, config = {} } = {}) {
-        return this.addModel(model, MixOpenAI, { options, config });
-    }
-    gpt41mini({ model = 'gpt-4.1-mini', options = {}, config = {} } = {}) {
-        return this.addModel(model, MixOpenAI, { options, config });
-    }
-    gpt41nano({ model = 'gpt-4.1-nano', options = {}, config = {} } = {}) {
-        return this.addModel(model, MixOpenAI, { options, config });
-    }
-    gpt4o({ model = 'gpt-4o', options = {}, config = {} } = {}) {
-        return this.addModel(model, MixOpenAI, { options, config });
-    }
-    o4mini({ model = 'o4-mini', options = {}, config = {} } = {}) {
-        return this.addModel(model, MixOpenAI, { options, config });
-    }
-    o3({ model = 'o3', options = {}, config = {} } = {}) {
-        return this.addModel(model, MixOpenAI, { options, config });
-    }
-    sonnet37({ model = 'claude-3-7-sonnet-20250219', options = {}, config = {} } = {}) {
-        return this.addModel(model, MixAnthropic, { options, config });
-    }
-    sonnet37think({ model = 'claude-3-7-sonnet-20250219', options = {
-        thinking: {
-            "type": "enabled",
-            "budget_tokens": 1024
-        },
-        temperature: 1
-    }, config = {} } = {}) {
-        return this.addModel(model, MixAnthropic, { options, config });
-    }
-    sonnet35({ model = 'claude-3-5-sonnet-20241022', options = {}, config = {} } = {}) {
-        return this.addModel(model, MixAnthropic, { options, config });
-    }
-    haiku35({ model = 'claude-3-5-haiku-20241022', options = {}, config = {} } = {}) {
-        return this.addModel(model, MixAnthropic, { options, config });
-    }
-    gemini25flash({ model = 'gemini-2.5-flash-preview-04-17', options = {}, config = {} } = {}) {
-        return this.addModel(model, MixGoogle, { options, config });
-    }
-    gemini25proExp({ model = 'gemini-2.5-pro-exp-03-25', options = {}, config = {} } = {}) {
-        return this.addModel(model, MixGoogle, { options, config });
-    }        
-    gemini25pro({ model = 'gemini-2.5-pro-preview-05-06', options = {}, config = {} } = {}) {
-        return this.addModel(model, MixGoogle, { options, config });
-    }    
-    sonar({ model = 'sonar-pro', options = {}, config = {} } = {}) {
-        return this.addModel(model, MixPerplexity, { options, config });
-    }
-    qwen3({ model = 'Qwen/Qwen3-235B-A22B-fp8-tput', options = {}, config = {} } = {}) {
-        return this.addModel(model, MixTogether, { options, config });
-    }
-    grok2({ model = 'grok-2-latest', options = {}, config = {} } = {}) {
-        return this.addModel(model, MixGrok, { options, config });
-    }
-    grok3({ model = 'grok-3-beta', options = {}, config = {} } = {}) {
-        return this.addModel(model, MixGrok, { options, config });
-    }
-    grok3mini({ model = 'grok-3-mini-beta', options = {}, config = {} } = {}) {
-        return this.addModel(model, MixGrok, { options, config });
-    }
-    scout({ model = 'llama-4-scout-17b-16e-instruct', options = {}, config = {} } = {}) {
-        return this.addModel(model, MixCerebras, { options, config });
-    }
-
-    // --- Methods delegated to MessageHandler after creation ---
-    // Define stubs that will call _getHandler first
-
-    new() { this._getHandler(); return this.new(...arguments); }
-    addText() { this._getHandler(); return this.addText(...arguments); }
-    addTextFromFile() { this._getHandler(); return this.addTextFromFile(...arguments); }
-    setSystem() { this._getHandler(); return this.setSystem(...arguments); }
-    setSystemFromFile() { this._getHandler(); return this.setSystemFromFile(...arguments); }
-    addImage() { this._getHandler(); return this.addImage(...arguments); }
-    addImageFromUrl() { this._getHandler(); return this.addImageFromUrl(...arguments); }
-    replace() { this._getHandler(); return this.replace(...arguments); }
-    replaceKeyFromFile() { this._getHandler(); return this.replaceKeyFromFile(...arguments); }
-
-    // Async methods need await
-    async message() { this._getHandler(); return await this.message(...arguments); }
-    async json() { this._getHandler(); return await this.json(...arguments); }
-    async block() { this._getHandler(); return await this.block(...arguments); }
-    async raw() { this._getHandler(); return await this.raw(...arguments); }
-    async stream() { this._getHandler(); return await this.stream(...arguments); }
-}
-
 class ModelMix {
     constructor({ options = {}, config = {} } = {}) {
-        this.models = {};
-        this.defaultOptions = {
+        this.models = [];
+        this.messages = [];
+        this.options = {
             max_tokens: 5000,
             temperature: 1, // 1 --> More creative, 0 --> More deterministic.
             top_p: 1, // 100% --> The model considers all possible tokens.
@@ -181,6 +33,7 @@ class ModelMix {
         }
 
         this.limiter = new Bottleneck(this.config.bottleneck);
+
     }
 
     replace(keyValues) {
@@ -188,108 +41,116 @@ class ModelMix {
         return this;
     }
 
-    attach(...modelInstances) {
-        for (const modelInstance of modelInstances) {
-            const key = modelInstance.config.prefix.join("_");
-            this.models[key] = modelInstance;
+    static create({ options = {}, config = {} } = {}) {
+        return new ModelMix({ options, config });
+    }
+
+    create() {
+        return new ModelMix({ options: this.options, config: this.config });
+    }
+
+    attach(key, provider) {
+
+        if (this.models.some(model => model.key === key)) {
+            return this;
         }
+
+        if (this.messages.length > 0) {
+            throw new Error("Cannot add models after message generation has started.");
+        }
+
+        this.models.push({ key, provider });
         return this;
     }
 
-    static create(args = {}) {
-        return new ModelMixBuilder(args);
+    // --- Model addition methods ---
+    gpt41({ options = {}, config = {} } = {}) {
+        return this.attach('gpt-4.1', new MixOpenAI({ options, config }));
+    }
+    gpt41mini({ options = {}, config = {} } = {}) {
+        return this.attach('gpt-4.1-mini', new MixOpenAI({ options, config }));
+    }
+    gpt41nano({ options = {}, config = {} } = {}) {
+        return this.attach('gpt-4.1-nano', new MixOpenAI({ options, config }));
+    }
+    gpt4o({ options = {}, config = {} } = {}) {
+        return this.attach('gpt-4o', new MixOpenAI({ options, config }));
+    }
+    o4mini({ options = {}, config = {} } = {}) {
+        return this.attach('o4-mini', new MixOpenAI({ options, config }));
+    }
+    o3({ options = {}, config = {} } = {}) {
+        return this.attach('o3', new MixOpenAI({ options, config }));
+    }
+    gpt45({ options = {}, config = {} } = {}) {
+        return this.attach('gpt-4.5-preview', new MixOpenAI({ options, config }));
+    }
+    sonnet37({ options = {}, config = {} } = {}) {
+        return this.attach('claude-3-7-sonnet-20250219', new MixAnthropic({ options, config }));
+    }
+    sonnet37think({ options = {
+        thinking: {
+            "type": "enabled",
+            "budget_tokens": 1024
+        },
+        temperature: 1
+    }, config = {} } = {}) {
+        return this.attach('claude-3-7-sonnet-20250219', new MixAnthropic({ options, config }));
+    }
+    sonnet35({ options = {}, config = {} } = {}) {
+        return this.attach('claude-3-5-sonnet-20241022', new MixAnthropic({ options, config }));
+    }
+    haiku35({ options = {}, config = {} } = {}) {
+        return this.attach('claude-3-5-haiku-20241022', new MixAnthropic({ options, config }));
+    }
+    gemini25flash({ options = {}, config = {} } = {}) {
+        return this.attach('gemini-2.5-flash-preview-04-17', new MixGoogle({ options, config }));
+    }
+    gemini25proExp({ options = {}, config = {} } = {}) {
+        return this.attach('gemini-2.5-pro-exp-03-25', new MixGoogle({ options, config }));
+    }
+    gemini25pro({ options = {}, config = {} } = {}) {
+        return this.attach('gemini-2.5-pro-preview-05-06', new MixGoogle({ options, config }));
+    }
+    sonar({ options = {}, config = {} } = {}) {
+        return this.attach('sonar-pro', new MixPerplexity({ options, config }));
+    }
+    qwen3({ options = {}, config = {} } = {}) {
+        return this.attach('Qwen/Qwen3-235B-A22B-fp8-tput', new MixTogether({ options, config }));
+    }
+    grok2({ options = {}, config = {} } = {}) {
+        return this.attach('grok-2-latest', new MixGrok({ options, config }));
+    }
+    grok3({ options = {}, config = {} } = {}) {
+        return this.attach('grok-3-beta', new MixGrok({ options, config }));
+    }
+    grok3mini({ options = {}, config = {} } = {}) {
+        return this.attach('grok-3-mini-beta', new MixGrok({ options, config }));
+    }
+    scout({ options = {}, config = {} } = {}) {
+        return this.attach('llama-4-scout-17b-16e-instruct', new MixCerebras({ options, config }));
     }
 
-    createByDef(modelDefinitions, { config: explicitOverallConfig = {}, options: explicitOverallOptions = {} } = {}) {
-
-        // modelDefinitions is expected to be the array from ModelMixBuilder.models
-        // e.g., [{ key, providerClass, options, config }, ...]
-        const allModelsInfo = modelDefinitions;
-        const modelKeys = allModelsInfo.map(m => m.key);
-
-        if (modelKeys.length === 0) {
-            throw new Error('No model keys provided in modelDefinitions.');
-        }
-
-        // Verificar que todos los modelos estén disponibles
-        const unavailableModels = modelKeys.filter(modelKey => {
-            return !Object.values(this.models).some(entry =>
-                entry.config.prefix.some(p => modelKey.startsWith(p))
-            );
-        });
-
-        if (unavailableModels.length > 0) {
-            throw new Error(`The following models are not available: ${unavailableModels.join(', ')}`);
-        }
-
-        // Una vez verificado que todos están disponibles, obtener el primer modelo (primary)
-        const primaryModelInfo = allModelsInfo[0];
-        const primaryModelKey = primaryModelInfo.key;
-        const primaryModelEntry = Object.values(this.models).find(entry =>
-            entry.config.prefix.some(p => primaryModelKey.startsWith(p))
-        );
-
-        if (!primaryModelEntry) { // Should be caught by unavailableModels, but good for robustness
-            throw new Error(`Primary model provider for key ${primaryModelKey} not found or attached.`);
-        }
-
-        // Options/config for the MessageHandler instance (session-level)
-        // These are based on the primary model's specification.
-        const optionsHandler = {
-            ...this.defaultOptions,                 // ModelMix global defaults
-            ...(primaryModelEntry.options || {}),   // Primary provider class defaults
-            ...(primaryModelInfo.options || {}),    // Options from addModel for primary
-            ...explicitOverallOptions,              // Explicit options to .create() if any
-            model: primaryModelKey                  // Ensure primary model key is set
-        };
-
-        const configHandler = {
-            ...this.config,                         // ModelMix global config
-            ...(primaryModelEntry.config || {}),    // Primary provider class config
-            ...(primaryModelInfo.config || {}),     // Config from addModel for primary
-            ...explicitOverallConfig                // Explicit config to .create()
-        };
-
-        // Pass the entire allModelsInfo array for fallback/iteration
-        return new MessageHandler(this, primaryModelEntry, optionsHandler, configHandler, allModelsInfo);
+    // --- Message handling methods ---
+    new() {
+        this.messages = [];
+        return this;
     }
 
-    create(modelKeys = [], { config = {}, options = {} } = {}) {
+    addText(text, { role = "user" } = {}) {
+        const content = [{
+            type: "text",
+            text
+        }];
 
-        // Backward compatibility for string model keys
-        if (!modelKeys || (Array.isArray(modelKeys) && modelKeys.length === 0)) {
-            return new ModelMixBuilder({ config: { ...this.config, ...config }, options: { ...this.defaultOptions, ...options } });
-        }
+        this.messages.push({ role, content });
+        return this;
+    }
 
-        // If modelKeys is a string, convert it to an array for backward compatibility
-        const modelArray = Array.isArray(modelKeys) ? modelKeys : [modelKeys];
-
-        if (modelArray.length === 0) {
-            throw new Error('No model keys provided');
-        }
-
-        // Create model definitions based on string keys
-        const modelDefinitions = modelArray.map(key => {
-            // Find the provider for this model key
-            const providerEntry = Object.values(this.models).find(entry =>
-                entry.config.prefix.some(p => key.startsWith(p))
-            );
-
-            if (!providerEntry) {
-                throw new Error(`Model provider not found for key: ${key}`);
-            }
-
-            // Return a synthesized model definition with just the key and options/config from the create call
-            return {
-                key,
-                providerClass: null, // Not needed for our purpose
-                options,            // Use the options from create call for all models
-                config              // Use the config from create call for all models
-            };
-        });
-
-        // Pass to the new implementation
-        return this.createByDef(modelDefinitions, { config, options });
+    addTextFromFile(filePath, { role = "user" } = {}) {
+        const content = this.readFile(filePath);
+        this.addText(content, { role });
+        return this;
     }
 
     setSystem(text) {
@@ -303,67 +164,8 @@ class ModelMix {
         return this;
     }
 
-    readFile(filePath, { encoding = 'utf8' } = {}) {
-        try {
-            const absolutePath = path.resolve(filePath);
-            return fs.readFileSync(absolutePath, { encoding });
-        } catch (error) {
-            if (error.code === 'ENOENT') {
-                throw new Error(`File not found: ${filePath}`);
-            } else if (error.code === 'EACCES') {
-                throw new Error(`Permission denied: ${filePath}`);
-            } else {
-                throw new Error(`Error reading file ${filePath}: ${error.message}`);
-            }
-        }
-    }
-}
-
-class MessageHandler {
-    constructor(mix, modelEntry, options, config, allModelsInfo = []) {
-        this.mix = mix;
-        this.modelEntry = modelEntry; // Primary model's provider instance
-        this.options = options;     // Session-level options, based on primary
-        this.config = config;       // Session-level config, based on primary
-        this.messages = [];
-        this.allModelsInfo = allModelsInfo; // Store the full info array [{ key, providerClass, options, config }, ...]
-        this.imagesToProcess = [];
-    }
-
-    new() {
-        this.messages = [];
-        return this;
-    }
-
-    addText(text, config = { role: "user" }) {
-        const content = [{
-            type: "text",
-            text
-        }];
-
-        this.messages.push({ ...config, content });
-        return this;
-    }
-
-    addTextFromFile(filePath, { role = "user" } = {}) {
-        const content = this.mix.readFile(filePath);
-        this.addText(content, { role });
-        return this;
-    }
-
-    setSystem(text) {
-        this.config.system = text;
-        return this;
-    }
-
-    setSystemFromFile(filePath) {
-        const content = this.mix.readFile(filePath);
-        this.setSystem(content);
-        return this;
-    }
-
     addImage(filePath, { role = "user" } = {}) {
-        const imageBuffer = this.mix.readFile(filePath, { encoding: null });
+        const imageBuffer = this.readFile(filePath, { encoding: null });
         const mimeType = mime.lookup(filePath);
 
         if (!mimeType || !mimeType.startsWith('image/')) {
@@ -387,16 +189,20 @@ class MessageHandler {
         };
 
         this.messages.push(imageMessage);
-
         return this;
     }
 
     addImageFromUrl(url, config = { role: "user" }) {
+        if (!this.imagesToProcess) {
+            this.imagesToProcess = [];
+        }
         this.imagesToProcess.push({ url, config });
         return this;
     }
 
     async processImageUrls() {
+        if (!this.imagesToProcess) return;
+
         const imageContents = await Promise.all(
             this.imagesToProcess.map(async (image) => {
                 try {
@@ -405,7 +211,7 @@ class MessageHandler {
                     const mimeType = response.headers['content-type'];
                     return { base64, mimeType, config: image.config };
                 } catch (error) {
-                    console.error(`Error descargando imagen desde ${image.url}:`, error);
+                    console.error(`Error downloading image from ${image.url}:`, error);
                     return null;
                 }
             })
@@ -434,22 +240,16 @@ class MessageHandler {
     async message() {
         this.options.stream = false;
         let raw = await this.execute();
-        if (!raw.message && raw.response?.content?.[1]?.text) {
-            return raw.response.content[1].text;
-        }
-
         return raw.message;
     }
 
     async json(schemaExample = null, schemaDescription = {}, { type = 'json_object', addExample = false, addSchema = true } = {}) {
         this.options.response_format = { type };
         if (schemaExample) {
-
             if (addSchema) {
                 const schema = generateJsonSchema(schemaExample, schemaDescription);
                 this.config.systemExtra = "\nOutput JSON Schema: \n```\n" + JSON.stringify(schema) + "\n```";
             }
-
             if (addExample) {
                 this.config.systemExtra += "\nOutput JSON Example: \n```\n" + JSON.stringify(schemaExample) + "\n```";
             }
@@ -480,22 +280,18 @@ class MessageHandler {
 
     async stream(callback) {
         this.options.stream = true;
-        this.modelEntry.streamCallback = callback;
+        this.streamCallback = callback;
         return this.execute();
     }
 
-    replace(keyValues) {
-        this.config.replace = { ...this.config.replace, ...keyValues };
-        return this;
-    }
-
     replaceKeyFromFile(key, filePath) {
-        const content = this.mix.readFile(filePath);
+        const content = this.readFile(filePath);
         this.replace({ [key]: this.template(content, this.config.replace) });
         return this;
     }
 
     template(input, replace) {
+        if (!replace) return input;
         for (const k in replace) {
             input = input.split(/([¿?¡!,"';:\(\)\.\s])/).map(x => x === k ? replace[k] : x).join("");
         }
@@ -519,13 +315,13 @@ class MessageHandler {
     applyTemplate() {
         if (!this.config.replace) return;
 
-        this.config.system = this.template(this.config.system, this.config.replace)
+        this.config.system = this.template(this.config.system, this.config.replace);
 
         this.messages = this.messages.map(message => {
             if (message.content instanceof Array) {
                 message.content = message.content.map(content => {
                     if (content.type === 'text') {
-                        content.text = this.template(content.text, this.config.replace)
+                        content.text = this.template(content.text, this.config.replace);
                     }
                     return content;
                 });
@@ -542,140 +338,96 @@ class MessageHandler {
         this.options.messages = this.messages;
     }
 
+    readFile(filePath, { encoding = 'utf8' } = {}) {
+        try {
+            const absolutePath = path.resolve(filePath);
+            return fs.readFileSync(absolutePath, { encoding });
+        } catch (error) {
+            if (error.code === 'ENOENT') {
+                throw new Error(`File not found: ${filePath}`);
+            } else if (error.code === 'EACCES') {
+                throw new Error(`Permission denied: ${filePath}`);
+            } else {
+                throw new Error(`Error reading file ${filePath}: ${error.message}`);
+            }
+        }
+    }
+
     async execute() {
-        return this.mix.limiter.schedule(async () => {
-            await this.prepareMessages(); // Prepare messages once, outside the loop
+        if (!this.models || this.models.length === 0) {
+            throw new Error("No models specified. Use methods like .gpt(), .sonnet() first.");
+        }
+
+        return this.limiter.schedule(async () => {
+            await this.prepareMessages();
 
             if (this.messages.length === 0) {
                 throw new Error("No user messages have been added. Use addText(prompt), addTextFromFile(filePath), addImage(filePath), or addImageFromUrl(url) to add a prompt.");
             }
 
             let lastError = null;
-            const modelIterationList = this.allModelsInfo; // Use the full info for iteration
 
-            // Iterate through the models defined in the handler's list
-            for (let i = 0; i < modelIterationList.length; i++) {
-                const currentModelDetail = modelIterationList[i];
-                const currentModelKey = currentModelDetail.key;
-                const currentModelBuilderOptions = currentModelDetail.options || {};
-                const currentModelBuilderConfig = currentModelDetail.config || {};
+            for (let i = 0; i < this.models.length; i++) {
 
-                // Find the corresponding model provider instance in the ModelMix instance
-                const currentModelProviderInstance = Object.values(this.mix.models).find(entry =>
-                    entry.config.prefix.some(p => currentModelKey.startsWith(p))
-                );
+                const currentModel = this.models[i];
+                const currentModelKey = currentModel.key;
+                const providerInstance = currentModel.provider;
 
-                if (!currentModelProviderInstance) {
-                    log.warn(`Model provider not found or attached for key: ${currentModelKey}. Skipping.`);
-                    if (!lastError) {
-                        lastError = new Error(`Model provider not found for key: ${currentModelKey}`);
-                    }
-                    continue; // Try the next model
-                }
-
-                // Construct effective options and config for THIS attempt
-                const attemptOptions = {
-                    ...this.mix.defaultOptions,                            // 1. ModelMix global defaults
-                    ...(currentModelProviderInstance.options || {}),      // 2. Provider class defaults for current model
-                    ...this.options,                                       // 3. MessageHandler current general options (from primary + handler changes)
-                    ...currentModelBuilderOptions,                         // 4. Specific options from addModel for THIS model
-                    model: currentModelKey                                 // 5. Crucial: set current model key
+                let options = {
+                    ...this.options,
+                    ...providerInstance.options,
+                    model: currentModelKey
                 };
 
-                const attemptConfig = {
-                    ...this.mix.config,                                    // 1. ModelMix global config
-                    ...(currentModelProviderInstance.config || {}),       // 2. Provider class config for current model
-                    ...this.config,                                        // 3. MessageHandler current general config
-                    ...currentModelBuilderConfig                           // 4. Specific config from addModel for THIS model
+                const config = {
+                    ...this.config,
+                    ...providerInstance.config,
                 };
 
-                // Determine the effective debug flag for this attempt (for logging and API call context)
-                // Precedence: model-specific builder config -> handler config -> mix config
-                const effectiveDebugForAttempt = attemptConfig.hasOwnProperty('debug') ? attemptConfig.debug :
-                    this.config.hasOwnProperty('debug') ? this.config.debug :
-                        this.mix.config.debug;
-
-                // Update attemptConfig with the finally resolved debug flag for the API call
-                const apiCallConfig = { ...attemptConfig, debug: effectiveDebugForAttempt };
-
-
-                if (effectiveDebugForAttempt) {
+                if (config.debug) {
                     const isPrimary = i === 0;
-                    log.debug(`Attempt #${i + 1}: Using model ${currentModelKey}` + (isPrimary ? ' (Primary)' : ' (Fallback)'));
-                    log.debug("Effective attemptOptions for " + currentModelKey + ":");
-                    log.inspect(attemptOptions);
-                    log.debug("Effective apiCallConfig for " + currentModelKey + ":");
-                    log.inspect(apiCallConfig);
+                    log.debug(`[${currentModelKey}] Attempt #${i + 1}` + (isPrimary ? ' (Primary)' : ' (Fallback)'));
                 }
-
-
-                // Apply model-specific adjustments to a copy of options for this attempt
-                let finalAttemptOptions = { ...attemptOptions };
-                if (currentModelProviderInstance instanceof MixOpenAI && finalAttemptOptions.model?.startsWith('o')) {
-                    delete finalAttemptOptions.max_tokens;
-                    delete finalAttemptOptions.temperature;
-                }
-                if (currentModelProviderInstance instanceof MixAnthropic) {
-                    if (finalAttemptOptions.thinking) {
-                        delete finalAttemptOptions.top_p;
-                        // if (finalAttemptOptions.temperature < 1) {
-                        //     finalAttemptOptions.temperature = 1;
-                        // }
-                    }
-                    delete finalAttemptOptions.response_format; // Anthropic doesn't use this top-level option
-                }
-                // ... add other potential model-specific option adjustments here ...
 
                 try {
-                    // Attach the stream callback to the *current* model entry for this attempt
-                    // this.modelEntry is the primary model's provider instance where streamCallback was stored by MessageHandler.stream()
-                    if (finalAttemptOptions.stream && this.modelEntry && this.modelEntry.streamCallback) {
-                        currentModelProviderInstance.streamCallback = this.modelEntry.streamCallback;
+                    if (options.stream && this.streamCallback) {
+                        providerInstance.streamCallback = this.streamCallback;
                     }
 
-                    // Pass the adjusted options/config for this specific attempt
-                    const result = await currentModelProviderInstance.create({ options: finalAttemptOptions, config: apiCallConfig });
+                    const result = await providerInstance.create({ options, config });
 
-                    // Add successful response to history *before* returning
-                    let messageContentToAdd = result.message;
-                    if (currentModelProviderInstance instanceof MixAnthropic && result.response?.content?.[0]?.text) {
-                        messageContentToAdd = result.response.content[0].text;
-                    } else if (currentModelProviderInstance instanceof MixOllama && result.response?.message?.content) {
-                        messageContentToAdd = result.response.message.content;
-                    } // Add more cases if other providers have different structures
+                    this.messages.push({ role: "assistant", content: result.message });
 
-                    this.messages.push({ role: "assistant", content: messageContentToAdd });
-
-                    if (effectiveDebugForAttempt) {
+                    if (config.debug) {
                         log.debug(`Request successful with model: ${currentModelKey}`);
                         log.inspect(result.response);
                     }
-                    return result; // Success!
+
+                    return result;
+
                 } catch (error) {
-                    lastError = error; // Store the most recent error
-                    log.warn(`Model ${currentModelKey} failed (Attempt #${i + 1}/${modelIterationList.length}).`);
+                    lastError = error;
+                    log.warn(`Model ${currentModelKey} failed (Attempt #${i + 1}/${this.models.length}).`);
                     if (error.message) log.warn(`Error: ${error.message}`);
                     if (error.statusCode) log.warn(`Status Code: ${error.statusCode}`);
                     if (error.details) log.warn(`Details: ${JSON.stringify(error.details)}`);
 
-                    // Check if this is the last model in the list
-                    if (i === modelIterationList.length - 1) {
-                        log.error(`All ${modelIterationList.length} model(s) failed. Throwing last error from ${currentModelKey}.`);
-                        throw lastError; // Re-throw the last encountered error
+                    if (i === this.models.length - 1) {
+                        log.error(`All ${this.models.length} model(s) failed. Throwing last error from ${currentModelKey}.`);
+                        throw lastError;
                     } else {
-                        const nextModelKey = modelIterationList[i + 1].key;
+                        const nextModelKey = this.models[i + 1].key;
                         log.info(`-> Proceeding to next model: ${nextModelKey}`);
                     }
                 }
             }
 
-            // This point should theoretically not be reached if there's at least one model key
-            // and the loop either returns a result or throws an error.
             log.error("Fallback logic completed without success or throwing the final error.");
             throw lastError || new Error("Failed to get response from any model, and no specific error was caught.");
         });
     }
 }
+
 class MixCustom {
     constructor({ config = {}, options = {}, headers = {} } = {}) {
         this.config = this.getDefaultConfig(config);
@@ -694,7 +446,6 @@ class MixCustom {
         return {
             url: '',
             apiKey: '',
-            prefix: [],
             ...customConfig
         };
     }
@@ -797,8 +548,16 @@ class MixCustom {
         return '';
     }
 
+    extractMessage(data) {
+        if (data.choices && data.choices[0].message.content) return data.choices[0].message.content;
+        return '';
+    }
+
     processResponse(response) {
-        return { response: response.data, message: response.data.choices[0].message.content };
+        return {
+            response: response.data,
+            message: this.extractMessage(response.data)
+        };
     }
 }
 
@@ -806,7 +565,6 @@ class MixOpenAI extends MixCustom {
     getDefaultConfig(customConfig) {
         return super.getDefaultConfig({
             url: 'https://api.openai.com/v1/chat/completions',
-            prefix: ['gpt', 'ft:', 'o'],
             apiKey: process.env.OPENAI_API_KEY,
             ...customConfig
         });
@@ -854,7 +612,6 @@ class MixAnthropic extends MixCustom {
     getDefaultConfig(customConfig) {
         return super.getDefaultConfig({
             url: 'https://api.anthropic.com/v1/messages',
-            prefix: ['claude'],
             apiKey: process.env.ANTHROPIC_API_KEY,
             ...customConfig
         });
@@ -889,8 +646,18 @@ class MixAnthropic extends MixCustom {
         return '';
     }
 
-    processResponse(response) {
-        return { response: response.data, message: response.data.content[0].text };
+    extractMessage(data) {
+        if (data.content) {
+            // thinking
+            if (data.content?.[1]?.text) {
+                return data.content[1].text;
+            }
+
+            if (data.content[0].text) {
+                return data.content[0].text;
+            }
+        }
+        return '';
     }
 }
 
@@ -898,7 +665,6 @@ class MixPerplexity extends MixCustom {
     getDefaultConfig(customConfig) {
         return super.getDefaultConfig({
             url: 'https://api.perplexity.ai/chat/completions',
-            prefix: ['sonar'],
             apiKey: process.env.PPLX_API_KEY,
             ...customConfig
         });
@@ -943,8 +709,8 @@ class MixOllama extends MixCustom {
         return super.create({ config, options });
     }
 
-    processResponse(response) {
-        return { response: response.data, message: response.data.message.content.trim() };
+    extractMessage(data) {
+        return data.message.content.trim();
     }
 
     static convertMessages(messages) {
@@ -973,7 +739,6 @@ class MixGrok extends MixOpenAI {
     getDefaultConfig(customConfig) {
         return super.getDefaultConfig({
             url: 'https://api.x.ai/v1/chat/completions',
-            prefix: ['grok'],
             apiKey: process.env.XAI_API_KEY,
             ...customConfig
         });
@@ -1000,7 +765,6 @@ class MixGroq extends MixCustom {
     getDefaultConfig(customConfig) {
         return super.getDefaultConfig({
             url: 'https://api.groq.com/openai/v1/chat/completions',
-            prefix: ["llama", "mixtral", "gemma", "deepseek-r1-distill"],
             apiKey: process.env.GROQ_API_KEY,
             ...customConfig
         });
@@ -1022,7 +786,6 @@ class MixTogether extends MixCustom {
     getDefaultConfig(customConfig) {
         return super.getDefaultConfig({
             url: 'https://api.together.xyz/v1/chat/completions',
-            prefix: ["meta-llama", "google", "NousResearch", "deepseek-ai", "Qwen"],
             apiKey: process.env.TOGETHER_API_KEY,
             ...customConfig
         });
@@ -1061,7 +824,6 @@ class MixCerebras extends MixCustom {
     getDefaultConfig(customConfig) {
         return super.getDefaultConfig({
             url: 'https://api.cerebras.ai/v1/chat/completions',
-            prefix: ["llama"],
             apiKey: process.env.CEREBRAS_API_KEY,
             ...customConfig
         });
@@ -1079,14 +841,12 @@ class MixGoogle extends MixCustom {
     getDefaultConfig(customConfig) {
         return super.getDefaultConfig({
             url: 'https://generativelanguage.googleapis.com/v1beta/models',
-            prefix: ['gemini'],
             apiKey: process.env.GOOGLE_API_KEY,
             ...customConfig
         });
     }
 
     getDefaultHeaders(customHeaders) {
-        // Remove the authorization header as we'll use the API key as a query parameter
         return {
             'Content-Type': 'application/json',
             ...customHeaders
@@ -1105,7 +865,7 @@ class MixGoogle extends MixCustom {
     static convertMessages(messages) {
         return messages.map(message => {
             const parts = [];
-            
+
             if (message.content instanceof Array) {
                 message.content.forEach(content => {
                     if (content.type === 'text') {
@@ -1137,13 +897,13 @@ class MixGoogle extends MixCustom {
 
         const modelId = options.model || 'gemini-2.5-flash-preview-04-17';
         const generateContentApi = options.stream ? 'streamGenerateContent' : 'generateContent';
-        
+
         // Construct the full URL with model ID, API endpoint, and API key
         const fullUrl = `${this.config.url}/${modelId}:${generateContentApi}?key=${this.config.apiKey}`;
 
         // Convert messages to Gemini format
         const contents = MixGoogle.convertMessages(options.messages);
-        
+
         // Add system message if present
         if (config.system || config.systemExtra) {
             contents.unshift({
@@ -1171,21 +931,8 @@ class MixGoogle extends MixCustom {
         }
     }
 
-    extractDelta(data) {
-        try {
-            const parsed = JSON.parse(data);
-            if (parsed.candidates?.[0]?.content?.parts?.[0]?.text) {
-                return parsed.candidates[0].content.parts[0].text;
-            }
-        } catch (e) {
-            // If parsing fails, return empty string
-        }
-        return '';
-    }
-
-    processResponse(response) {
-        const content = response.data.candidates?.[0]?.content?.parts?.[0]?.text || '';
-        return { response: response.data, message: content };
+    extractMessage(data) {
+        return data.candidates?.[0]?.content?.parts?.[0]?.text;
     }
 }
 

@@ -14,11 +14,11 @@ const mmix = new ModelMix({
     }
 });
 
-mmix.attach(new MixGroq({
+mmix.attach('deepseek-r1-distill-llama-70b', new MixGroq({
     config: {
         apiKey: env.GROQ_API_KEY,
     }
 }));
 
-const r = await mmix.create('deepseek-r1-distill-llama-70b').addText('do you like cats?').message();
+const r = await mmix.addText('do you like cats?').message();
 console.log(r)

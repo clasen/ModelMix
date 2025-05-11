@@ -14,8 +14,6 @@ const mix = new ModelMix({
     }
 });
 
-mix.attach(new MixOpenAI());
-
 // Function to create a promise that resolves after a random time
 const randomDelay = () => new Promise(resolve => setTimeout(resolve, Math.random() * 2000 + 1000));
 
@@ -24,7 +22,7 @@ async function makeRequest(id) {
     const start = Date.now();
     console.log(`Starting request ${id}`);
 
-    const message = await mix.create('gpt-4o-mini')
+    const message = await mix.gpt41nano()
         .addText(`Generate an interesting fact about the number ${id}.`)
         .message();
 

@@ -9,20 +9,30 @@ const setup = {
     }
 };
 
-const result = await ModelMix.create(setup)
+// const result = await ModelMix.create(setup)
+//     .sonnet37think()
+//     .o4mini({ config: { temperature: 0 } })
+//     .gpt41nano()
+//     .grok3mini()
+//     .gemini25flash()
+//     .addText("What's your name?")
+//     .message();
+
+// console.log(result);
+
+const model = await ModelMix.create(setup)
+    .sonnet37think()    
+    .o4mini()    
     .sonnet37think()
-    .o4mini({ config: { temperature: 0 } })
-    .gpt41nano()
-    .grok3mini()
+    .gpt45()
     .gemini25flash()
-    .addText("What's your name?")
-    .message();
-
-console.log(result);
-
-const jsonResult = await ModelMix.create({ config: { debug: false } })
-    .sonnet37()
     .addText("Name and capital of 3 South American countries.")
-    .json({ countries: [{ name: "", capital: "" }] });
+
+const jsonResult = await model.json({ countries: [{ name: "", capital: "" }] });
 
 console.log(jsonResult);
+
+model.addText("Name and capital of 1 South American countries.")
+
+const jsonResult2 = await model.json({ countries: [{ name: "", capital: "" }] });
+console.log(jsonResult2);
