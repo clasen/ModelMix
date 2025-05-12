@@ -142,6 +142,57 @@ This would replace `article_file_contents` with the entire content of 'article.t
 
 Both methods allow for flexible content insertion, enabling you to create dynamic and customizable prompts for your AI model interactions.
 
+## ⚡️ Shorthand Methods
+
+ModelMix provides convenient shorthand methods for quickly accessing different AI models. Here's a comprehensive list of available methods:
+
+| Method             | Provider    | Model                          | Description                                  | Price (Input / Output) per 1 M tokens                   |
+| ------------------ | ----------- | ------------------------------ | -------------------------------------------- | ------------------------------------------------------- |
+| `gpt41()`          | OpenAI      | gpt-4.1                        | OpenAI's GPT-4.1 model                       | \$2.00 / \$8.00 ([OpenAI][1])                           |
+| `gpt41mini()`      | OpenAI      | gpt-4.1-mini                   | OpenAI's GPT-4.1 Mini model                  | \$0.40 / \$1.60 ([OpenAI][1])                           |
+| `gpt41nano()`      | OpenAI      | gpt-4.1-nano                   | OpenAI's GPT-4.1 Nano model                  | \$0.10 / \$0.40 ([OpenAI][1])                           |
+| `gpt4o()`          | OpenAI      | gpt-4o                         | OpenAI's GPT-4 Optimized model               | \$5.00 / \$20.00 (texto) ([OpenAI][1])                  |
+| `o4mini()`         | OpenAI      | o4-mini                        | OpenAI's O4 Mini model                       | \$1.10 / \$4.40 ([OpenAI][1])                           |
+| `o3()`             | OpenAI      | o3                             | OpenAI's O3 model                            | \$10.00 / \$40.00 ([OpenAI][1])                         |
+| `sonnet37()`       | Anthropic   | claude-3-7-sonnet-20250219     | Anthropic's Claude 3.7 Sonnet model          | \$3.00 / \$15.00 ([Anthropic][2], [Anthropic][3])       |
+| `sonnet37think()`  | Anthropic   | claude-3-7-sonnet-20250219     | Claude 3.7 Sonnet with thinking mode enabled | \$3.00 / \$15.00 ([Anthropic][2], [Anthropic][3])       |
+| `sonnet35()`       | Anthropic   | claude-3-5-sonnet-20241022     | Anthropic's Claude 3.5 Sonnet model          | \$3.00 / \$15.00 ([Anthropic][4])                       |
+| `haiku35()`        | Anthropic   | claude-3-5-haiku-20241022      | Anthropic's Claude 3.5 Haiku model           | \$0.80 / \$4.00 ([Anthropic][2])                        |
+| `gemini25flash()`  | Google      | gemini-2.5-flash-preview-04-17 | Google's Gemini 2.5 Flash model (preview)    | Gratuito (preview) ([Google AI for Developers][5])      |
+| `gemini25proExp()` | Google      | gemini-2.5-pro-exp-03-25       | Google's Gemini 2.5 Pro Experimental         | Gratuito (experimental) ([Google AI for Developers][5]) |
+| `gemini25pro()`    | Google      | gemini-2.5-pro-preview-05-06   | Google's Gemini 2.5 Pro model                | \$2.50 / \$15.00 ([Google DeepMind][6])                 |
+| `sonar()`          | Perplexity  | sonar                          | Perplexity's Sonar model                     | \$1.00 / \$1.00 ([Perplexity][7])                       |
+| `sonarPro()`       | Perplexity  | sonar-pro                      | Perplexity's Sonar Pro model                 | \$3.00 / \$15.00 ([Perplexity][7])                      |
+| `qwen3()`          | Together AI | Qwen/Qwen3-235B-A22B-fp8-tput  | Together AI's Qwen 3 model                   | \$0.20 / \$0.60 ([Together AI][8])                      |
+| `grok2()`          | Grok        | grok-2-latest                  | Grok's latest version 2 model                | \$2.00 / \$10.00 ([xAI][9])                             |
+| `grok3()`          | Grok        | grok-3-beta                    | Grok's version 3 beta model                  | \$3.00 / \$15.00 ([xAI][9])                             |
+| `grok3mini()`      | Grok        | grok-3-mini-beta               | Grok's version 3 mini beta model             | \$0.30 / \$0.50 ([xAI][9])                              |
+| `scout()`          | Cerebras    | llama-4-scout-17b-16e-instruct | Cerebras' Llama 4 Scout model                | \$0.65 / \$0.85 ([Cerebras][10])                        |
+
+Las cifras corresponden a precios de inferencia básicos por millón (1 M) de tokens de entrada y salida.
+
+[1]: https://openai.com/api/pricing/ "Pricing | OpenAI"
+[2]: https://www.anthropic.com/pricing "Pricing - Anthropic"
+[3]: https://www.anthropic.com/news/claude-3-7-sonnet "Claude 3.7 Sonnet and Claude Code - Anthropic"
+[4]: https://docs.anthropic.com/en/docs/about-claude/pricing "Pricing - Anthropic API"
+[5]: https://ai.google.dev/gemini-api/docs/pricing "Gemini Developer API Pricing | Gemini API | Google AI for Developers"
+[6]: https://deepmind.google/technologies/gemini/pro/ "Gemini Pro - Google DeepMind"
+[7]: https://docs.perplexity.ai/guides/pricing "Pricing - Perplexity"
+[8]: https://www.together.ai/pricing "Together Pricing | The Most Powerful Tools at the Best Value"
+[9]: https://x.ai/api "API | xAI"
+[10]: https://www.cerebras.ai/blog/llamablog "Meta Llama 4 Scout runs at 2,600 tokens per second - Cerebras"
+
+Each method accepts optional `options` and `config` parameters to customize the model's behavior. For example:
+
+```javascript
+const result = await ModelMix.new()
+    .sonnet37({ 
+        options: { temperature: 0.7 },
+        config: { system: "You are a helpful assistant" }
+    })
+    .message();
+```
+
 ## 🐛 Enabling Debug Mode
 
 To activate debug mode in ModelMix and view detailed request information, follow these two steps:
@@ -149,7 +200,7 @@ To activate debug mode in ModelMix and view detailed request information, follow
 1. In the ModelMix constructor, include `debug: true` in the configuration:
 
    ```javascript
-   const mix = new ModelMix({
+   const mix = ModelMix.new({
      config: {
        debug: true
        // ... other configuration options ...
@@ -191,57 +242,6 @@ const setup = {
 3. **Automatic Queueing**: If the rate limit is reached, Bottleneck will automatically queue subsequent requests and process them as capacity becomes available.
 
 This integration ensures that your application respects API rate limits while maximizing throughput, providing a robust solution for managing multiple AI model interactions.
-
-## ⚡️ Shorthand Methods
-
-ModelMix provides convenient shorthand methods for quickly accessing different AI models. Here's a comprehensive list of available methods:
-
-| Method             | Provider    | Model                          | Description                                  | Price (Input / Output) per 1 M tokens                   |
-| ------------------ | ----------- | ------------------------------ | -------------------------------------------- | ------------------------------------------------------- |
-| `gpt41()`          | OpenAI      | gpt-4.1                        | OpenAI's GPT-4.1 model                       | \$2.00 / \$8.00 ([OpenAI][1])                           |
-| `gpt41mini()`      | OpenAI      | gpt-4.1-mini                   | OpenAI's GPT-4.1 Mini model                  | \$0.40 / \$1.60 ([OpenAI][1])                           |
-| `gpt41nano()`      | OpenAI      | gpt-4.1-nano                   | OpenAI's GPT-4.1 Nano model                  | \$0.10 / \$0.40 ([OpenAI][1])                           |
-| `gpt4o()`          | OpenAI      | gpt-4o                         | OpenAI's GPT-4 Optimized model               | \$5.00 / \$20.00 (texto) ([OpenAI][1])                  |
-| `o4mini()`         | OpenAI      | o4-mini                        | OpenAI's O4 Mini model                       | \$1.10 / \$4.40 ([OpenAI][1])                           |
-| `o3()`             | OpenAI      | o3                             | OpenAI's O3 model                            | \$10.00 / \$40.00 ([OpenAI][1])                         |
-| `sonnet37()`       | Anthropic   | claude-3-7-sonnet-20250219     | Anthropic's Claude 3.7 Sonnet model          | \$3.00 / \$15.00 ([Anthropic][2], [Anthropic][3])       |
-| `sonnet37think()`  | Anthropic   | claude-3-7-sonnet-20250219     | Claude 3.7 Sonnet with thinking mode enabled | \$3.00 / \$15.00 ([Anthropic][2], [Anthropic][3])       |
-| `sonnet35()`       | Anthropic   | claude-3-5-sonnet-20241022     | Anthropic's Claude 3.5 Sonnet model          | \$3.00 / \$15.00 ([Anthropic][4])                       |
-| `haiku35()`        | Anthropic   | claude-3-5-haiku-20241022      | Anthropic's Claude 3.5 Haiku model           | \$0.80 / \$4.00 ([Anthropic][2])                        |
-| `gemini25flash()`  | Google      | gemini-2.5-flash-preview-04-17 | Google's Gemini 2.5 Flash model (preview)    | Gratuito (preview) ([Google AI for Developers][5])      |
-| `gemini25proExp()` | Google      | gemini-2.5-pro-exp-03-25       | Google's Gemini 2.5 Pro Experimental         | Gratuito (experimental) ([Google AI for Developers][5]) |
-| `gemini25pro()`    | Google      | gemini-2.5-pro-preview-05-06   | Google's Gemini 2.5 Pro model                | \$2.50 / \$15.00 ([Google DeepMind][6])                 |
-| `sonar()`          | Perplexity  | sonar                          | Perplexity's Sonar model                     | \$1.00 / \$1.00 ([Perplexity][7])                       |
-| `sonarPro()`       | Perplexity  | sonar-pro                      | Perplexity's Sonar Pro model                 | \$3.00 / \$15.00 ([Perplexity][7])                      |
-| `qwen3()`          | Together AI | Qwen/Qwen3-235B-A22B-fp8-tput  | Together AI's Qwen 3 model                   | \$0.20 / \$0.60 ([Together AI][8])                      |
-| `grok2()`          | Grok        | grok-2-latest                  | Grok's latest version 2 model                | \$2.00 / \$10.00 ([xAI][9])                             |
-| `grok3()`          | Grok        | grok-3-beta                    | Grok's version 3 beta model                  | \$3.00 / \$15.00 ([xAI][9])                             |
-| `grok3mini()`      | Grok        | grok-3-mini-beta               | Grok's version 3 mini beta model             | \$0.30 / \$0.50 ([xAI][9])                              |
-| `scout()`          | Cerebras    | llama-4-scout-17b-16e-instruct | Cerebras' Llama 4 Scout model                | \$0.65 / \$0.85 ([Cerebras][10])                        |
-
-Las cifras corresponden a precios de inferencia básicos por millón (1 M) de tokens de entrada y salida.
-
-[1]: https://openai.com/api/pricing/ "Pricing | OpenAI"
-[2]: https://www.anthropic.com/pricing?utm_source=chatgpt.com "Pricing - Anthropic"
-[3]: https://www.anthropic.com/news/claude-3-7-sonnet?utm_source=chatgpt.com "Claude 3.7 Sonnet and Claude Code - Anthropic"
-[4]: https://docs.anthropic.com/en/docs/about-claude/pricing?utm_source=chatgpt.com "Pricing - Anthropic API"
-[5]: https://ai.google.dev/gemini-api/docs/pricing?utm_source=chatgpt.com "Gemini Developer API Pricing | Gemini API | Google AI for Developers"
-[6]: https://deepmind.google/technologies/gemini/pro/?utm_source=chatgpt.com "Gemini Pro - Google DeepMind"
-[7]: https://docs.perplexity.ai/guides/pricing?utm_source=chatgpt.com "Pricing - Perplexity"
-[8]: https://www.together.ai/pricing?utm_source=chatgpt.com "Together Pricing | The Most Powerful Tools at the Best Value"
-[9]: https://x.ai/api?utm_source=chatgpt.com "API | xAI"
-[10]: https://www.cerebras.ai/blog/llamablog?utm_source=chatgpt.com "Meta Llama 4 Scout runs at 2,600 tokens per second - Cerebras"
-
-Each method accepts optional `options` and `config` parameters to customize the model's behavior. For example:
-
-```javascript
-const result = await ModelMix.new()
-    .sonnet37({ 
-        options: { temperature: 0.7 },
-        config: { system: "You are a helpful assistant" }
-    })
-    .message();
-```
 
 ## 📚 ModelMix Class Overview
 
