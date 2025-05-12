@@ -169,8 +169,6 @@ ModelMix provides convenient shorthand methods for quickly accessing different A
 | `grok3mini()`      | Grok        | grok-3-mini-beta               | \$0.30 / \$0.50 ([xAI][9])                        |
 | `scout()`          | Cerebras    | llama-4-scout-17b-16e-instruct | \$0.65 / \$0.85 ([Cerebras][10])                  |
 
-Las cifras corresponden a precios de inferencia básicos por millón (1 M) de tokens de entrada y salida.
-
 [1]: https://openai.com/api/pricing/ "Pricing | OpenAI"
 [2]: https://www.anthropic.com/pricing "Pricing - Anthropic"
 [3]: https://www.anthropic.com/news/claude-3-7-sonnet "Claude 3.7 Sonnet and Claude Code - Anthropic"
