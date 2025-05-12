@@ -2,7 +2,7 @@ import 'dotenv/config'
 
 import { ModelMix } from '../index.js';
 
-const setup = {
+const mmix = new ModelMix({
     options: {
         max_tokens: 2000,
     },
@@ -11,10 +11,10 @@ const setup = {
         max_history: 2,
         debug: true
     }
-};
+});
 
 
-const r = await ModelMix.create(setup).grok2()
+const r = await mmix.grok2()
     .addText('hi there!')
     .addText('do you like cats?')
     .message();

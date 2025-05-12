@@ -33,26 +33,26 @@ gpt.replace({ '{animal}': 'cat' });
 console.log(await gpt.json({ time: '24:00:00', message: 'Hello' }, { time: 'Time in format HH:MM:SS' }));
 
 console.log("\n" + '--------| claude-3-5-sonnet-20240620 |--------');
-const claude = mmix.create().attach('claude-3-5-sonnet-20240620', new MixAnthropic());
+const claude = ModelMix.new().attach('claude-3-5-sonnet-20240620', new MixAnthropic());
 claude.addImageFromUrl('https://pbs.twimg.com/media/F6-GsjraAAADDGy?format=jpg');
 const imageDescription = await claude.addText('describe the image').message();
 console.log(imageDescription);
 
 console.log("\n" + '--------| claude-3-7-sonnet-20250219 |--------');
-const writer = mmix.create().attach('claude-3-7-sonnet-20250219', new MixAnthropic());
+const writer = ModelMix.new().attach('claude-3-7-sonnet-20250219', new MixAnthropic());
 writer.setSystem('You are a writer like Stephen King');
 writer.replaceKeyFromFile('{story_title}', './title.md');
 const story = await writer.addTextFromFile('./prompt.md').message();
 console.log(story);
 
-console.log("\n" + '--------| llama-3-sonar-large-32k-online |--------');
-const pplx = mmix.create().sonar(pplxSettings);
+console.log("\n" + '--------| sonar |--------');
+const pplx = ModelMix.new().sonar(pplxSettings);
 pplx.addText('How much is ETH trading in USD?');
-const news = await pplx.addText('What are the 3 most recent Ethereum news?').message();
+const news = await pplx.addText('What are the 3 most recent Ethereum news?').json({ price: 1000.12 });
 console.log(news);
 
 // console.log("\n" + '--------| ollama (llava:latest) |--------');
-// await mmix.create('llava:latest')
+// await mmix.new().attach('llava:latest', new MixOllama())
 //     .addImage('./watson.jpg')
 //     .addText('what is the predominant color?')
 //     .stream((data) => { console.log(data.message); });

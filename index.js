@@ -41,11 +41,11 @@ class ModelMix {
         return this;
     }
 
-    static create({ options = {}, config = {} } = {}) {
+    static new({ options = {}, config = {} } = {}) {
         return new ModelMix({ options, config });
     }
 
-    create() {
+    new() {
         return new ModelMix({ options: this.options, config: this.config });
     }
 
@@ -112,8 +112,11 @@ class ModelMix {
     gemini25pro({ options = {}, config = {} } = {}) {
         return this.attach('gemini-2.5-pro-preview-05-06', new MixGoogle({ options, config }));
     }
-    sonar({ options = {}, config = {} } = {}) {
+    sonarPro({ options = {}, config = {} } = {}) {
         return this.attach('sonar-pro', new MixPerplexity({ options, config }));
+    }
+    sonar({ options = {}, config = {} } = {}) {
+        return this.attach('sonar', new MixPerplexity({ options, config }));
     }
     qwen3({ options = {}, config = {} } = {}) {
         return this.attach('Qwen/Qwen3-235B-A22B-fp8-tput', new MixTogether({ options, config }));
@@ -129,12 +132,6 @@ class ModelMix {
     }
     scout({ options = {}, config = {} } = {}) {
         return this.attach('llama-4-scout-17b-16e-instruct', new MixCerebras({ options, config }));
-    }
-
-    // --- Message handling methods ---
-    new() {
-        this.messages = [];
-        return this;
     }
 
     addText(text, { role = "user" } = {}) {
@@ -245,10 +242,12 @@ class ModelMix {
 
     async json(schemaExample = null, schemaDescription = {}, { type = 'json_object', addExample = false, addSchema = true } = {}) {
         this.options.response_format = { type };
+        
         if (schemaExample) {
+            this.config.schema = generateJsonSchema(schemaExample, schemaDescription);
+
             if (addSchema) {
-                const schema = generateJsonSchema(schemaExample, schemaDescription);
-                this.config.systemExtra = "\nOutput JSON Schema: \n```\n" + JSON.stringify(schema) + "\n```";
+                this.config.systemExtra = "\nOutput JSON Schema: \n```\n" + JSON.stringify(this.config.schema) + "\n```";
             }
             if (addExample) {
                 this.config.systemExtra += "\nOutput JSON Example: \n```\n" + JSON.stringify(schemaExample) + "\n```";
@@ -671,6 +670,16 @@ class MixPerplexity extends MixCustom {
     }
 
     async create({ config = {}, options = {} } = {}) {
+
+        if (config.schema) {
+            config.systemExtra = '';
+
+            options.response_format = {
+                type: 'json_schema',
+                json_schema: { schema: config.schema }
+            };
+        }
+
         if (!this.config.apiKey) {
             throw new Error('Perplexity API key not found. Please provide it in config or set PPLX_API_KEY environment variable.');
         }

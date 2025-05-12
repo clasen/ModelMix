@@ -9,20 +9,16 @@ const setup = {
     }
 };
 
-// const result = await ModelMix.create(setup)
-//     .sonnet37think()
-//     .o4mini({ config: { temperature: 0 } })
-//     .gpt41nano()
-//     .grok3mini()
-//     .gemini25flash()
-//     .addText("What's your name?")
-//     .message();
+const result = await ModelMix.new(setup)
+    .gpt41nano({ config: { temperature: 0 } })
+    .addText("What's your name?")
+    .message();
 
-// console.log(result);
+console.log(result);
 
-const model = await ModelMix.create(setup)
-    .sonnet37think()    
-    .o4mini()    
+const model = await ModelMix.new({ config: { debug: true } })
+    .sonnet37think()
+    .o4mini()
     .sonnet37think()
     .gpt45()
     .gemini25flash()
