@@ -151,15 +151,15 @@ ModelMix provides convenient shorthand methods for quickly accessing different A
 | `gpt41()`          | OpenAI      | gpt-4.1                        | \$2.00 / \$8.00 ([OpenAI][1])                           |
 | `gpt41mini()`      | OpenAI      | gpt-4.1-mini                   | \$0.40 / \$1.60 ([OpenAI][1])                           |
 | `gpt41nano()`      | OpenAI      | gpt-4.1-nano                   | \$0.10 / \$0.40 ([OpenAI][1])                           |
-| `gpt4o()`          | OpenAI      | gpt-4o                         | \$5.00 / \$20.00 (texto) ([OpenAI][1])                  |
+| `gpt4o()`          | OpenAI      | gpt-4o                         | \$5.00 / \$20.00 ([OpenAI][1])                  |
 | `o4mini()`         | OpenAI      | o4-mini                        | \$1.10 / \$4.40 ([OpenAI][1])                           |
 | `o3()`             | OpenAI      | o3                             | \$10.00 / \$40.00 ([OpenAI][1])                         |
 | `sonnet37()`       | Anthropic   | claude-3-7-sonnet-20250219     | \$3.00 / \$15.00 ([Anthropic][2], [Anthropic][3])       |
 | `sonnet37think()`  | Anthropic   | claude-3-7-sonnet-20250219     | \$3.00 / \$15.00 ([Anthropic][2], [Anthropic][3])       |
 | `sonnet35()`       | Anthropic   | claude-3-5-sonnet-20241022     | \$3.00 / \$15.00 ([Anthropic][4])                       |
 | `haiku35()`        | Anthropic   | claude-3-5-haiku-20241022      | \$0.80 / \$4.00 ([Anthropic][2])                        |
-| `gemini25flash()`  | Google      | gemini-2.5-flash-preview-04-17 | Gratuito (preview) ([Google AI for Developers][5])      |
-| `gemini25proExp()` | Google      | gemini-2.5-pro-exp-03-25       | Gratuito (experimental) ([Google AI for Developers][5]) |
+| `gemini25flash()`  | Google      | gemini-2.5-flash-preview-04-17 | \$0.00 / \$0.00 ([Google AI for Developers][5])      |
+| `gemini25proExp()` | Google      | gemini-2.5-pro-exp-03-25       | \$0.00 / \$0.00 ([Google AI for Developers][5]) |
 | `gemini25pro()`    | Google      | gemini-2.5-pro-preview-05-06   | \$2.50 / \$15.00 ([Google DeepMind][6])                 |
 | `sonar()`          | Perplexity  | sonar                          | \$1.00 / \$1.00 ([Perplexity][7])                       |
 | `sonarPro()`       | Perplexity  | sonar-pro                      | \$3.00 / \$15.00 ([Perplexity][7])                      |
