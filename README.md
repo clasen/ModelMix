@@ -94,7 +94,8 @@ This pattern allows you to:
 
 ## ⚡️ Shorthand Methods
 
-ModelMix provides convenient shorthand methods for quickly accessing different AI models. Here's a comprehensive list of available methods:
+ModelMix provides convenient shorthand methods for quickly accessing different AI models.
+Here's a comprehensive list of available methods:
 
 | Method             | Provider   | Model                          | Price (I/O) per 1 M tokens |
 | ------------------ | ---------- | ------------------------------ | -------------------------- |
@@ -108,24 +109,24 @@ ModelMix provides convenient shorthand methods for quickly accessing different A
 | `sonnet37think()`  | Anthropic  | claude-3-7-sonnet-20250219     | [\$3.00 / \$15.00][2]      |
 | `sonnet35()`       | Anthropic  | claude-3-5-sonnet-20241022     | [\$3.00 / \$15.00][2]      |
 | `haiku35()`        | Anthropic  | claude-3-5-haiku-20241022      | [\$0.80 / \$4.00][2]       |
-| `gemini25flash()`   | Google     | gemini-2.5-flash-preview-04-17  | [\$0.00 / \$0.00][5]       |
-| `gemini25proExp()` | Google     | gemini-2.5-pro-exp-03-25       | [\$0.00 / \$0.00][5]       |
-| `gemini25pro()`    | Google     | gemini-2.5-pro-preview-05-06   | [\$2.50 / \$15.00][5]      |
-| `grok2()`          | Grok       | grok-2-latest                  | [\$2.00 / \$10.00][9]      |
-| `grok3()`          | Grok       | grok-3-beta                    | [\$3.00 / \$15.00][9]      |
-| `grok3mini()`      | Grok       | grok-3-mini-beta               | [\$0.30 / \$0.50][9]       |
-| `sonar()`          | Perplexity | sonar                          | [\$1.00 / \$1.00][7]       |
-| `sonarPro()`       | Perplexity | sonar-pro                      | [\$3.00 / \$15.00][7]      |
-| `qwen3()`          | Groq       | Qwen3-235B-A22B-fp8-tput       | [\$0.29 / \$0.39][8]       |
-| `scout()`          | Groq       | Llama-4-Scout-17B-16E-Instruct | [\$0.11 / \$0.34][8]       |
-| `maverick()`       | Groq       | Maverick-17B-128E-Instruct-FP8 | [\$0.20 / \$0.60][8]       |
+| `gemini25flash()`   | Google     | gemini-2.5-flash-preview-04-17  | [\$0.00 / \$0.00][3]       |
+| `gemini25proExp()` | Google     | gemini-2.5-pro-exp-03-25       | [\$0.00 / \$0.00][3]       |
+| `gemini25pro()`    | Google     | gemini-2.5-pro-preview-05-06   | [\$2.50 / \$15.00][3]      |
+| `grok2()`          | Grok       | grok-2-latest                  | [\$2.00 / \$10.00][6]      |
+| `grok3()`          | Grok       | grok-3-beta                    | [\$3.00 / \$15.00][6]      |
+| `grok3mini()`      | Grok       | grok-3-mini-beta               | [\$0.30 / \$0.50][6]       |
+| `sonar()`          | Perplexity | sonar                          | [\$1.00 / \$1.00][4]       |
+| `sonarPro()`       | Perplexity | sonar-pro                      | [\$3.00 / \$15.00][4]      |
+| `qwen3()`          | Groq       | Qwen3-235B-A22B-fp8-tput       | [\$0.29 / \$0.39][5]       |
+| `scout()`          | Groq       | Llama-4-Scout-17B-16E-Instruct | [\$0.11 / \$0.34][5]       |
+| `maverick()`       | Groq       | Maverick-17B-128E-Instruct-FP8 | [\$0.20 / \$0.60][5]       |
 
 [1]: https://openai.com/api/pricing/ "Pricing | OpenAI"
-[2]: https://www.anthropic.com/pricing "Pricing - Anthropic"
-[5]: https://ai.google.dev/gemini-api/docs/pricing "Google AI for Developers"
-[7]: https://docs.perplexity.ai/guides/pricing "Pricing - Perplexity"
-[8]: https://groq.com/pricing/ "Groq Pricing"
-[9]: https://docs.x.ai/docs/models "xAI"
+[2]: https://docs.anthropic.com/en/docs/about-claude/pricing "Pricing - Anthropic"
+[3]: https://ai.google.dev/gemini-api/docs/pricing "Google AI for Developers"
+[4]: https://docs.perplexity.ai/guides/pricing "Pricing - Perplexity"
+[5]: https://groq.com/pricing/ "Groq Pricing"
+[6]: https://docs.x.ai/docs/models "xAI"
 
 Each method accepts optional `options` and `config` parameters to customize the model's behavior. For example:
 
