@@ -132,6 +132,13 @@ class ModelMix {
     }
     scout({ options = {}, config = {} } = {}) {
         return this.attach('llama-4-scout-17b-16e-instruct', new MixCerebras({ options, config }));
+        // return this.attach('meta-llama/Llama-4-Scout-17B-16E-Instruct', new MixTogether({ options, config }));
+    }
+    maverick({ options = {}, config = {} } = {}) {
+        return this.attach('meta-llama/Llama-4-Maverick-17B-128E-Instruct-FP8', new MixTogether({ options, config }));
+    }
+    deepseekR1({ options = {}, config = {} } = {}) {
+        return this.attach('deepseek-ai/DeepSeek-R1', new MixTogether({ options, config }));
     }
 
     addText(text, { role = "user" } = {}) {

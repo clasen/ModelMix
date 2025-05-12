@@ -48,8 +48,8 @@ console.log(story);
 console.log("\n" + '--------| sonar |--------');
 const pplx = ModelMix.new().sonar(pplxSettings);
 pplx.addText('How much is ETH trading in USD?');
-const news = await pplx.addText('What are the 3 most recent Ethereum news?').json({ price: 1000.12 });
-console.log(news);
+const ETH = await pplx.json({ price: 1000.1 });
+console.log(ETH.price);
 
 // console.log("\n" + '--------| ollama (llava:latest) |--------');
 // await mmix.new().attach('llava:latest', new MixOllama())
