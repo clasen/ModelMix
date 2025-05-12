@@ -118,9 +118,7 @@ class ModelMix {
     sonar({ options = {}, config = {} } = {}) {
         return this.attach('sonar', new MixPerplexity({ options, config }));
     }
-    qwen3({ options = {}, config = {} } = {}) {
-        return this.attach('Qwen/Qwen3-235B-A22B-fp8-tput', new MixTogether({ options, config }));
-    }
+
     grok2({ options = {}, config = {} } = {}) {
         return this.attach('grok-2-latest', new MixGrok({ options, config }));
     }
@@ -130,15 +128,30 @@ class ModelMix {
     grok3mini({ options = {}, config = {} } = {}) {
         return this.attach('grok-3-mini-beta', new MixGrok({ options, config }));
     }
-    scout({ options = {}, config = {} } = {}) {
-        return this.attach('llama-4-scout-17b-16e-instruct', new MixCerebras({ options, config }));
-        // return this.attach('meta-llama/Llama-4-Scout-17B-16E-Instruct', new MixTogether({ options, config }));
+
+    qwen3({ options = {}, config = {}, mix = { groq: true, together: false } } = {}) {
+        if (mix.groq) this.attach('qwen-qwq-32b', new MixGroq({ options, config }));
+        if (mix.together) this.attach('Qwen/Qwen3-235B-A22B-fp8-tput', new MixTogether({ options, config }));
+        return this;
     }
-    maverick({ options = {}, config = {} } = {}) {
-        return this.attach('meta-llama/Llama-4-Maverick-17B-128E-Instruct-FP8', new MixTogether({ options, config }));
+
+    scout({ options = {}, config = {}, mix = { groq: true, together: false, cerebras: false } } = {}) {
+        if (mix.groq) this.attach('meta-llama/llama-4-scout-17b-16e-instruct', new MixGroq({ options, config }));
+        if (mix.together) this.attach('meta-llama/Llama-4-Scout-17B-16E-Instruct', new MixTogether({ options, config }));
+        if (mix.cerebras) this.attach('llama-4-scout-17b-16e-instruct', new MixCerebras({ options, config }));
+        return this;
+    }  
+    maverick({ options = {}, config = {}, mix = { groq: true, together: false } } = {}) {
+        if (mix.groq) this.attach('meta-llama/llama-4-maverick-17b-128e-instruct', new MixGroq({ options, config }));
+        if (mix.together) this.attach('meta-llama/Llama-4-Maverick-17B-128E-Instruct-FP8', new MixTogether({ options, config }));
+        return this;
     }
-    deepseekR1({ options = {}, config = {} } = {}) {
-        return this.attach('deepseek-ai/DeepSeek-R1', new MixTogether({ options, config }));
+
+    deepseekR1({ options = {}, config = {}, mix = { groq: true, together: false, cerebras: false } } = {}) {
+        if (mix.groq) this.attach('deepseek-r1-distill-llama-70b', new MixGroq({ options, config }));
+        if (mix.together) this.attach('deepseek-ai/DeepSeek-R1', new MixTogether({ options, config }));
+        if (mix.cerebras) this.attach('deepseek-r1-distill-llama-70b', new MixCerebras({ options, config }));
+        return this;
     }
 
     addText(text, { role = "user" } = {}) {
@@ -249,7 +262,7 @@ class ModelMix {
 
     async json(schemaExample = null, schemaDescription = {}, { type = 'json_object', addExample = false, addSchema = true } = {}) {
         this.options.response_format = { type };
-        
+
         if (schemaExample) {
             this.config.schema = generateJsonSchema(schemaExample, schemaDescription);
 
