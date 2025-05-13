@@ -37,7 +37,7 @@ class ModelMix {
     }
 
     replace(keyValues) {
-        this.config.replace = keyValues;
+        this.config.replace = { ...this.config.replace, ...keyValues };
         return this;
     }
 
