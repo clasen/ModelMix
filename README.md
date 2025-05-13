@@ -117,7 +117,7 @@ Here's a comprehensive list of available methods:
 | `grok3mini()`      | Grok       | grok-3-mini-beta               | [\$0.30 / \$0.50][6]       |
 | `sonar()`          | Perplexity | sonar                          | [\$1.00 / \$1.00][4]       |
 | `sonarPro()`       | Perplexity | sonar-pro                      | [\$3.00 / \$15.00][4]      |
-| `qwen3()`          | Groq       | Qwen3-235B-A22B-fp8-tput       | [\$0.29 / \$0.39][5]       |
+| `qwen3()`          | Together   | Qwen3-235B-A22B-fp8-tput       | [\$0.20 / \$0.60][7]       |
 | `scout()`          | Groq       | Llama-4-Scout-17B-16E-Instruct | [\$0.11 / \$0.34][5]       |
 | `maverick()`       | Groq       | Maverick-17B-128E-Instruct-FP8 | [\$0.20 / \$0.60][5]       |
 
@@ -127,6 +127,7 @@ Here's a comprehensive list of available methods:
 [4]: https://docs.perplexity.ai/guides/pricing "Pricing - Perplexity"
 [5]: https://groq.com/pricing/ "Groq Pricing"
 [6]: https://docs.x.ai/docs/models "xAI"
+[7]: https://www.together.ai/pricing "Together AI"
 
 Each method accepts optional `options` and `config` parameters to customize the model's behavior. For example:
 
