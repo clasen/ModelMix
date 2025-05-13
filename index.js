@@ -786,6 +786,21 @@ class MixGrok extends MixOpenAI {
             ...customConfig
         });
     }
+
+    processResponse(response) {
+        const message = this.extractMessage(response.data);
+
+        const output = {
+            message: message,
+            response: response.data
+        }
+
+        if (response.data.choices[0].message.reasoning_content) {
+            output.think = response.data.choices[0].message.reasoning_content;
+        }
+
+        return output;
+    }
 }
 
 class MixLMStudio extends MixCustom {
