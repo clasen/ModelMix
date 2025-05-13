@@ -140,7 +140,7 @@ class ModelMix {
         if (mix.together) this.attach('meta-llama/Llama-4-Scout-17B-16E-Instruct', new MixTogether({ options, config }));
         if (mix.cerebras) this.attach('llama-4-scout-17b-16e-instruct', new MixCerebras({ options, config }));
         return this;
-    }  
+    }
     maverick({ options = {}, config = {}, mix = { groq: true, together: false } } = {}) {
         if (mix.groq) this.attach('meta-llama/llama-4-maverick-17b-128e-instruct', new MixGroq({ options, config }));
         if (mix.together) this.attach('meta-llama/Llama-4-Maverick-17B-128E-Instruct-FP8', new MixTogether({ options, config }));
@@ -568,15 +568,23 @@ class MixCustom {
     }
 
     extractMessage(data) {
-        if (data.choices && data.choices[0].message.content) return data.choices[0].message.content;
+        if (data.choices && data.choices[0].message.content) return data.choices[0].message.content.trim();
         return '';
     }
 
     processResponse(response) {
-        return {
-            response: response.data,
-            message: this.extractMessage(response.data)
-        };
+        let message = this.extractMessage(response.data);
+
+        if (message.startsWith('<think>')) {
+            const endTagIndex = message.indexOf('</think>');
+            if (endTagIndex !== -1) {
+                const think = message.substring(7, endTagIndex).trim();
+                message = message.substring(endTagIndex + 8).trim();
+                return { response: response.data, message, think };
+            }
+        }
+
+        return { response: response.data, message };
     }
 }
 
@@ -665,18 +673,24 @@ class MixAnthropic extends MixCustom {
         return '';
     }
 
-    extractMessage(data) {
-        if (data.content) {
-            // thinking
-            if (data.content?.[1]?.text) {
-                return data.content[1].text;
+    processResponse(response) {
+        if (response.data.content) {
+
+            if (response.data.content?.[1]?.text) {
+                return {
+                    think: response.data.content[0]?.thinking,
+                    message: response.data.content[1].text,
+                    response: response.data
+                }
             }
 
-            if (data.content[0].text) {
-                return data.content[0].text;
+            if (response.data.content[0].text) {
+                return {
+                    message: response.data.content[0].text,
+                    response: response.data
+                }
             }
         }
-        return '';
     }
 }
 
