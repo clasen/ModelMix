@@ -5,11 +5,16 @@ const log = require('lemonlog')('ModelMix');
 const Bottleneck = require('bottleneck');
 const path = require('path');
 const generateJsonSchema = require('./schema');
+const { Client } = require("@modelcontextprotocol/sdk/client/index.js");
+const { StdioClientTransport } = require("@modelcontextprotocol/sdk/client/stdio.js");
 
 class ModelMix {
     constructor({ options = {}, config = {} } = {}) {
         this.models = [];
         this.messages = [];
+        this.tools = {};
+        this.toolClient = {};
+        this.mcp = {};
         this.options = {
             max_tokens: 5000,
             temperature: 1, // 1 --> More creative, 0 --> More deterministic.
@@ -129,8 +134,9 @@ class ModelMix {
         return this.attach('grok-3-mini-beta', new MixGrok({ options, config }));
     }
 
-    qwen3({ options = {}, config = {}, mix = { together: true } } = {}) {
+    qwen3({ options = {}, config = {}, mix = { together: true, cerebras: false } } = {}) {
         if (mix.together) this.attach('Qwen/Qwen3-235B-A22B-fp8-tput', new MixTogether({ options, config }));
+        if (mix.cerebras) this.attach('qwen-3-32b', new MixCerebras({ options, config }));
         return this;
     }
 
@@ -319,10 +325,11 @@ class ModelMix {
     groupByRoles(messages) {
         return messages.reduce((acc, currentMessage, index) => {
             if (index === 0 || currentMessage.role !== messages[index - 1].role) {
-                acc.push({
-                    role: currentMessage.role,
-                    content: currentMessage.content
-                });
+                // acc.push({
+                //     role: currentMessage.role,
+                //     content: currentMessage.content
+                // });
+                acc.push(currentMessage);
             } else {
                 acc[acc.length - 1].content = acc[acc.length - 1].content.concat(currentMessage.content);
             }
@@ -390,10 +397,12 @@ class ModelMix {
                 const currentModel = this.models[i];
                 const currentModelKey = currentModel.key;
                 const providerInstance = currentModel.provider;
+                const optionsTools = providerInstance.getOptionsTools(this.tools);
 
                 let options = {
                     ...this.options,
                     ...providerInstance.options,
+                    ...optionsTools,
                     model: currentModelKey
                 };
 
@@ -413,6 +422,19 @@ class ModelMix {
                     }
 
                     const result = await providerInstance.create({ options, config });
+
+                    if (result.tool.calls.length > 0) {
+
+                        this.messages.push(result.tool.message);
+
+                        const toolCalls = await this.processToolCalls(result.tool.calls);
+
+                        for (const toolCall of toolCalls) {
+                            this.messages.push(toolCall);
+                        }
+
+                        return this.execute();
+                    }
 
                     this.messages.push({ role: "assistant", content: result.message });
 
@@ -443,6 +465,64 @@ class ModelMix {
             log.error("Fallback logic completed without success or throwing the final error.");
             throw lastError || new Error("Failed to get response from any model, and no specific error was caught.");
         });
+    }
+
+    async processToolCalls(toolCalls) {
+        const result = []
+        for (const toolCall of toolCalls) {
+            const client = this.toolClient[toolCall.function.name];
+            const args = JSON.parse(toolCall.function.arguments);
+
+            const response = await client.callTool({
+                name: toolCall.function.name,
+                arguments: args
+            });
+
+            result.push({
+                tool_call_id: toolCall.id,
+                role: 'tool',
+                name: toolCall.function.name,
+                content: response.content.map(item => item.text).join("\n")
+            });
+        }
+        return result;
+    }
+
+    async addMCP() {
+
+        const key = arguments[0];
+
+        if (this.mcp[key]) {
+            log.info(`MCP ${key} already attached.`);
+            return;
+        }
+
+        if (this.config.max_history < 3) {
+            log.warn(`MCP ${key} requires at least 3 max_history. Setting to 3.`);
+            this.config.max_history = 3;
+        }
+
+        const transport = new StdioClientTransport({
+            command: "npx",
+            args: ["-y", ...arguments],
+            env: process.env
+        });
+
+        // Crear el cliente MCP
+        this.mcp[key] = new Client({
+            name: key,
+            version: "1.0.0"
+        });
+
+        await this.mcp[key].connect(transport);
+
+        const { tools } = await this.mcp[key].listTools();
+        this.tools[key] = tools;
+
+        for (const tool of tools) {
+            this.toolClient[tool.name] = this.mcp[key];
+        }
+
     }
 }
 
@@ -571,7 +651,23 @@ class MixCustom {
         return '';
     }
 
+    extractToolCalls(data) {
+        if (data.choices && data.choices[0].message.tool_calls) {
+            return {
+                calls: data.choices[0].message.tool_calls,
+                message: {
+                    role: 'assistant',
+                    tool_calls: data.choices[0].message.tool_calls
+                }
+            }
+        }
+        return {
+            calls: [],
+        }
+    }
+
     processResponse(response) {
+        const tool = this.extractToolCalls(response.data);
         let message = this.extractMessage(response.data);
 
         if (message.startsWith('<think>')) {
@@ -583,7 +679,11 @@ class MixCustom {
             }
         }
 
-        return { response: response.data, message };
+        return { response: response.data, message, tool };
+    }
+
+    getOptionsTools(tools) {
+        return { tools: Object.values(tools), tool_choice: 'auto' };
     }
 }
 
@@ -632,6 +732,29 @@ class MixOpenAI extends MixCustom {
             return message;
         });
     }
+
+    getOptionsTools(tools) {
+        return MixOpenAI.getOptionsTools(tools);
+    }
+
+    static getOptionsTools(tools) {
+        const options = {};
+        options.tools = [];
+        for (const tool in tools) {
+            for (const item of tools[tool]) {
+                options.tools.push({
+                    type: 'function',
+                    function: {
+                        name: item.name,
+                        description: item.description,
+                        parameters: item.inputSchema
+                    }
+                });
+            }
+        }
+        // options.tool_choice = 'auto';
+        return options;
+    }
 }
 
 class MixAnthropic extends MixCustom {
@@ -654,9 +777,27 @@ class MixAnthropic extends MixCustom {
         }
 
         delete options.response_format;
-
+        options.messages = MixAnthropic.convertMessages(options.messages);
         options.system = config.system + config.systemExtra;
         return super.create({ config, options });
+    }
+
+    static convertMessages(messages) {
+        return messages.map(message => {
+            if (message.role === 'tool') {
+                return {
+                    role: 'user',
+                    content: [
+                        {
+                            type: "tool_result",
+                            tool_use_id: message.tool_call_id,
+                            content: message.content
+                        }
+                    ]
+                }
+            }
+            return message;
+        });
     }
 
     getDefaultHeaders(customHeaders) {
@@ -672,24 +813,68 @@ class MixAnthropic extends MixCustom {
         return '';
     }
 
+    extractToolCalls(data) {
+        const toolCalls = [];
+        for (const item of data.content) {
+            console.log('extractToolCalls', JSON.stringify(item, null, 2));
+            if (item.type === 'tool_use') {
+                toolCalls.push({
+                    id: item.id,
+                    function: {
+                        name: item.name,
+                        arguments: JSON.stringify(item.input)
+                    }
+                });
+            }
+        }
+        return {
+            calls: toolCalls,
+            message: {
+                role: 'assistant',
+                content: data.content
+            }
+        };
+    }
+
     processResponse(response) {
         if (response.data.content) {
 
+            const tool = this.extractToolCalls(response.data);
+
             if (response.data.content?.[1]?.text) {
                 return {
-                    think: response.data.content[0]?.thinking,
+                    // think: response.data.content[0]?.thinking,
                     message: response.data.content[1].text,
-                    response: response.data
+                    response: response.data,
+                    tool
                 }
             }
 
             if (response.data.content[0].text) {
                 return {
                     message: response.data.content[0].text,
-                    response: response.data
+                    response: response.data,
+                    tool
                 }
             }
         }
+    }
+
+    getOptionsTools(tools) {
+        const options = {};
+        options.tools = [];
+        for (const tool in tools) {
+            for (const item of tools[tool]) {
+                options.tools.push({
+                    type: 'custom',
+                    name: item.name,
+                    description: item.description,
+                    input_schema: item.inputSchema
+                });
+            }
+        }
+        // options.tool_choice = 'auto';
+        return options;
     }
 }
 
@@ -825,6 +1010,10 @@ class MixGroq extends MixCustom {
             apiKey: process.env.GROQ_API_KEY,
             ...customConfig
         });
+    }
+
+    getOptionsTools(tools) {
+        return MixOpenAI.getOptionsTools(tools);
     }
 
     async create({ config = {}, options = {} } = {}) {

@@ -48,6 +48,7 @@
   },
   "homepage": "https://github.com/clasen/ModelMix#readme",
   "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.11.2",
     "axios": "^1.8.4",
     "bottleneck": "^2.19.5",
     "lemonlog": "^1.1.2"
