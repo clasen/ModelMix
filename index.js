@@ -149,6 +149,7 @@ class ModelMix {
     maverick({ options = {}, config = {}, mix = { groq: true, together: false } } = {}) {
         if (mix.groq) this.attach('meta-llama/llama-4-maverick-17b-128e-instruct', new MixGroq({ options, config }));
         if (mix.together) this.attach('meta-llama/Llama-4-Maverick-17B-128E-Instruct-FP8', new MixTogether({ options, config }));
+        if (mix.lambda) this.attach('llama-4-maverick-17b-128e-instruct-fp8', new MixLambda({ options, config }));
         return this;
     }
 
@@ -156,6 +157,11 @@ class ModelMix {
         if (mix.groq) this.attach('deepseek-r1-distill-llama-70b', new MixGroq({ options, config }));
         if (mix.together) this.attach('deepseek-ai/DeepSeek-R1', new MixTogether({ options, config }));
         if (mix.cerebras) this.attach('deepseek-r1-distill-llama-70b', new MixCerebras({ options, config }));
+        return this;
+    }
+
+    hermes3({ options = {}, config = {}, mix = { lambda: true } } = {}) {
+        this.attach('Hermes-3-Llama-3.1-405B-FP8', new MixLambda({ options, config }));
         return this;
     }
 
@@ -423,20 +429,16 @@ class ModelMix {
 
                     const result = await providerInstance.create({ options, config });
 
-                    if (result.tool.calls.length > 0) {
+                    if (result.toolCalls.length > 0) {
 
-                        this.messages.push(result.tool.message);
+                        if (result.message) this.addText(result.message, { role: "assistant" });;
+                        this.messages.push({ role: "assistant", content: result.toolCalls, tool_calls: result.toolCalls });
 
-                        const toolCalls = await this.processToolCalls(result.tool.calls);
-
-                        for (const toolCall of toolCalls) {
-                            this.messages.push(toolCall);
-                        }
+                        const content = await this.processToolCalls(result.toolCalls);
+                        this.messages.push({ role: "tool", content });
 
                         return this.execute();
                     }
-
-                    this.messages.push({ role: "assistant", content: result.message });
 
                     if (config.debug) {
                         log.debug(`Request successful with model: ${currentModelKey}`);
@@ -469,19 +471,17 @@ class ModelMix {
 
     async processToolCalls(toolCalls) {
         const result = []
+
         for (const toolCall of toolCalls) {
             const client = this.toolClient[toolCall.function.name];
-            const args = JSON.parse(toolCall.function.arguments);
 
             const response = await client.callTool({
                 name: toolCall.function.name,
-                arguments: args
+                arguments: JSON.parse(toolCall.function.arguments)
             });
 
             result.push({
                 tool_call_id: toolCall.id,
-                role: 'tool',
-                name: toolCall.function.name,
                 content: response.content.map(item => item.text).join("\n")
             });
         }
@@ -642,48 +642,81 @@ class MixCustom {
     }
 
     extractDelta(data) {
-        if (data.choices && data.choices[0].delta.content) return data.choices[0].delta.content;
-        return '';
+        return data.choices[0].delta.content;
     }
 
-    extractMessage(data) {
-        if (data.choices && data.choices[0].message.content) return data.choices[0].message.content.trim();
-        return '';
+    static extractMessage(data) {
+        const message = data.choices[0].message?.content?.trim() || '';
+        const endTagIndex = message.indexOf('</think>');
+        if (message.startsWith('<think>') && endTagIndex !== -1) {
+            return message.substring(endTagIndex + 8).trim();
+        }
+        return message;
     }
 
-    extractToolCalls(data) {
-        if (data.choices && data.choices[0].message.tool_calls) {
-            return {
-                calls: data.choices[0].message.tool_calls,
-                message: {
-                    role: 'assistant',
-                    tool_calls: data.choices[0].message.tool_calls
-                }
+    static extractThink(data) {
+
+        if (data.choices[0].message?.reasoning_content) {
+            return data.choices[0].message.reasoning_content;
+        }
+
+        const message = data.choices[0].message?.content?.trim() || '';
+        const endTagIndex = message.indexOf('</think>');
+        if (message.startsWith('<think>') && endTagIndex !== -1) {
+            return message.substring(7, endTagIndex).trim();
+        }
+        return null;
+    }
+
+    static extractToolCalls(data) {
+        return data.choices[0].message?.tool_calls?.map(call => ({
+            id: call.id,
+            type: 'function',
+            function: {
+                name: call.function.name,
+                arguments: call.function.arguments
             }
-        }
-        return {
-            calls: [],
-        }
+        })) || []
     }
 
     processResponse(response) {
-        const tool = this.extractToolCalls(response.data);
-        let message = this.extractMessage(response.data);
-
-        if (message.startsWith('<think>')) {
-            const endTagIndex = message.indexOf('</think>');
-            if (endTagIndex !== -1) {
-                const think = message.substring(7, endTagIndex).trim();
-                message = message.substring(endTagIndex + 8).trim();
-                return { response: response.data, message, think };
-            }
+        return {
+            message: MixCustom.extractMessage(response.data),
+            think: MixCustom.extractThink(response.data),
+            toolCalls: MixCustom.extractToolCalls(response.data),
+            response: response.data
         }
-
-        return { response: response.data, message, tool };
     }
 
     getOptionsTools(tools) {
-        return { tools: Object.values(tools), tool_choice: 'auto' };
+        const values = Object.values(tools);
+        return values.length > 0 ? { tools: values } : {};
+    }
+
+    static adapt(obj, transform = {}) {
+        if (!obj || typeof obj !== 'object') return obj;
+        if (Array.isArray(obj)) return obj.map(item => this.adapt(item, transform));
+
+        const result = {};
+        for (const [key, value] of Object.entries(obj)) {
+            let transformFn = transform[key];
+            if (transformFn === null) continue;
+
+            // Si es string, es el nuevo nombre de la key
+            const newKey = typeof transformFn === 'string' ? transformFn : key;
+
+            transformFn = transform[newKey];
+            // Aplicamos la transformación si es una función
+            let transformedValue = value;
+            if (typeof transformFn === 'function') {
+                transformedValue = Array.isArray(value)
+                    ? value.map(item => transformFn(item))
+                    : transformFn(value);
+            }
+
+            result[newKey] = this.adapt(transformedValue, transform);
+        }
+        return result;
     }
 }
 
@@ -714,24 +747,60 @@ class MixOpenAI extends MixCustom {
     }
 
     static convertMessages(messages) {
-        return messages.map(message => {
-            if (message.role === 'user' && message.content instanceof Array) {
-                message.content = message.content.map(content => {
+
+        const results = []
+        for (const message of messages) {
+
+            if (message.tool_calls) {
+                results.push({ role: 'assistant', tool_calls: message.tool_calls })
+                continue;
+            }
+
+            if (message.role === 'tool') {
+                for (const content of message.content) {
+                    results.push({ role: 'tool', ...content })
+                }
+                continue;
+            }
+
+            if (Array.isArray(message.content))
+                for (const content of message.content) {
                     if (content.type === 'image') {
                         const { type, media_type, data } = content.source;
-                        return {
+                        message.content = {
                             type: 'image_url',
                             image_url: {
                                 url: `data:${media_type};${type},${data}`
                             }
                         };
                     }
-                    return content;
-                });
-            }
-            return message;
-        });
+                }
+
+            results.push(message);
+        }
+        return results;
     }
+
+    // static convertMessages(messages) {
+    //     return messages.map(message => {
+    //         if (message.role === 'user' && message.content instanceof Array) {
+    //             message.content = message.content.map(content => {
+    //                 if (content.type === 'image') {
+    //                     const { type, media_type, data } = content.source;
+    //                     return {
+    //                         type: 'image_url',
+    //                         image_url: {
+    //                             url: `data:${media_type};${type},${data}`
+    //                         }
+    //                     };
+    //                 }
+    //                 return content;
+    //             });
+    //         }
+
+    //         return message;
+    //     });
+    // }
 
     getOptionsTools(tools) {
         return MixOpenAI.getOptionsTools(tools);
@@ -752,7 +821,7 @@ class MixOpenAI extends MixCustom {
                 });
             }
         }
-        // options.tool_choice = 'auto';
+
         return options;
     }
 }
@@ -784,18 +853,33 @@ class MixAnthropic extends MixCustom {
 
     static convertMessages(messages) {
         return messages.map(message => {
+            console.log(message.content)
+
             if (message.role === 'tool') {
                 return {
-                    role: 'user',
-                    content: [
-                        {
-                            type: "tool_result",
-                            tool_use_id: message.tool_call_id,
-                            content: message.content
-                        }
-                    ]
+                    role: "user",
+                    content: message.content.map(content => ({
+                        type: "tool_result",
+                        tool_use_id: content.tool_call_id,
+                        content: content.content
+                    }))
                 }
             }
+
+            message.content = message.content.map(content => {
+                if (content.type === 'function') {
+                    return {
+                        type: 'tool_use',
+                        id: content.id,
+                        name: content.function.name,
+                        input: JSON.parse(content.function.arguments)
+                    }
+                }
+                return content;
+            });
+
+
+
             return message;
         });
     }
@@ -813,54 +897,48 @@ class MixAnthropic extends MixCustom {
         return '';
     }
 
-    extractToolCalls(data) {
-        const toolCalls = [];
-        for (const item of data.content) {
-            console.log('extractToolCalls', JSON.stringify(item, null, 2));
+    static extractToolCalls(data) {
+
+        return data.content.map(item => {
             if (item.type === 'tool_use') {
-                toolCalls.push({
+                return {
                     id: item.id,
+                    type: 'function',
                     function: {
                         name: item.name,
                         arguments: JSON.stringify(item.input)
                     }
-                });
+                };
             }
+            return null;
+        }).filter(item => item !== null);
+    }
+
+    static extractMessage(data) {
+        if (data.content?.[1]?.text) {
+            return data.content[1].text;
         }
-        return {
-            calls: toolCalls,
-            message: {
-                role: 'assistant',
-                content: data.content
-            }
-        };
+        return data.content[0].text;
+    }
+
+    static extractThink(data) {
+        return data.content[0]?.thinking || null;
     }
 
     processResponse(response) {
-        if (response.data.content) {
-
-            const tool = this.extractToolCalls(response.data);
-
-            if (response.data.content?.[1]?.text) {
-                return {
-                    // think: response.data.content[0]?.thinking,
-                    message: response.data.content[1].text,
-                    response: response.data,
-                    tool
-                }
-            }
-
-            if (response.data.content[0].text) {
-                return {
-                    message: response.data.content[0].text,
-                    response: response.data,
-                    tool
-                }
-            }
+        return {
+            message: MixAnthropic.extractMessage(response.data),
+            think: MixAnthropic.extractThink(response.data),
+            toolCalls: MixAnthropic.extractToolCalls(response.data),
+            response: response.data
         }
     }
 
     getOptionsTools(tools) {
+        return MixAnthropic.getOptionsTools(tools);
+    }
+
+    static getOptionsTools(tools) {
         const options = {};
         options.tools = [];
         for (const tool in tools) {
@@ -873,7 +951,7 @@ class MixAnthropic extends MixCustom {
                 });
             }
         }
-        // options.tool_choice = 'auto';
+
         return options;
     }
 }
@@ -970,20 +1048,21 @@ class MixGrok extends MixOpenAI {
             ...customConfig
         });
     }
+}
 
-    processResponse(response) {
-        const message = this.extractMessage(response.data);
+class MixLambda extends MixCustom {
+    getDefaultConfig(customConfig) {
+        return super.getDefaultConfig({
+            url: 'https://api.lambda.ai/v1/chat/completions',
+            apiKey: process.env.LAMBDA_API_KEY,
+            ...customConfig
+        });
+    }
 
-        const output = {
-            message: message,
-            response: response.data
-        }
-
-        if (response.data.choices[0].message.reasoning_content) {
-            output.think = response.data.choices[0].message.reasoning_content;
-        }
-
-        return output;
+    async create({ config = {}, options = {} } = {}) {
+        const content = config.system + config.systemExtra;
+        options.messages = [{ role: 'system', content }, ...options.messages || []];
+        return super.create({ config, options });
     }
 }
 
@@ -1088,7 +1167,6 @@ class MixGoogle extends MixCustom {
         return super.getDefaultConfig({
             url: 'https://generativelanguage.googleapis.com/v1beta/models',
             apiKey: process.env.GOOGLE_API_KEY,
-            ...customConfig
         });
     }
 
@@ -1096,15 +1174,6 @@ class MixGoogle extends MixCustom {
         return {
             'Content-Type': 'application/json',
             ...customHeaders
-        };
-    }
-
-    getDefaultOptions(customOptions) {
-        return {
-            generationConfig: {
-                responseMimeType: "text/plain"
-            },
-            ...customOptions
         };
     }
 
@@ -1141,30 +1210,42 @@ class MixGoogle extends MixCustom {
             throw new Error('Google API key not found. Please provide it in config or set GOOGLE_API_KEY environment variable.');
         }
 
-        const modelId = options.model || 'gemini-2.5-flash-preview-04-17';
         const generateContentApi = options.stream ? 'streamGenerateContent' : 'generateContent';
 
-        // Construct the full URL with model ID, API endpoint, and API key
-        const fullUrl = `${this.config.url}/${modelId}:${generateContentApi}?key=${this.config.apiKey}`;
+        const fullUrl = `${this.config.url}/${options.model}:${generateContentApi}?key=${this.config.apiKey}`;
 
-        // Convert messages to Gemini format
-        const contents = MixGoogle.convertMessages(options.messages);
 
-        // Add system message if present
-        if (config.system || config.systemExtra) {
-            contents.unshift({
-                role: 'user',
-                parts: [{ text: (config.system || '') + (config.systemExtra || '') }]
-            });
+        const content = config.system + config.systemExtra;
+        const systemInstruction = { parts: [{ text: content }] };
+
+        options.messages = MixCustom.adapt(options.messages, {
+            content: 'parts',
+            role: x => (x === 'assistant' ? 'model' : x),
+            parts: x => ({ text: x.text })
+        });
+
+        const generationConfig = {
+            topP: options.top_p,
+            maxOutputTokens: options.max_tokens,
         }
 
-        // Prepare the request payload
+        generationConfig.responseMimeType = "text/plain";
+
         const payload = {
-            contents,
-            generationConfig: options.generationConfig || this.getDefaultOptions().generationConfig
+            generationConfig,
+            systemInstruction,
+            contents: options.messages,
+            tools: options.tools
         };
 
         try {
+            if (config.debug) {
+                log.debug("config");
+                log.info(config);
+                log.debug("payload");
+                log.inspect(payload);
+            }
+
             if (options.stream) {
                 throw new Error('Stream is not supported for Gemini');
             } else {
@@ -1177,8 +1258,62 @@ class MixGoogle extends MixCustom {
         }
     }
 
-    extractMessage(data) {
+    processResponse(response) {
+        return {
+            message: MixGoogle.extractMessage(response.data),
+            think: null,
+            toolCalls: MixGoogle.extractToolCalls(response.data),
+            response: response.data
+        }
+    }
+
+    static extractToolCalls(data) {
+        return data.candidates?.[0]?.content?.parts?.map(part => {
+            if (part.functionCall) {
+                return {
+                    id: part.functionCall.id,
+                    type: 'function',
+                    function: {
+                        name: part.functionCall.name,
+                        arguments: JSON.stringify(part.functionCall.args)
+                    }
+                };
+            }
+            return null;
+        }).filter(item => item !== null) || [];
+    }
+
+    static extractMessage(data) {
         return data.candidates?.[0]?.content?.parts?.[0]?.text;
+    }
+
+    static getOptionsTools(tools) {
+        const options = {};
+        options.tools = [];
+        for (const tool in tools) {
+            for (const item of tools[tool]) {
+                options.tools.push({
+                    name: item.name,
+                    description: item.description,
+                    parameters: item.inputSchema
+                });
+            }
+        }
+
+        return options;
+    }
+
+    getOptionsTools(tools) {
+        return {
+            tools: [{
+                functionDeclarations: MixGoogle.getOptionsTools(tools).tools
+            }],
+            // toolConfig: {
+            //     functionCallingConfig: {
+            //         mode: "ANY"
+            //     }
+            // }
+        };
     }
 }
 
