@@ -146,7 +146,7 @@ class ModelMix {
         if (mix.cerebras) this.attach('llama-4-scout-17b-16e-instruct', new MixCerebras({ options, config }));
         return this;
     }
-    maverick({ options = {}, config = {}, mix = { groq: true, together: false } } = {}) {
+    maverick({ options = {}, config = {}, mix = { groq: true, together: false, lambda: false } } = {}) {
         if (mix.groq) this.attach('meta-llama/llama-4-maverick-17b-128e-instruct', new MixGroq({ options, config }));
         if (mix.together) this.attach('meta-llama/Llama-4-Maverick-17B-128E-Instruct-FP8', new MixTogether({ options, config }));
         if (mix.lambda) this.attach('llama-4-maverick-17b-128e-instruct-fp8', new MixLambda({ options, config }));
@@ -558,8 +558,15 @@ class MixCustom {
         };
     }
 
+    convertMessages(messages, config) {
+        return MixOpenAI.convertMessages(messages, config);
+    }
+
     async create({ config = {}, options = {} } = {}) {
         try {
+
+            options.messages = this.convertMessages(options.messages, config);
+
             if (config.debug) {
                 log.debug("config");
                 log.info(config);
@@ -690,13 +697,17 @@ class MixCustom {
     }
 
     getOptionsTools(tools) {
-        const values = Object.values(tools);
-        return values.length > 0 ? { tools: values } : {};
+        return MixOpenAI.getOptionsTools(tools);
     }
 }
 
 class MixOpenAI extends MixCustom {
     getDefaultConfig(customConfig) {
+
+        if (!process.env.OPENAI_API_KEY) {
+            throw new Error('OpenAI API key not found. Please provide it in config or set OPENAI_API_KEY environment variable.');
+        }
+
         return super.getDefaultConfig({
             url: 'https://api.openai.com/v1/chat/completions',
             apiKey: process.env.OPENAI_API_KEY,
@@ -705,9 +716,6 @@ class MixOpenAI extends MixCustom {
     }
 
     async create({ config = {}, options = {} } = {}) {
-        if (!this.config.apiKey) {
-            throw new Error('OpenAI API key not found. Please provide it in config or set OPENAI_API_KEY environment variable.');
-        }
 
         // Remove max_tokens and temperature for o1/o3 models
         if (options.model?.startsWith('o')) {
@@ -715,13 +723,13 @@ class MixOpenAI extends MixCustom {
             delete options.temperature;
         }
 
-        const content = config.system + config.systemExtra;
-        options.messages = [{ role: 'system', content }, ...options.messages || []];
-        options.messages = MixOpenAI.convertMessages(options.messages);
         return super.create({ config, options });
     }
 
-    static convertMessages(messages) {
+    static convertMessages(messages, config) {
+
+        const content = config.system + config.systemExtra;
+        messages = [{ role: 'system', content }, ...messages || []];
 
         const results = []
         for (const message of messages) {
@@ -754,10 +762,6 @@ class MixOpenAI extends MixCustom {
             results.push(message);
         }
         return results;
-    }
-
-    getOptionsTools(tools) {
-        return MixOpenAI.getOptionsTools(tools);
     }
 
     static getOptionsTools(tools) {
@@ -800,12 +804,14 @@ class MixAnthropic extends MixCustom {
         }
 
         delete options.response_format;
-        options.messages = MixAnthropic.convertMessages(options.messages);
-        options.system = config.system + config.systemExtra;
         return super.create({ config, options });
     }
 
-    static convertMessages(messages) {
+    convertMessages(messages, config) {
+        return MixAnthropic.convertMessages(messages, config);
+    }
+
+    static convertMessages(messages, config) {
         return messages.map(message => {
             if (message.role === 'tool') {
                 return {
@@ -956,19 +962,18 @@ class MixOllama extends MixCustom {
         return '';
     }
 
-    async create({ config = {}, options = {} } = {}) {
-
-        options.messages = MixOllama.convertMessages(options.messages);
-        const content = config.system + config.systemExtra;
-        options.messages = [{ role: 'system', content }, ...options.messages || []];
-        return super.create({ config, options });
-    }
-
     extractMessage(data) {
         return data.message.content.trim();
     }
 
-    static convertMessages(messages) {
+    convertMessages(messages, config) {
+        return MixOllama.convertMessages(messages, config);
+    }
+
+    static convertMessages(messages, config) {
+        const content = config.system + config.systemExtra;
+        messages = [{ role: 'system', content }, ...messages || []];
+
         return messages.map(entry => {
             let content = '';
             let images = [];
@@ -992,6 +997,11 @@ class MixOllama extends MixCustom {
 
 class MixGrok extends MixOpenAI {
     getDefaultConfig(customConfig) {
+
+        if (!process.env.XAI_API_KEY) {
+            throw new Error('Grok API key not found. Please provide it in config or set XAI_API_KEY environment variable.');
+        }
+
         return super.getDefaultConfig({
             url: 'https://api.x.ai/v1/chat/completions',
             apiKey: process.env.XAI_API_KEY,
@@ -1002,17 +1012,16 @@ class MixGrok extends MixOpenAI {
 
 class MixLambda extends MixCustom {
     getDefaultConfig(customConfig) {
+
+        if (!process.env.LAMBDA_API_KEY) {
+            throw new Error('Lambda API key not found. Please provide it in config or set LAMBDA_API_KEY environment variable.');
+        }
+
         return super.getDefaultConfig({
             url: 'https://api.lambda.ai/v1/chat/completions',
             apiKey: process.env.LAMBDA_API_KEY,
             ...customConfig
         });
-    }
-
-    async create({ config = {}, options = {} } = {}) {
-        const content = config.system + config.systemExtra;
-        options.messages = [{ role: 'system', content }, ...options.messages || []];
-        return super.create({ config, options });
     }
 }
 
@@ -1023,42 +1032,30 @@ class MixLMStudio extends MixCustom {
             ...customConfig
         });
     }
-
-    async create({ config = {}, options = {} } = {}) {
-        const content = config.system + config.systemExtra;
-        options.messages = [{ role: 'system', content }, ...options.messages || []];
-        options.messages = MixOpenAI.convertMessages(options.messages);
-        return super.create({ config, options });
-    }
 }
 
 class MixGroq extends MixCustom {
     getDefaultConfig(customConfig) {
+
+        if (!process.env.GROQ_API_KEY) {
+            throw new Error('Groq API key not found. Please provide it in config or set GROQ_API_KEY environment variable.');
+        }
+
         return super.getDefaultConfig({
             url: 'https://api.groq.com/openai/v1/chat/completions',
             apiKey: process.env.GROQ_API_KEY,
             ...customConfig
         });
     }
-
-    getOptionsTools(tools) {
-        return MixOpenAI.getOptionsTools(tools);
-    }
-
-    async create({ config = {}, options = {} } = {}) {
-        if (!this.config.apiKey) {
-            throw new Error('Groq API key not found. Please provide it in config or set GROQ_API_KEY environment variable.');
-        }
-
-        const content = config.system + config.systemExtra;
-        options.messages = [{ role: 'system', content }, ...options.messages || []];
-        options.messages = MixOpenAI.convertMessages(options.messages);
-        return super.create({ config, options });
-    }
 }
 
 class MixTogether extends MixCustom {
     getDefaultConfig(customConfig) {
+
+        if (!process.env.TOGETHER_API_KEY) {
+            throw new Error('Together API key not found. Please provide it in config or set TOGETHER_API_KEY environment variable.');
+        }
+
         return super.getDefaultConfig({
             url: 'https://api.together.xyz/v1/chat/completions',
             apiKey: process.env.TOGETHER_API_KEY,
@@ -1072,43 +1069,20 @@ class MixTogether extends MixCustom {
             ...customOptions
         };
     }
-
-    static convertMessages(messages) {
-        return messages.map(message => {
-            if (message.content instanceof Array) {
-                message.content = message.content.map(content => content.text).join("\n\n");
-            }
-            return message;
-        });
-    }
-
-    async create({ config = {}, options = {} } = {}) {
-        if (!this.config.apiKey) {
-            throw new Error('Together API key not found. Please provide it in config or set TOGETHER_API_KEY environment variable.');
-        }
-
-        const content = config.system + config.systemExtra;
-        options.messages = [{ role: 'system', content }, ...options.messages || []];
-        options.messages = MixTogether.convertMessages(options.messages);
-
-        return super.create({ config, options });
-    }
 }
 
 class MixCerebras extends MixCustom {
     getDefaultConfig(customConfig) {
+
+        if (!process.env.CEREBRAS_API_KEY) {
+            throw new Error('Together API key not found. Please provide it in config or set CEREBRAS_API_KEY environment variable.');
+        }
+
         return super.getDefaultConfig({
             url: 'https://api.cerebras.ai/v1/chat/completions',
             apiKey: process.env.CEREBRAS_API_KEY,
             ...customConfig
         });
-    }
-
-    async create({ config = {}, options = {} } = {}) {
-        const content = config.system + config.systemExtra;
-        options.messages = [{ role: 'system', content }, ...options.messages || []];
-        options.messages = MixTogether.convertMessages(options.messages);
-        return super.create({ config, options });
     }
 }
 
@@ -1127,7 +1101,7 @@ class MixGoogle extends MixCustom {
         };
     }
 
-    static convertMessages(messages) {
+    static convertMessages(messages, config) {
         return messages.map(message => {
 
             if (!Array.isArray(message.content)) return message;
@@ -1257,11 +1231,10 @@ class MixGoogle extends MixCustom {
     }
 
     static getOptionsTools(tools) {
-        const options = {};
-        options.tools = [];
+        const functionDeclarations = [];
         for (const tool in tools) {
             for (const item of tools[tool]) {
-                options.tools.push({
+                functionDeclarations.push({
                     name: item.name,
                     description: item.description,
                     parameters: item.inputSchema
@@ -1269,20 +1242,17 @@ class MixGoogle extends MixCustom {
             }
         }
 
+        const options = {
+            tools: [{
+                functionDeclarations
+            }]
+        };
+
         return options;
     }
 
     getOptionsTools(tools) {
-        return {
-            tools: [{
-                functionDeclarations: MixGoogle.getOptionsTools(tools).tools
-            }],
-            // toolConfig: {
-            //     functionCallingConfig: {
-            //         mode: "ANY"
-            //     }
-            // }
-        };
+        return MixGoogle.getOptionsTools(tools);
     }
 }
 
