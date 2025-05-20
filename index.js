@@ -435,7 +435,7 @@ class ModelMix {
                         this.messages.push({ role: "assistant", content: result.toolCalls, tool_calls: result.toolCalls });
 
                         const content = await this.processToolCalls(result.toolCalls);
-                        this.messages.push({ role: "tool", content });
+                        this.messages.push({ role: 'tool', content });
 
                         return this.execute();
                     }
@@ -481,6 +481,7 @@ class ModelMix {
             });
 
             result.push({
+                name: toolCall.function.name,
                 tool_call_id: toolCall.id,
                 content: response.content.map(item => item.text).join("\n")
             });
@@ -692,32 +693,6 @@ class MixCustom {
         const values = Object.values(tools);
         return values.length > 0 ? { tools: values } : {};
     }
-
-    static adapt(obj, transform = {}) {
-        if (!obj || typeof obj !== 'object') return obj;
-        if (Array.isArray(obj)) return obj.map(item => this.adapt(item, transform));
-
-        const result = {};
-        for (const [key, value] of Object.entries(obj)) {
-            let transformFn = transform[key];
-            if (transformFn === null) continue;
-
-            // Si es string, es el nuevo nombre de la key
-            const newKey = typeof transformFn === 'string' ? transformFn : key;
-
-            transformFn = transform[newKey];
-            // Aplicamos la transformación si es una función
-            let transformedValue = value;
-            if (typeof transformFn === 'function') {
-                transformedValue = Array.isArray(value)
-                    ? value.map(item => transformFn(item))
-                    : transformFn(value);
-            }
-
-            result[newKey] = this.adapt(transformedValue, transform);
-        }
-        return result;
-    }
 }
 
 class MixOpenAI extends MixCustom {
@@ -781,27 +756,6 @@ class MixOpenAI extends MixCustom {
         return results;
     }
 
-    // static convertMessages(messages) {
-    //     return messages.map(message => {
-    //         if (message.role === 'user' && message.content instanceof Array) {
-    //             message.content = message.content.map(content => {
-    //                 if (content.type === 'image') {
-    //                     const { type, media_type, data } = content.source;
-    //                     return {
-    //                         type: 'image_url',
-    //                         image_url: {
-    //                             url: `data:${media_type};${type},${data}`
-    //                         }
-    //                     };
-    //                 }
-    //                 return content;
-    //             });
-    //         }
-
-    //         return message;
-    //     });
-    // }
-
     getOptionsTools(tools) {
         return MixOpenAI.getOptionsTools(tools);
     }
@@ -853,8 +807,6 @@ class MixAnthropic extends MixCustom {
 
     static convertMessages(messages) {
         return messages.map(message => {
-            console.log(message.content)
-
             if (message.role === 'tool') {
                 return {
                     role: "user",
@@ -877,8 +829,6 @@ class MixAnthropic extends MixCustom {
                 }
                 return content;
             });
-
-
 
             return message;
         });
@@ -1179,29 +1129,52 @@ class MixGoogle extends MixCustom {
 
     static convertMessages(messages) {
         return messages.map(message => {
-            const parts = [];
 
-            if (message.content instanceof Array) {
-                message.content.forEach(content => {
+            if (!Array.isArray(message.content)) return message;
+            const role = (message.role === 'assistant' || message.role === 'tool') ? 'model' : 'user'
+
+            if (message.role === 'tool') {
+                return {
+                    role,
+                    parts: message.content.map(content => ({
+                        functionResponse: {
+                            name: content.name,
+                            response: {
+                                output: content.content,
+                            },
+                        }
+                    }))
+                }
+            }
+
+            return {
+                role,
+                parts: message.content.map(content => {
                     if (content.type === 'text') {
-                        parts.push({ text: content.text });
-                    } else if (content.type === 'image') {
-                        parts.push({
+                        return { text: content.text };
+                    }
+
+                    if (content.type === 'image') {
+                        return {
                             inline_data: {
                                 mime_type: content.source.media_type,
                                 data: content.source.data
                             }
-                        });
+                        }
                     }
-                });
-            } else {
-                parts.push({ text: message.content });
-            }
 
-            return {
-                role: message.role === 'assistant' ? 'model' : 'user',
-                parts
-            };
+                    if (content.type === 'function') {
+                        return {
+                            functionCall: {
+                                name: content.function.name,
+                                args: JSON.parse(content.function.arguments)
+                            }
+                        }
+                    }
+
+                    return content;
+                })
+            }
         });
     }
 
@@ -1218,11 +1191,7 @@ class MixGoogle extends MixCustom {
         const content = config.system + config.systemExtra;
         const systemInstruction = { parts: [{ text: content }] };
 
-        options.messages = MixCustom.adapt(options.messages, {
-            content: 'parts',
-            role: x => (x === 'assistant' ? 'model' : x),
-            parts: x => ({ text: x.text })
-        });
+        options.messages = MixGoogle.convertMessages(options.messages);
 
         const generationConfig = {
             topP: options.top_p,
