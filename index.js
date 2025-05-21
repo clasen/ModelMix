@@ -516,10 +516,16 @@ class ModelMix {
             this.config.max_history = 3;
         }
 
+        const env = {}
+        for (const key in process.env) {
+            if (['OPENAI', 'ANTHR', 'GOOGLE', 'GROQ', 'TOGET', 'LAMBDA', 'PPLX', 'XAI', 'CEREBR'].some(prefix => key.startsWith(prefix))) continue;
+            env[key] = process.env[key];
+        }
+
         const transport = new StdioClientTransport({
             command: "npx",
             args: ["-y", ...arguments],
-            env: process.env
+            env
         });
 
         // Crear el cliente MCP
