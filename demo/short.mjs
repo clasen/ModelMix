@@ -9,26 +9,12 @@ const setup = {
     }
 };
 
-const result = await ModelMix.new(setup)
-    .scout({ config: { temperature: 0 } })
-    .addText("What's your name?")
-    .message();
+const mmix = await ModelMix.new(setup)
+    .sonnet37think() // (main model) Anthropic claude-3-7-sonnet-20250219
+    .o4mini() // (fallback 1) OpenAI o4-mini
+    .gemini25proExp({ config: { temperature: 0 } }) // (fallback 2) Google gemini-2.5-pro-exp-03-25
+    .gpt41nano() // (fallback 3) OpenAI gpt-4.1-nano
+    .grok3mini() // (fallback 4) Grok grok-3-mini-beta
+    .addText("What's your name?");
 
-console.log(result);
-
-const model = await ModelMix.new({ config: { debug: true } })
-    .scout({ config: { temperature: 0 } })    
-    .o4mini()
-    .sonnet37think()
-    .gpt45()
-    .gemini25flash()
-    .addText("Name and capital of 3 South American countries.")
-
-const jsonResult = await model.json({ countries: [{ name: "", capital: "" }] });
-
-console.log(jsonResult);
-
-model.addText("Name and capital of 1 South American countries.")
-
-const jsonResult2 = await model.json({ countries: [{ name: "", capital: "" }] });
-console.log(jsonResult2);
+console.log(await mmix.message());

@@ -1,18 +1,11 @@
 import 'dotenv/config';
 import { ModelMix } from '../index.js';
 
-const mmix = ModelMix.new({
-    options: {
-        max_tokens: 2000,
-    },
-    config: {
-        system: 'You are an assistant and today is ' + new Date().toLocaleDateString(),
-        max_history: 10,
-        debug: true
-    }
-}).sonnet37()//.scout()//.gpt41nano()//.sonnet37().scout()//;//.gpt41nano().scout();
+const mmix = ModelMix.new({ config: { max_history: 10 } }).gpt41nano();
+mmix.setSystem('You are an assistant and today is ' + new Date().toISOString());
 
-await mmix.addMCP("@modelcontextprotocol/server-brave-search");
+// Add web search capability through MCP
+await mmix.addMCP('@modelcontextprotocol/server-brave-search');
 
-const r = await mmix.addText('search the web and tell me when Pope Francis died?').message();
-console.log(r);
+mmix.addText('Use Internet: When did the last Christian pope die?');
+console.log(await mmix.message());
