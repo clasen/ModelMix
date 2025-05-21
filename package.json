@@ -1,6 +1,6 @@
 {
   "name": "modelmix",
-  "version": "3.4.0",
+  "version": "3.5.0",
   "description": "🧬 ModelMix - Unified API for Diverse AI LLM.",
   "main": "index.js",
   "repository": {
@@ -8,6 +8,7 @@
     "url": "git+https://github.com/clasen/ModelMix.git"
   },
   "keywords": [
+    "mcp",
     "llm",
     "ai",
     "model",

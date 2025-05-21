@@ -60,6 +60,33 @@ All providers inherit from `MixCustom` base class which provides common function
   - Removes `max_tokens` and `temperature` for o1/o3 models
   - Converts image messages to base64 data URLs
 
+#### Function Calling
+
+**CALL**
+```json
+{
+    role: 'assistant',
+    tool_calls: [
+        {
+            id: 'call_GibonUAFsx7yHs20AhmzELG9',
+            type: 'function',
+            function: {
+                name: 'brave_web_search',
+                arguments: '{"query":"Pope Francis death"}'
+            }
+        }
+    ]
+}
+```
+**USE**
+```json
+{
+    role: "tool",
+    tool_call_id: "call_GibonUAFsx7yHs20AhmzELG9",
+    content: "Pope Francis death 2022-12-15"
+}
+```
+
 ### Anthropic (MixAnthropic)
 - **Base URL**: `https://api.anthropic.com/v1/messages`
 - **Input Format**:
@@ -104,6 +131,41 @@ All providers inherit from `MixCustom` base class which provides common function
   - Removes `top_p` when thinking mode is enabled
   - Uses `x-api-key` header instead of `authorization`
   - Requires `anthropic-version` header
+
+### Function Calling
+
+**CALL**
+```json
+{
+    role: 'assistant',
+    content: [
+        {
+            type: 'text',
+            text: "I'll search for information about Pope Francis's death."
+        },
+        {
+            type: 'tool_use',
+            id: 'toolu_018YeoPLbQwE6WKLSJipkGLE',
+            name: 'brave_web_search',
+            input: { query: 'When did Pope Francis die?' }
+        }
+    ]
+}
+```
+**USE**
+```json
+{
+    role: 'user',
+    content: [
+        {
+            type: 'tool_result',
+            tool_use_id: 'toolu_01GbfgjLrtNhnE9ZqinJmXYc',
+            content: 'Pope Francis died on April 21, 2025.'
+        }
+    ]
+}
+```
+
 
 ### Perplexity (MixPerplexity)
 - **Base URL**: `https://api.perplexity.ai/chat/completions`
@@ -195,6 +257,40 @@ All providers inherit from `MixCustom` base class which provides common function
     - Flash: Fastest response time, best for simple tasks
     - Pro: More capable, better for complex tasks
     - Pro Exp: Experimental version with latest features
+
+### Function Calling
+
+**CALL**
+```json
+{
+    role: 'model',
+    parts: [
+        {
+            functionCall: {
+                name: `getWeather`,
+                args: { "city": "tokio" },
+            }
+        },
+    ],
+}
+```
+
+**USE**
+```json
+{
+    role: 'user',
+    parts: [
+        {
+            functionResponse: {
+                name: `getWeather`,
+                response: {
+                    output: `20 grados`,
+                },
+            }
+        },
+    ],
+}
+```
 
 ### Cerebras (MixCerebras)
 - **Base URL**: `https://api.cerebras.ai/v1/chat/completions`

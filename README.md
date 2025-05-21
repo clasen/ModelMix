@@ -1,47 +1,43 @@
 # 🧬 ModelMix: Unified API for Diverse AI LLM
 
-**ModelMix** is a versatile module that enables seamless integration of various language models from different providers through a unified interface. With ModelMix, you can effortlessly manage and utilize multiple AI models while controlling request rates to avoid provider restrictions.
+**ModelMix** is a versatile module that enables seamless integration of various language models from different providers through a unified interface. With ModelMix, you can effortlessly manage and utilize multiple AI models while controlling request rates to avoid provider restrictions. The module also supports the Model Context Protocol (MCP), allowing you to enhance your models with powerful capabilities like web search, code execution, and custom functions.
 
-Are you one of those developers who wants to apply language models to everything? Do you need a reliable fallback system to ensure your application never fails? ModelMix is the answer! It allows you to chain multiple models together, automatically falling back to the next model if one fails, ensuring your application always gets a response.
+Ever found yourself wanting to integrate AI models into your projects but worried about reliability? ModelMix helps you build resilient AI applications by chaining multiple models together. If one model fails, it automatically switches to the next one, ensuring your application keeps running smoothly.
 
 ## ✨ Features
 
 - **Unified Interface**: Interact with multiple AI models through a single, coherent API.
 - **Request Rate Control**: Manage the rate of requests to adhere to provider limitations using Bottleneck.
-- **Flexible Integration**: Easily integrate popular models like OpenAI, Anthropic, Perplexity, Groq, Together AI, Ollama, LM Studio, Google Gemini or custom models.
+- **Flexible Integration**: Easily integrate popular models like OpenAI, Anthropic, Gemini, Perplexity, Groq, Together AI, Lambda, Ollama, LM Studio or custom models.
 - **History Tracking**: Automatically logs the conversation history with model responses, allowing you to limit the number of historical messages with `max_history`.
 - **Model Fallbacks**: Automatically try different models if one fails or is unavailable.
 - **Chain Multiple Models**: Create powerful chains of models that work together, with automatic fallback if one fails.
-
-## 📦 Installation
-
-First, install the ModelMix package:
-
-```bash
-npm install modelmix
-```
-
-Recommended: install dotenv to manage environment variables:
-
-```bash
-npm install dotenv
-```
+- **Model Context Protocol (MCP) Support**: Seamlessly integrate external tools and capabilities like web search, code execution, or custom functions through the Model Context Protocol standard.
 
 ## 🛠️ Usage
 
-Here's a quick example to get you started:
+1. **Install the ModelMix package:**
+Recommended: install dotenv to manage environment variables
 
-1. **Setup your environment variables (.env file)**:
-    ```plaintext
-    OPENAI_API_KEY="your_openai_api_key"
-    ANTHROPIC_API_KEY="your_anthropic_api_key"
-    PPLX_API_KEY="your_perplexity_api_key"
-    GROQ_API_KEY="your_groq_api_key"
-    TOGETHER_API_KEY="your_together_api_key"
-    GOOGLE_API_KEY="your_google_api_key"
-    ```
+  ```bash
+  npm install modelmix dotenv
+  ```
 
-2. **Create and configure your models**:
+2. **Setup your environment variables (.env file)**:
+```plaintext
+ANTHROPIC_API_KEY="sk-ant-..."
+OPENAI_API_KEY="sk-proj-..."
+PPLX_API_KEY="pplx-..."
+GROQ_API_KEY="gsk_..."
+TOGETHER_API_KEY="49a96..."
+XAI_API_KEY="xai-..."
+CEREBRAS_API_KEY="csk-..."
+GOOGLE_API_KEY="AIza..."
+LAMBDA_API_KEY="secret_..."
+BRAVE_API_KEY="BSA0..._fm"
+```
+
+3. **Create and configure your models**:
 
 ```javascript
 import 'dotenv/config';
@@ -56,16 +52,17 @@ const outputExample = { countries: [{ name: "", capital: "" }] };
 console.log(await model.json(outputExample));
 ```
 
+**Basic setup with system prompt and debug mode**
 ```javascript
-// Basic setup with system prompt and debug mode
 const setup = {
     config: {
         system: "You are ALF, if they ask your name, respond with 'ALF'.",
         debug: true
     }
 };
-
-// Chain multiple models with automatic fallback
+```
+**Chain multiple models with automatic fallback**
+```javascript
 const model = await ModelMix.new(setup)
     .sonnet37think() // (main model) Anthropic claude-3-7-sonnet-20250219
     .o4mini() // (fallback 1) OpenAI o4-mini
@@ -77,8 +74,8 @@ const model = await ModelMix.new(setup)
 console.log(await model.message());
 ```
 
+**Use Perplexity to get the price of ETH**
 ```javascript
-
 const ETH = ModelMix.new()
   .sonar() // Perplexity sonar
   .addText('How much is ETH trading in USD?')
@@ -91,6 +88,29 @@ This pattern allows you to:
 - Automatically fall back to the next model if one fails
 - Get structured JSON responses when needed
 - Keep your code clean and maintainable
+
+## 🔧 Model Context Protocol (MCP) Integration
+
+ModelMix makes it incredibly easy to enhance your AI models with powerful capabilities through the Model Context Protocol. With just a few lines of code, you can add features like web search, code execution, or any custom functionality to your models.
+
+### Example: Adding Web Search Capability
+
+```javascript
+const mmix = ModelMix.new({ config: { max_history: 10 } }).gpt41nano();
+mmix.setSystem('You are an assistant and today is ' + new Date().toISOString());
+
+// Add web search capability through MCP
+await mmix.addMCP('@modelcontextprotocol/server-brave-search');
+mmix.addText('Use Internet: When did the last Christian pope die?');
+console.log(await mmix.message());
+```
+
+This simple integration allows your model to:
+- Search the web in real-time
+- Access up-to-date information
+- Combine AI reasoning with external data
+
+The Model Context Protocol makes it easy to add any capability to your models, from web search to code execution, database queries, or custom functions. All with just a few lines of code!
 
 ## ⚡️ Shorthand Methods
 
@@ -120,6 +140,7 @@ Here's a comprehensive list of available methods:
 | `qwen3()`          | Together   | Qwen3-235B-A22B-fp8-tput       | [\$0.20 / \$0.60][7]       |
 | `scout()`          | Groq       | Llama-4-Scout-17B-16E-Instruct | [\$0.11 / \$0.34][5]       |
 | `maverick()`       | Groq       | Maverick-17B-128E-Instruct-FP8 | [\$0.20 / \$0.60][5]       |
+| `hermes3()`        | Lambda     | Hermes-3-Llama-3.1-405B-FP8    | [\$0.80 / \$0.80][8]       |
 
 [1]: https://openai.com/api/pricing/ "Pricing | OpenAI"
 [2]: https://docs.anthropic.com/en/docs/about-claude/pricing "Pricing - Anthropic"
@@ -128,6 +149,7 @@ Here's a comprehensive list of available methods:
 [5]: https://groq.com/pricing/ "Groq Pricing"
 [6]: https://docs.x.ai/docs/models "xAI"
 [7]: https://www.together.ai/pricing "Together AI"
+[8]: https://lambda.ai/inference "Lambda Pricing"
 
 Each method accepts optional `options` and `config` parameters to customize the model's behavior. For example:
 

@@ -431,7 +431,20 @@ class ModelMix {
 
                     if (result.toolCalls.length > 0) {
 
-                        if (result.message) this.addText(result.message, { role: "assistant" });;
+                        if (result.message) {
+                            if (result.signature) {
+                                this.messages.push({
+                                    role: "assistant", content: [{
+                                        type: "thinking",
+                                        thinking: result.think,
+                                        signature: result.signature
+                                    }]
+                                });
+                            } else {
+                                this.addText(result.message, { role: "assistant" });
+                            }
+                        }
+
                         this.messages.push({ role: "assistant", content: result.toolCalls, tool_calls: result.toolCalls });
 
                         const content = await this.processToolCalls(result.toolCalls);
@@ -780,12 +793,19 @@ class MixOpenAI extends MixCustom {
             }
         }
 
+        // options.tool_choice = "auto";
+
         return options;
     }
 }
 
 class MixAnthropic extends MixCustom {
     getDefaultConfig(customConfig) {
+
+        if (!process.env.ANTHROPIC_API_KEY) {
+            throw new Error('Anthropic API key not found. Please provide it in config or set ANTHROPIC_API_KEY environment variable.');
+        }
+
         return super.getDefaultConfig({
             url: 'https://api.anthropic.com/v1/messages',
             apiKey: process.env.ANTHROPIC_API_KEY,
@@ -794,9 +814,6 @@ class MixAnthropic extends MixCustom {
     }
 
     async create({ config = {}, options = {} } = {}) {
-        if (!this.config.apiKey) {
-            throw new Error('Anthropic API key not found. Please provide it in config or set ANTHROPIC_API_KEY environment variable.');
-        }
 
         // Remove top_p for thinking
         if (options.thinking) {
@@ -804,6 +821,8 @@ class MixAnthropic extends MixCustom {
         }
 
         delete options.response_format;
+
+        options.system = config.system + config.systemExtra;
         return super.create({ config, options });
     }
 
@@ -881,12 +900,17 @@ class MixAnthropic extends MixCustom {
         return data.content[0]?.thinking || null;
     }
 
+    static extractSignature(data) {
+        return data.content[0]?.signature || null;
+    }
+
     processResponse(response) {
         return {
             message: MixAnthropic.extractMessage(response.data),
             think: MixAnthropic.extractThink(response.data),
             toolCalls: MixAnthropic.extractToolCalls(response.data),
-            response: response.data
+            response: response.data,
+            signature: MixAnthropic.extractSignature(response.data)
         }
     }
 
@@ -914,6 +938,11 @@ class MixAnthropic extends MixCustom {
 
 class MixPerplexity extends MixCustom {
     getDefaultConfig(customConfig) {
+
+        if (!process.env.PPLX_API_KEY) {
+            throw new Error('Perplexity API key not found. Please provide it in config or set PPLX_API_KEY environment variable.');
+        }
+
         return super.getDefaultConfig({
             url: 'https://api.perplexity.ai/chat/completions',
             apiKey: process.env.PPLX_API_KEY,
@@ -930,10 +959,6 @@ class MixPerplexity extends MixCustom {
                 type: 'json_schema',
                 json_schema: { schema: config.schema }
             };
-        }
-
-        if (!this.config.apiKey) {
-            throw new Error('Perplexity API key not found. Please provide it in config or set PPLX_API_KEY environment variable.');
         }
 
         const content = config.system + config.systemExtra;
