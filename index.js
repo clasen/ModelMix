@@ -316,11 +316,11 @@ class ModelMix {
 
     replaceKeyFromFile(key, filePath) {
         const content = this.readFile(filePath);
-        this.replace({ [key]: this.template(content, this.config.replace) });
+        this.replace({ [key]: this._template(content, this.config.replace) });
         return this;
     }
 
-    template(input, replace) {
+    _template(input, replace) {
         if (!replace) return input;
         for (const k in replace) {
             input = input.split(/([¿?¡!,"';:\(\)\.\s])/).map(x => x === k ? replace[k] : x).join("");
@@ -346,13 +346,13 @@ class ModelMix {
     applyTemplate() {
         if (!this.config.replace) return;
 
-        this.config.system = this.template(this.config.system, this.config.replace);
+        this.config.system = this._template(this.config.system, this.config.replace);
 
         this.messages = this.messages.map(message => {
             if (message.content instanceof Array) {
                 message.content = message.content.map(content => {
                     if (content.type === 'text') {
-                        content.text = this.template(content.text, this.config.replace);
+                        content.text = this._template(content.text, this.config.replace);
                     }
                     return content;
                 });

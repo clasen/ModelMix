@@ -18,23 +18,17 @@ Ever found yourself wanting to integrate AI models into your projects but worrie
 
 1. **Install the ModelMix package:**
 Recommended: install dotenv to manage environment variables
-
-  ```bash
-  npm install modelmix dotenv
-  ```
+```bash
+npm install modelmix dotenv
+```
 
 2. **Setup your environment variables (.env file)**:
+Only the API keys you plan to use are required.
 ```plaintext
 ANTHROPIC_API_KEY="sk-ant-..."
 OPENAI_API_KEY="sk-proj-..."
-PPLX_API_KEY="pplx-..."
-GROQ_API_KEY="gsk_..."
-TOGETHER_API_KEY="49a96..."
-XAI_API_KEY="xai-..."
-CEREBRAS_API_KEY="csk-..."
+...
 GOOGLE_API_KEY="AIza..."
-LAMBDA_API_KEY="secret_..."
-BRAVE_API_KEY="BSA0..._fm"
 ```
 
 3. **Create and configure your models**:
@@ -52,7 +46,8 @@ const outputExample = { countries: [{ name: "", capital: "" }] };
 console.log(await model.json(outputExample));
 ```
 
-**Basic setup with system prompt and debug mode**
+**Chain multiple models with automatic fallback**
+
 ```javascript
 const setup = {
     config: {
@@ -60,9 +55,7 @@ const setup = {
         debug: true
     }
 };
-```
-**Chain multiple models with automatic fallback**
-```javascript
+
 const model = await ModelMix.new(setup)
     .sonnet37think() // (main model) Anthropic claude-3-7-sonnet-20250219
     .o4mini() // (fallback 1) OpenAI o4-mini
@@ -94,6 +87,11 @@ This pattern allows you to:
 ModelMix makes it incredibly easy to enhance your AI models with powerful capabilities through the Model Context Protocol. With just a few lines of code, you can add features like web search, code execution, or any custom functionality to your models.
 
 ### Example: Adding Web Search Capability
+
+Include the API key for Brave Search in your .env file.
+```
+BRAVE_API_KEY="BSA0..._fm"
+```
 
 ```javascript
 const mmix = ModelMix.new({ config: { max_history: 10 } }).gpt41nano();
