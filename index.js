@@ -9,6 +9,7 @@ const { Client } = require("@modelcontextprotocol/sdk/client/index.js");
 const { StdioClientTransport } = require("@modelcontextprotocol/sdk/client/stdio.js");
 
 class ModelMix {
+
     constructor({ options = {}, config = {} } = {}) {
         this.models = [];
         this.messages = [];
@@ -90,16 +91,25 @@ class ModelMix {
     gpt45({ options = {}, config = {} } = {}) {
         return this.attach('gpt-4.5-preview', new MixOpenAI({ options, config }));
     }
+    opus4think({ options = {}, config = {} } = {}) {
+        options = { ...MixAnthropic.thinkingOptions, ...options };
+        return this.attach('claude-opus-4-20250514', new MixAnthropic({ options, config }));
+    }
+    opus4({ options = {}, config = {} } = {}) {
+        return this.attach('claude-opus-4-20250514', new MixAnthropic({ options, config }));
+    }
+    sonnet4({ options = {}, config = {} } = {}) {
+        return this.attach('claude-sonnet-4-20250514', new MixAnthropic({ options, config }));
+    }
+    sonnet4think({ options = {}, config = {} } = {}) {
+        options = { ...MixAnthropic.thinkingOptions, ...options };
+        return this.attach('claude-sonnet-4-20250514', new MixAnthropic({ options, config }));
+    }
     sonnet37({ options = {}, config = {} } = {}) {
         return this.attach('claude-3-7-sonnet-20250219', new MixAnthropic({ options, config }));
     }
-    sonnet37think({ options = {
-        thinking: {
-            "type": "enabled",
-            "budget_tokens": 1024
-        },
-        temperature: 1
-    }, config = {} } = {}) {
+    sonnet37think({ options = {}, config = {} } = {}) {
+        options = { ...MixAnthropic.thinkingOptions, ...options };
         return this.attach('claude-3-7-sonnet-20250219', new MixAnthropic({ options, config }));
     }
     sonnet35({ options = {}, config = {} } = {}) {
@@ -806,6 +816,15 @@ class MixOpenAI extends MixCustom {
 }
 
 class MixAnthropic extends MixCustom {
+
+    static thinkingOptions = {
+        thinking: {
+            "type": "enabled",
+            "budget_tokens": 1024
+        },
+        temperature: 1
+    };
+
     getDefaultConfig(customConfig) {
 
         if (!process.env.ANTHROPIC_API_KEY) {

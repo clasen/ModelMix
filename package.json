@@ -1,6 +1,6 @@
 {
   "name": "modelmix",
-  "version": "3.5.0",
+  "version": "3.5.2",
   "description": "🧬 ModelMix - Unified API for Diverse AI LLM.",
   "main": "index.js",
   "repository": {
@@ -22,6 +22,8 @@
     "llama",
     "mixtral",
     "chat",
+    "opus",
+    "sonnet",    
     "multimodal",
     "groq",
     "gemini",
@@ -36,7 +38,6 @@
     "nousresearch",
     "reasoning",
     "bottleneck",
-    "claude-3-7-sonnet",
     "cerebras",
     "scout",
     "fallback",

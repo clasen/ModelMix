@@ -57,7 +57,7 @@ const setup = {
 };
 
 const model = await ModelMix.new(setup)
-    .sonnet37think() // (main model) Anthropic claude-3-7-sonnet-20250219
+    .sonnet4() // (main model) Anthropic claude-sonnet-4-20250514
     .o4mini() // (fallback 1) OpenAI o4-mini
     .gemini25proExp({ config: { temperature: 0 } }) // (fallback 2) Google gemini-2.5-pro-exp-03-25
     .gpt41nano() // (fallback 3) OpenAI gpt-4.1-nano
@@ -123,8 +123,9 @@ Here's a comprehensive list of available methods:
 | `gpt4o()`          | OpenAI     | gpt-4o                         | [\$5.00 / \$20.00][1]      |
 | `o4mini()`         | OpenAI     | o4-mini                        | [\$1.10 / \$4.40][1]       |
 | `o3()`             | OpenAI     | o3                             | [\$10.00 / \$40.00][1]     |
-| `sonnet37()`       | Anthropic  | claude-3-7-sonnet-20250219     | [\$3.00 / \$15.00][2]      |
-| `sonnet37think()`  | Anthropic  | claude-3-7-sonnet-20250219     | [\$3.00 / \$15.00][2]      |
+| `opus4[think]()`   | Anthropic  | claude-opus-4-20250514         | [\$15.00 / \$75.00][2]     |
+| `sonnet4[think]()` | Anthropic  | claude-sonnet-4-20250514       | [\$3.00 / \$15.00][2]      |
+| `sonnet37[think]()`| Anthropic  | claude-3-7-sonnet-20250219     | [\$3.00 / \$15.00][2]      |
 | `sonnet35()`       | Anthropic  | claude-3-5-sonnet-20241022     | [\$3.00 / \$15.00][2]      |
 | `haiku35()`        | Anthropic  | claude-3-5-haiku-20241022      | [\$0.80 / \$4.00][2]       |
 | `gemini25flash()`   | Google     | gemini-2.5-flash-preview-04-17  | [\$0.00 / \$0.00][3]       |
