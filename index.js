@@ -1,6 +1,6 @@
 const axios = require('axios');
 const fs = require('fs');
-const mime = require('mime-types');
+const { fileTypeFromBuffer } = require('file-type');
 const log = require('lemonlog')('ModelMix');
 const Bottleneck = require('bottleneck');
 const path = require('path');
@@ -203,6 +203,12 @@ class ModelMix {
     }
 
     addImageFromBuffer(buffer, { role = "user" } = {}) {
+
+        const fileType = fileTypeFromBuffer(buffer);
+        if (!fileType || !fileType.mime.startsWith('image/')) {
+            throw new Error('Invalid image buffer - unable to detect valid image format');
+        }
+
         const data = buffer.toString('base64');
 
         const imageMessage = {
@@ -212,7 +218,7 @@ class ModelMix {
                     type: "image",
                     "source": {
                         type: "base64",
-                        media_type: mimeType,
+                        media_type: fileType.mime,
                         data
                     }
                 }
@@ -225,14 +231,7 @@ class ModelMix {
 
     addImage(filePath, { role = "user" } = {}) {
         const imageBuffer = this.readFile(filePath, { encoding: null });
-        const mimeType = mime.lookup(filePath);
-
-        if (!mimeType || !mimeType.startsWith('image/')) {
-            throw new Error('Invalid image file type');
-        }
-
-        this.addImageFromBuffer(imageBuffer, { role });
-        return this;
+        return this.addImageFromBuffer(imageBuffer, { role });
     }
 
     addImageFromUrl(url, config = { role: "user" }) {
