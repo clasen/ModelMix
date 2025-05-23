@@ -202,15 +202,8 @@ class ModelMix {
         return this;
     }
 
-    addImage(filePath, { role = "user" } = {}) {
-        const imageBuffer = this.readFile(filePath, { encoding: null });
-        const mimeType = mime.lookup(filePath);
-
-        if (!mimeType || !mimeType.startsWith('image/')) {
-            throw new Error('Invalid image file type');
-        }
-
-        const data = imageBuffer.toString('base64');
+    addImageFromBuffer(buffer, { role = "user" } = {}) {
+        const data = buffer.toString('base64');
 
         const imageMessage = {
             ...{ role },
@@ -227,6 +220,18 @@ class ModelMix {
         };
 
         this.messages.push(imageMessage);
+        return this;
+    }
+
+    addImage(filePath, { role = "user" } = {}) {
+        const imageBuffer = this.readFile(filePath, { encoding: null });
+        const mimeType = mime.lookup(filePath);
+
+        if (!mimeType || !mimeType.startsWith('image/')) {
+            throw new Error('Invalid image file type');
+        }
+
+        this.addImageFromBuffer(imageBuffer, { role });
         return this;
     }
 
