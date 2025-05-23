@@ -1,6 +1,6 @@
 const axios = require('axios');
 const fs = require('fs');
-const { fileTypeFromBuffer } = require('file-type');
+const { fromBuffer } = require('file-type');
 const log = require('lemonlog')('ModelMix');
 const Bottleneck = require('bottleneck');
 const path = require('path');
@@ -13,6 +13,7 @@ class ModelMix {
     constructor({ options = {}, config = {} } = {}) {
         this.models = [];
         this.messages = [];
+        this.imagesToProcess = [];
         this.tools = {};
         this.toolClient = {};
         this.mcp = {};
@@ -203,80 +204,89 @@ class ModelMix {
     }
 
     addImageFromBuffer(buffer, { role = "user" } = {}) {
-
-        const fileType = fileTypeFromBuffer(buffer);
-        if (!fileType || !fileType.mime.startsWith('image/')) {
-            throw new Error('Invalid image buffer - unable to detect valid image format');
-        }
-
-        const data = buffer.toString('base64');
-
-        const imageMessage = {
-            ...{ role },
-            content: [
-                {
-                    type: "image",
-                    "source": {
-                        type: "base64",
-                        media_type: fileType.mime,
-                        data
-                    }
-                }
-            ]
-        };
-
-        this.messages.push(imageMessage);
+        this.imagesToProcess.push({ type: 'buffer', buffer, config: { role } });
         return this;
     }
 
     addImage(filePath, { role = "user" } = {}) {
-        const imageBuffer = this.readFile(filePath, { encoding: null });
-        return this.addImageFromBuffer(imageBuffer, { role });
-    }
-
-    addImageFromUrl(url, config = { role: "user" }) {
-        if (!this.imagesToProcess) {
-            this.imagesToProcess = [];
-        }
-        this.imagesToProcess.push({ url, config });
+        this.imagesToProcess.push({ type: 'file', filePath, config: { role } });
         return this;
     }
 
-    async processImageUrls() {
-        if (!this.imagesToProcess) return;
+    addImageFromUrl(url, config = { role: "user" }) {
+        this.imagesToProcess.push({ type: 'url', url, config });
+        return this;
+    }
+
+    async processImages() {
+        if (this.imagesToProcess.length === 0) return;
+
+        const imageProcessors = {
+            url: async (image) => {
+                const response = await axios.get(image.url, { responseType: 'arraybuffer' });
+                return {
+                    buffer: Buffer.from(response.data),
+                    mimeType: response.headers['content-type']
+                };
+            },
+            file: (image) => {
+                const buffer = this.readFile(image.filePath, { encoding: null });
+                return { buffer, source: `file: ${image.filePath}` };
+            },
+            buffer: (image) => ({
+                buffer: image.buffer,
+                source: 'buffer'
+            })
+        };
 
         const imageContents = await Promise.all(
             this.imagesToProcess.map(async (image) => {
                 try {
-                    const response = await axios.get(image.url, { responseType: 'arraybuffer' });
-                    const base64 = Buffer.from(response.data, 'binary').toString('base64');
-                    const mimeType = response.headers['content-type'];
-                    return { base64, mimeType, config: image.config };
+                    const processor = imageProcessors[image.type];
+                    if (!processor) {
+                        throw new Error(`Unknown image type: ${image.type}`);
+                    }
+
+                    const { buffer, mimeType: providedMimeType, source } = await processor(image);
+                    
+                    // Detect mimeType from buffer if not provided (for file and buffer types)
+                    let mimeType = providedMimeType;
+                    if (!mimeType) {
+                        const fileType = await fromBuffer(buffer);
+                        if (!fileType || !fileType.mime.startsWith('image/')) {
+                            throw new Error(`Invalid image ${source || image.type} - unable to detect valid image format`);
+                        }
+                        mimeType = fileType.mime;
+                    }
+
+                    return {
+                        base64: buffer.toString('base64'),
+                        mimeType,
+                        config: image.config
+                    };
+                    
                 } catch (error) {
-                    console.error(`Error downloading image from ${image.url}:`, error);
+                    console.error(`Error processing image:`, error);
                     return null;
                 }
             })
         );
 
-        imageContents.forEach((image) => {
-            if (image) {
-                const imageMessage = {
+        imageContents
+            .filter(Boolean)
+            .forEach((image) => {
+                this.messages.push({
                     ...image.config,
-                    content: [
-                        {
-                            type: "image",
-                            "source": {
-                                type: "base64",
-                                media_type: image.mimeType,
-                                data: image.base64
-                            }
+                    content: [{
+                        type: "image",
+                        source: {
+                            type: "base64",
+                            media_type: image.mimeType,
+                            data: image.base64
                         }
-                    ]
-                };
-                this.messages.push(imageMessage);
-            }
-        });
+                    }]
+                });
+            });
     }
 
     async message() {
@@ -376,7 +386,7 @@ class ModelMix {
     }
 
     async prepareMessages() {
-        await this.processImageUrls();
+        await this.processImages();
         this.applyTemplate();
         this.messages = this.messages.slice(-this.config.max_history);
         this.messages = this.groupByRoles(this.messages);
