@@ -779,12 +779,12 @@ class MixOpenAI extends MixCustom {
                 for (const content of message.content) {
                     if (content.type === 'image') {
                         const { type, media_type, data } = content.source;
-                        message.content = {
+                        message.content = [{
                             type: 'image_url',
                             image_url: {
                                 url: `data:${media_type};${type},${data}`
                             }
-                        };
+                        }];
                     }
                 }
 
