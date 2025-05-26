@@ -321,7 +321,7 @@ class ModelMix {
             config.schema = generateJsonSchema(schemaExample, schemaDescription);
 
             if (addSchema) {
-                config.system += "\nOutput JSON Schema: \n```\n" + JSON.stringify(this.config.schema) + "\n```";
+                config.system += "\nOutput JSON Schema: \n```\n" + JSON.stringify(config.schema) + "\n```";
             }
             if (addExample) {
                 config.system += "\nOutput JSON Example: \n```\n" + JSON.stringify(schemaExample) + "\n```";
