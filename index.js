@@ -13,7 +13,6 @@ class ModelMix {
     constructor({ options = {}, config = {} } = {}) {
         this.models = [];
         this.messages = [];
-        this.imagesToProcess = [];
         this.tools = {};
         this.toolClient = {};
         this.mcp = {};
@@ -32,7 +31,6 @@ class ModelMix {
 
         this.config = {
             system: 'You are an assistant.',
-            systemExtra: '',
             max_history: 1, // Default max history
             debug: false,
             bottleneck: defaultBottleneckConfig,
@@ -204,113 +202,133 @@ class ModelMix {
     }
 
     addImageFromBuffer(buffer, { role = "user" } = {}) {
-        this.imagesToProcess.push({ type: 'buffer', buffer, config: { role } });
+        this.messages.push({
+            role,
+            content: [{
+                type: "image",
+                source: {
+                    type: "buffer",
+                    data: buffer
+                }
+            }]
+        });
         return this;
     }
 
     addImage(filePath, { role = "user" } = {}) {
-        this.imagesToProcess.push({ type: 'file', filePath, config: { role } });
+        this.messages.push({
+            role,
+            content: [{
+                type: "image",
+                source: {
+                    type: "file",
+                    data: filePath
+                }
+            }]
+        });
         return this;
     }
 
-    addImageFromUrl(url, config = { role: "user" }) {
-        this.imagesToProcess.push({ type: 'url', url, config });
+    addImageFromUrl(url, { role = "user" } = {}) {
+        this.messages.push({
+            role,
+            content: [{
+                type: "image",
+                source: {
+                    type: "url",
+                    data: url
+                }
+            }]
+        });
         return this;
     }
 
     async processImages() {
-        if (this.imagesToProcess.length === 0) return;
-
-        const imageProcessors = {
-            url: async (image) => {
-                const response = await axios.get(image.url, { responseType: 'arraybuffer' });
-                return {
-                    buffer: Buffer.from(response.data),
-                    mimeType: response.headers['content-type']
-                };
-            },
-            file: (image) => {
-                const buffer = this.readFile(image.filePath, { encoding: null });
-                return { buffer, source: `file: ${image.filePath}` };
-            },
-            buffer: (image) => ({
-                buffer: image.buffer,
-                source: 'buffer'
-            })
-        };
-
-        const imageContents = await Promise.all(
-            this.imagesToProcess.map(async (image) => {
+        // Process images that are in messages
+        for (let i = 0; i < this.messages.length; i++) {
+            const message = this.messages[i];
+            if (!message.content) continue;
+            
+            for (let j = 0; j < message.content.length; j++) {
+                const content = message.content[j];
+                if (content.type !== 'image' || content.source.type === 'base64') continue;
+                
                 try {
-                    const processor = imageProcessors[image.type];
-                    if (!processor) {
-                        throw new Error(`Unknown image type: ${image.type}`);
-                    }
-
-                    const { buffer, mimeType: providedMimeType, source } = await processor(image);
+                    let buffer, mimeType;
                     
-                    // Detect mimeType from buffer if not provided (for file and buffer types)
-                    let mimeType = providedMimeType;
+                    switch (content.source.type) {
+                        case 'url':
+                            const response = await axios.get(content.source.data, { responseType: 'arraybuffer' });
+                            buffer = Buffer.from(response.data);
+                            mimeType = response.headers['content-type'];
+                            break;
+                            
+                        case 'file':
+                            buffer = this.readFile(content.source.data, { encoding: null });
+                            break;
+                            
+                        case 'buffer':
+                            buffer = content.source.data;
+                            break;
+                    }
+                    
+                    // Detect mimeType if not provided
                     if (!mimeType) {
                         const fileType = await fromBuffer(buffer);
                         if (!fileType || !fileType.mime.startsWith('image/')) {
-                            throw new Error(`Invalid image ${source || image.type} - unable to detect valid image format`);
+                            throw new Error(`Invalid image - unable to detect valid image format`);
                         }
                         mimeType = fileType.mime;
                     }
-
-                    return {
-                        base64: buffer.toString('base64'),
-                        mimeType,
-                        config: image.config
+                    
+                    // Update the content with processed image
+                    message.content[j] = {
+                        type: "image",
+                        source: {
+                            type: "base64",
+                            media_type: mimeType,
+                            data: buffer.toString('base64')
+                        }
                     };
                     
                 } catch (error) {
                     console.error(`Error processing image:`, error);
-                    return null;
+                    // Remove failed image from content
+                    message.content.splice(j, 1);
+                    j--;
                 }
-            })
-        );
-
-        imageContents
-            .filter(Boolean)
-            .forEach((image) => {
-                this.messages.push({
-                    ...image.config,
-                    content: [{
-                        type: "image",
-                        source: {
-                            type: "base64",
-                            media_type: image.mimeType,
-                            data: image.base64
-                        }
-                    }]
-                });
-            });
+            }
+        }
     }
 
     async message() {
-        this.options.stream = false;
-        let raw = await this.execute();
+        let raw = await this.execute({ options: { stream: false } });
         return raw.message;
     }
 
     async json(schemaExample = null, schemaDescription = {}, { type = 'json_object', addExample = false, addSchema = true } = {}) {
-        this.options.response_format = { type };
+
+        let options = {
+            response_format: { type },
+            stream: false,
+        }
+
+        let config = {
+            system: this.config.system,
+        }
 
         if (schemaExample) {
-            this.config.schema = generateJsonSchema(schemaExample, schemaDescription);
+            config.schema = generateJsonSchema(schemaExample, schemaDescription);
 
             if (addSchema) {
-                this.config.systemExtra = "\nOutput JSON Schema: \n```\n" + JSON.stringify(this.config.schema) + "\n```";
+                config.system += "\nOutput JSON Schema: \n```\n" + JSON.stringify(this.config.schema) + "\n```";
             }
             if (addExample) {
-                this.config.systemExtra += "\nOutput JSON Example: \n```\n" + JSON.stringify(schemaExample) + "\n```";
+                config.system += "\nOutput JSON Example: \n```\n" + JSON.stringify(schemaExample) + "\n```";
             }
         }
-        const response = await this.message();
-        this.config.systemExtra = "";
-        return JSON.parse(this._extractBlock(response));
+        const { message } = await this.execute({ options, config });
+        return JSON.parse(this._extractBlock(message));
     }
 
     _extractBlock(response) {
@@ -319,23 +337,24 @@ class ModelMix {
     }
 
     async block({ addSystemExtra = true } = {}) {
-        if (addSystemExtra) {
-            this.config.systemExtra = "\nReturn the result of the task between triple backtick block code tags ```";
+        let config = {
+            system: this.config.system,
         }
-        const response = await this.message();
-        this.config.systemExtra = "";
-        return this._extractBlock(response);
+
+        if (addSystemExtra) {
+            config.system += "\nReturn the result of the task between triple backtick block code tags ```";
+        }
+        const { message } = await this.execute({ options: { stream: false }, config });
+        return this._extractBlock(message);
     }
 
     async raw() {
-        this.options.stream = false;
-        return this.execute();
+        return this.execute({ options: { stream: false } });
     }
 
     async stream(callback) {
-        this.options.stream = true;
         this.streamCallback = callback;
-        return this.execute();
+        return this.execute({ options: { stream: true } });
     }
 
     replaceKeyFromFile(key, filePath) {
@@ -408,9 +427,9 @@ class ModelMix {
         }
     }
 
-    async execute() {
+    async execute({ config = {}, options = {} } = {}) {
         if (!this.models || this.models.length === 0) {
-            throw new Error("No models specified. Use methods like .gpt(), .sonnet() first.");
+            throw new Error("No models specified. Use methods like .gpt41mini(), .sonnet4() first.");
         }
 
         return this.limiter.schedule(async () => {
@@ -429,16 +448,18 @@ class ModelMix {
                 const providerInstance = currentModel.provider;
                 const optionsTools = providerInstance.getOptionsTools(this.tools);
 
-                let options = {
+                options = {
                     ...this.options,
                     ...providerInstance.options,
                     ...optionsTools,
+                    ...options,
                     model: currentModelKey
                 };
 
-                const config = {
+                config = {
                     ...this.config,
                     ...providerInstance.config,
+                    ...config,
                 };
 
                 if (config.debug) {
@@ -771,7 +792,7 @@ class MixOpenAI extends MixCustom {
 
     static convertMessages(messages, config) {
 
-        const content = config.system + config.systemExtra;
+        const content = config.system;
         messages = [{ role: 'system', content }, ...messages || []];
 
         const results = []
@@ -861,7 +882,7 @@ class MixAnthropic extends MixCustom {
 
         delete options.response_format;
 
-        options.system = config.system + config.systemExtra;
+        options.system = config.system;
         return super.create({ config, options });
     }
 
@@ -992,16 +1013,12 @@ class MixPerplexity extends MixCustom {
     async create({ config = {}, options = {} } = {}) {
 
         if (config.schema) {
-            config.systemExtra = '';
-
             options.response_format = {
                 type: 'json_schema',
                 json_schema: { schema: config.schema }
             };
         }
 
-        const content = config.system + config.systemExtra;
-        options.messages = [{ role: 'system', content }, ...options.messages || []];
         return super.create({ config, options });
     }
 }
@@ -1035,7 +1052,7 @@ class MixOllama extends MixCustom {
     }
 
     static convertMessages(messages, config) {
-        const content = config.system + config.systemExtra;
+        const content = config.system;
         messages = [{ role: 'system', content }, ...messages || []];
 
         return messages.map(entry => {
@@ -1226,7 +1243,7 @@ class MixGoogle extends MixCustom {
         const fullUrl = `${this.config.url}/${options.model}:${generateContentApi}?key=${this.config.apiKey}`;
 
 
-        const content = config.system + config.systemExtra;
+        const content = config.system;
         const systemInstruction = { parts: [{ text: content }] };
 
         options.messages = MixGoogle.convertMessages(options.messages);
