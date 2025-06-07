@@ -212,6 +212,62 @@ This would replace `article_file_contents` with the entire content of 'article.t
 
 Both methods allow for flexible content insertion, enabling you to create dynamic and customizable prompts for your AI model interactions.
 
+## 🧩 JSON Export Options
+
+The `json` method signature includes these options:
+
+```javascript
+async json(schemaExample = null, schemaDescription = {}, { 
+    type = 'json_object', 
+    addExample = false, 
+    addSchema = true, 
+    addNote = false 
+} = {})
+```
+
+### Option Details
+
+**`addSchema` (default: `true`)**
+- When set to `true`, includes the generated JSON schema in the system prompt
+
+**`addExample` (default: `false`)**
+- When set to `true`, adds the example JSON structure to the system prompt
+
+**`addNote` (default: `false`)**
+- When set to `true`, adds a technical note about JSON formatting requirements
+- Specifically adds this instruction to the system prompt:
+  ```
+  Output JSON Note: Escape all unescaped double quotes, backslashes, and ASCII control characters inside JSON strings, and ensure the output contains no comments.
+  ```
+- Helps prevent common JSON parsing errors
+
+### Usage Examples
+
+```javascript
+// Basic usage with example and note
+const result = await model.json(
+    { name: "John", age: 30, skills: ["JavaScript", "Python"] },
+    { name: "Person's full name", age: "Age in years" },
+    { addExample: true, addNote: true }
+);
+
+// Only add the example, skip the technical note
+const result = await model.json(
+    { status: "success", data: [] },
+    {},
+    { addExample: true, addNote: false }
+);
+
+// Add note for robust JSON parsing
+const result = await model.json(
+    { message: "Hello \"world\"" },
+    {},
+    { addNote: true }
+);
+```
+
+These options give you fine-grained control over how much guidance you provide to the model for generating properly formatted JSON responses.
+
 ## 🐛 Enabling Debug Mode
 
 To activate debug mode in ModelMix and view detailed request information, follow these two steps:
