@@ -306,7 +306,7 @@ class ModelMix {
         return raw.message;
     }
 
-    async json(schemaExample = null, schemaDescription = {}, { type = 'json_object', addExample = false, addSchema = true } = {}) {
+    async json(schemaExample = null, schemaDescription = {}, { type = 'json_object', addExample = false, addSchema = true, addNote = false } = {}) {
 
         let options = {
             response_format: { type },
@@ -321,10 +321,13 @@ class ModelMix {
             config.schema = generateJsonSchema(schemaExample, schemaDescription);
 
             if (addSchema) {
-                config.system += "\nOutput JSON Schema: \n```\n" + JSON.stringify(config.schema) + "\n```";
+                config.system += "\n\nOutput JSON Schema: \n```\n" + JSON.stringify(config.schema) + "\n```";
             }
             if (addExample) {
-                config.system += "\nOutput JSON Example: \n```\n" + JSON.stringify(schemaExample) + "\n```";
+                config.system += "\n\nOutput JSON Example: \n```\n" + JSON.stringify(schemaExample) + "\n```";
+            }
+            if (addNote) {
+                config.system += `\n\nOutput JSON Note: Escape all unescaped double quotes, backslashes, and ASCII control characters inside JSON strings, and ensure the output contains no comments.`;
             }
         }
         const { message } = await this.execute({ options, config });
