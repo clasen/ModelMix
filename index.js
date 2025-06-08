@@ -327,7 +327,7 @@ class ModelMix {
                 config.system += "\n\nOutput JSON Example: \n```\n" + JSON.stringify(schemaExample) + "\n```";
             }
             if (addNote) {
-                config.system += `\n\nOutput JSON Note: Escape all unescaped double quotes, backslashes, and ASCII control characters inside JSON strings, and ensure the output contains no comments.`;
+                config.system += "\n\nOutput JSON Escape: double quotes, backslashes, and control characters inside JSON strings.\nEnsure the output contains no comments.";
             }
         }
         const { message } = await this.execute({ options, config });
