@@ -142,6 +142,9 @@ class ModelMix {
     grok3mini({ options = {}, config = {} } = {}) {
         return this.attach('grok-3-mini-beta', new MixGrok({ options, config }));
     }
+    grok4({ options = {}, config = {} } = {}) {
+        return this.attach('grok-4-0709', new MixGrok({ options, config }));
+    }
 
     qwen3({ options = {}, config = {}, mix = { together: true, cerebras: false } } = {}) {
         if (mix.together) this.attach('Qwen/Qwen3-235B-A22B-fp8-tput', new MixTogether({ options, config }));

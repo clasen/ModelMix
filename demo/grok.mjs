@@ -14,8 +14,9 @@ const mmix = new ModelMix({
 });
 
 
-const r = await mmix.grok3mini()
+const r = await mmix.grok4()
     .addText('hi there!')
     .addText('do you like cats?')
     .raw();
+
 console.log(r);
