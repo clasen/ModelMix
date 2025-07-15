@@ -61,7 +61,7 @@ const model = await ModelMix.new(setup)
     .o4mini() // (fallback 1) OpenAI o4-mini
     .gemini25proExp({ config: { temperature: 0 } }) // (fallback 2) Google gemini-2.5-pro-exp-03-25
     .gpt41nano() // (fallback 3) OpenAI gpt-4.1-nano
-    .grok3mini() // (fallback 4) Grok grok-3-mini-beta
+    .grok3mini() // (fallback 4) Grok grok-3-mini
     .addText("What's your name?");
 
 console.log(await model.message());
@@ -131,9 +131,9 @@ Here's a comprehensive list of available methods:
 | `gemini25flash()`   | Google     | gemini-2.5-flash-preview-04-17  | [\$0.00 / \$0.00][3]       |
 | `gemini25proExp()` | Google     | gemini-2.5-pro-exp-03-25       | [\$0.00 / \$0.00][3]       |
 | `gemini25pro()`    | Google     | gemini-2.5-pro-preview-05-06   | [\$2.50 / \$15.00][3]      |
-| `grok2()`          | Grok       | grok-2-latest                  | [\$2.00 / \$10.00][6]      |
-| `grok3()`          | Grok       | grok-3-beta                    | [\$3.00 / \$15.00][6]      |
-| `grok3mini()`      | Grok       | grok-3-mini-beta               | [\$0.30 / \$0.50][6]       |
+| `grok3()`          | Grok       | grok-3                         | [\$3.00 / \$15.00][6]      |
+| `grok3mini()`      | Grok       | grok-3-mini                    | [\$0.30 / \$0.50][6]       |
+| `grok4()`          | Grok       | grok-4-0709                    | [\$3.00 / \$15.00][6]      |
 | `sonar()`          | Perplexity | sonar                          | [\$1.00 / \$1.00][4]       |
 | `sonarPro()`       | Perplexity | sonar-pro                      | [\$3.00 / \$15.00][4]      |
 | `qwen3()`          | Together   | Qwen3-235B-A22B-fp8-tput       | [\$0.20 / \$0.60][7]       |

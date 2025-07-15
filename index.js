@@ -133,14 +133,11 @@ class ModelMix {
         return this.attach('sonar', new MixPerplexity({ options, config }));
     }
 
-    grok2({ options = {}, config = {} } = {}) {
-        return this.attach('grok-2-latest', new MixGrok({ options, config }));
-    }
     grok3({ options = {}, config = {} } = {}) {
-        return this.attach('grok-3-beta', new MixGrok({ options, config }));
+        return this.attach('grok-3', new MixGrok({ options, config }));
     }
     grok3mini({ options = {}, config = {} } = {}) {
-        return this.attach('grok-3-mini-beta', new MixGrok({ options, config }));
+        return this.attach('grok-3-mini', new MixGrok({ options, config }));
     }
     grok4({ options = {}, config = {} } = {}) {
         return this.attach('grok-4-0709', new MixGrok({ options, config }));
