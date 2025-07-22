@@ -174,6 +174,11 @@ class ModelMix {
         return this;
     }
 
+    kimiK2({ options = {}, config = {}} = {}) {
+        this.attach('moonshotai/Kimi-K2-Instruct', new MixTogether({ options, config }));
+        return this;
+    }
+
     addText(text, { role = "user" } = {}) {
         const content = [{
             type: "text",

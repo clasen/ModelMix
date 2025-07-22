@@ -1,6 +1,6 @@
 {
   "name": "modelmix",
-  "version": "3.7.4",
+  "version": "3.7.6",
   "description": "🧬 ModelMix - Unified API for Diverse AI LLM.",
   "main": "index.js",
   "repository": {
@@ -20,7 +20,7 @@
     "gpt",
     "claude",
     "llama",
-    "mixtral",
+    "kimi",
     "chat",
     "opus",
     "sonnet",
@@ -54,6 +54,7 @@
     "axios": "^1.8.4",
     "bottleneck": "^2.19.5",
     "file-type": "^16.5.4",
+    "form-data": "^4.0.4",
     "lemonlog": "^1.1.2"
   }
 }

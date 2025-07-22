@@ -136,10 +136,11 @@ Here's a comprehensive list of available methods:
 | `grok4()`          | Grok       | grok-4-0709                    | [\$3.00 / \$15.00][6]      |
 | `sonar()`          | Perplexity | sonar                          | [\$1.00 / \$1.00][4]       |
 | `sonarPro()`       | Perplexity | sonar-pro                      | [\$3.00 / \$15.00][4]      |
-| `qwen3()`          | Together   | Qwen3-235B-A22B-fp8-tput       | [\$0.20 / \$0.60][7]       |
 | `scout()`          | Groq       | Llama-4-Scout-17B-16E-Instruct | [\$0.11 / \$0.34][5]       |
 | `maverick()`       | Groq       | Maverick-17B-128E-Instruct-FP8 | [\$0.20 / \$0.60][5]       |
 | `hermes3()`        | Lambda     | Hermes-3-Llama-3.1-405B-FP8    | [\$0.80 / \$0.80][8]       |
+| `qwen3()`          | Together   | Qwen3-235B-A22B-fp8-tput       | [\$0.20 / \$0.60][7]       |
+| `kimiK2()`         | Together   | Kimi-K2-Instruct               | [\$1.00 / \$3.00][7]       |
 
 [1]: https://openai.com/api/pricing/ "Pricing | OpenAI"
 [2]: https://docs.anthropic.com/en/docs/about-claude/pricing "Pricing - Anthropic"
