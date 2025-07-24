@@ -456,7 +456,8 @@ class ModelMix {
                 const providerInstance = currentModel.provider;
                 const optionsTools = providerInstance.getOptionsTools(this.tools);
 
-                options = {
+                // Create clean copies for each provider to avoid contamination
+                const currentOptions = {
                     ...this.options,
                     ...providerInstance.options,
                     ...optionsTools,
@@ -464,23 +465,23 @@ class ModelMix {
                     model: currentModelKey
                 };
 
-                config = {
+                const currentConfig = {
                     ...this.config,
                     ...providerInstance.config,
                     ...config,
                 };
 
-                if (config.debug) {
+                if (currentConfig.debug) {
                     const isPrimary = i === 0;
                     log.debug(`[${currentModelKey}] Attempt #${i + 1}` + (isPrimary ? ' (Primary)' : ' (Fallback)'));
                 }
 
                 try {
-                    if (options.stream && this.streamCallback) {
+                    if (currentOptions.stream && this.streamCallback) {
                         providerInstance.streamCallback = this.streamCallback;
                     }
 
-                    const result = await providerInstance.create({ options, config });
+                    const result = await providerInstance.create({ options: currentOptions, config: currentConfig });
 
                     if (result.toolCalls.length > 0) {
 
@@ -506,7 +507,7 @@ class ModelMix {
                         return this.execute();
                     }
 
-                    if (config.debug) {
+                    if (currentConfig.debug) {
                         log.debug(`Request successful with model: ${currentModelKey}`);
                         log.inspect(result.response);
                     }
