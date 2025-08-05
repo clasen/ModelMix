@@ -90,12 +90,23 @@ class ModelMix {
     gpt45({ options = {}, config = {} } = {}) {
         return this.attach('gpt-4.5-preview', new MixOpenAI({ options, config }));
     }
+    gptOss({ options = {}, config = {}, mix = { together: true } } = {}) {
+        if (mix.together) return this.attach('openai/gpt-oss-120b', new MixTogether({ options, config }));
+        return this;
+    }
     opus4think({ options = {}, config = {} } = {}) {
         options = { ...MixAnthropic.thinkingOptions, ...options };
         return this.attach('claude-opus-4-20250514', new MixAnthropic({ options, config }));
     }
     opus4({ options = {}, config = {} } = {}) {
         return this.attach('claude-opus-4-20250514', new MixAnthropic({ options, config }));
+    }
+    opus41({ options = {}, config = {} } = {}) {
+        return this.attach('claude-opus-4-1-20250805', new MixAnthropic({ options, config }));
+    }
+    opus41think({ options = {}, config = {} } = {}) {
+        options = { ...MixAnthropic.thinkingOptions, ...options };
+        return this.attach('claude-opus-4-1-20250805', new MixAnthropic({ options, config }));
     }
     sonnet4({ options = {}, config = {} } = {}) {
         return this.attach('claude-sonnet-4-20250514', new MixAnthropic({ options, config }));
@@ -887,6 +898,12 @@ class MixAnthropic extends MixCustom {
         // Remove top_p for thinking
         if (options.thinking) {
             delete options.top_p;
+        }
+
+        if (options.model && options.model.includes('claude-opus-4-1')) {
+            if (options.temperature !== undefined && options.top_p !== undefined) {
+                delete options.top_p;
+            }
         }
 
         delete options.response_format;
