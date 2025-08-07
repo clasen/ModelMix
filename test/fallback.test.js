@@ -3,8 +3,6 @@ const sinon = require('sinon');
 const nock = require('nock');
 const { ModelMix } = require('../index.js');
 
-require('dotenv').config();
-
 describe('Provider Fallback Chain Tests', () => {
 
     afterEach(() => {

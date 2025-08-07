@@ -1,6 +1,6 @@
 {
   "name": "modelmix",
-  "version": "3.8.2",
+  "version": "3.8.4",
   "description": "🧬 ModelMix - Unified API for Diverse AI LLM.",
   "main": "index.js",
   "repository": {
@@ -22,6 +22,7 @@
     "llama",
     "kimi",
     "chat",
+    "gpt5",
     "opus",
     "sonnet",
     "multimodal",
@@ -33,7 +34,6 @@
     "nano",
     "deepseek",
     "oss",
-    "4.1",
     "qwen",
     "nousresearch",
     "reasoning",
@@ -56,5 +56,22 @@
     "file-type": "^16.5.4",
     "form-data": "^4.0.4",
     "lemonlog": "^1.1.2"
+  },
+  "devDependencies": {
+    "chai": "^5.2.1",
+    "mocha": "^11.7.1",
+    "nock": "^14.0.9",
+    "sinon": "^21.0.0"
+  },
+  "scripts": {
+    "test": "mocha test/**/*.js --timeout 10000 --require test/setup.js",
+    "test:watch": "mocha test/**/*.js --watch --timeout 10000 --require test/setup.js",
+    "test:json": "mocha test/json.test.js --timeout 10000 --require test/setup.js",
+    "test:fallback": "mocha test/fallback.test.js --timeout 10000 --require test/setup.js",
+    "test:templates": "mocha test/templates.test.js --timeout 10000 --require test/setup.js",
+    "test:images": "mocha test/images.test.js --timeout 10000 --require test/setup.js",
+    "test:mcp": "mocha test/mcp.test.js --timeout 10000 --require test/setup.js",
+    "test:bottleneck": "mocha test/bottleneck.test.js --timeout 10000 --require test/setup.js",
+    "test:integration": "mocha test/integration.test.js --timeout 10000 --require test/setup.js"
   }
 }

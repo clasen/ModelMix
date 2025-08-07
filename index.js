@@ -390,8 +390,13 @@ class ModelMix {
     }
 
     replaceKeyFromFile(key, filePath) {
-        const content = this.readFile(filePath);
-        this.replace({ [key]: this._template(content, this.config.replace) });
+        try {
+            const content = this.readFile(filePath);
+            this.replace({ [key]: this._template(content, this.config.replace) });
+        } catch (error) {
+            // Gracefully handle file read errors without throwing
+            log.warn(`replaceKeyFromFile: ${error.message}`);
+        }
         return this;
     }
 

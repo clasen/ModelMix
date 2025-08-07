@@ -117,11 +117,12 @@ Here's a comprehensive list of available methods:
 
 | Method             | Provider   | Model                          | Price (I/O) per 1 M tokens |
 | ------------------ | ---------- | ------------------------------ | -------------------------- |
+| `gpt5()`           | OpenAI     | gpt-5                          | [\$1.25 / \$10.00][1]      |
+| `gpt5mini()`       | OpenAI     | gpt-5-mini                     | [\$0.25 / \$2.00][1]       |
+| `gpt5nano()`       | OpenAI     | gpt-5-nano                     | [\$0.05 / \$0.40][1]       |
 | `gpt41()`          | OpenAI     | gpt-4.1                        | [\$2.00 / \$8.00][1]       |
 | `gpt41mini()`      | OpenAI     | gpt-4.1-mini                   | [\$0.40 / \$1.60][1]       |
 | `gpt41nano()`      | OpenAI     | gpt-4.1-nano                   | [\$0.10 / \$0.40][1]       |
-| `gpt4o()`          | OpenAI     | gpt-4o                         | [\$5.00 / \$20.00][1]      |
-| `o4mini()`         | OpenAI     | o4-mini                        | [\$1.10 / \$4.40][1]       |
 | `o3()`             | OpenAI     | o3                             | [\$10.00 / \$40.00][1]     |
 | `gptOss()`         | Together   | gpt-oss-120B                   | [\$0.15 / \$0.60][7]       |
 | `opus41[think]()`  | Anthropic  | claude-opus-4-1-20250805       | [\$15.00 / \$75.00][2]     |

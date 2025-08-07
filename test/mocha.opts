@@ -1,0 +1,5 @@
+--timeout 10000
+--recursive
+--require test/setup.js
+--reporter spec
+--bail false
