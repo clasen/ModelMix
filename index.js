@@ -68,7 +68,6 @@ class ModelMix {
         return this;
     }
 
-    // --- Model addition methods ---
     gpt41({ options = {}, config = {} } = {}) {
         return this.attach('gpt-4.1', new MixOpenAI({ options, config }));
     }
@@ -90,6 +89,15 @@ class ModelMix {
     gpt45({ options = {}, config = {} } = {}) {
         return this.attach('gpt-4.5-preview', new MixOpenAI({ options, config }));
     }
+    gpt5({ options = {}, config = {} } = {}) {
+        return this.attach('gpt-5', new MixOpenAI({ options, config }));
+    }
+    gpt5mini({ options = {}, config = {} } = {}) {
+        return this.attach('gpt-5-mini', new MixOpenAI({ options, config }));
+    }
+    gpt5nano({ options = {}, config = {} } = {}) {
+        return this.attach('gpt-5-nano', new MixOpenAI({ options, config }));
+    }    
     gptOss({ options = {}, config = {}, mix = { together: false, cerebras: false, groq: true, lmstudio: false } } = {}) {
         if (mix.together) return this.attach('openai/gpt-oss-120b', new MixTogether({ options, config }));
         if (mix.cerebras) return this.attach('gpt-oss-120b', new MixCerebras({ options, config }));
@@ -97,6 +105,7 @@ class ModelMix {
         if (mix.lmstudio) return this.attach('openai/gpt-oss-120b', new MixLMStudio({ options, config }));
         return this;
     }
+    
     opus4think({ options = {}, config = {} } = {}) {
         options = { ...MixAnthropic.thinkingOptions, ...options };
         return this.attach('claude-opus-4-20250514', new MixAnthropic({ options, config }));
