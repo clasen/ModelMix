@@ -123,7 +123,8 @@ Here's a comprehensive list of available methods:
 | `gpt4o()`          | OpenAI     | gpt-4o                         | [\$5.00 / \$20.00][1]      |
 | `o4mini()`         | OpenAI     | o4-mini                        | [\$1.10 / \$4.40][1]       |
 | `o3()`             | OpenAI     | o3                             | [\$10.00 / \$40.00][1]     |
-| `opus4[think]()`   | Anthropic  | claude-opus-4-20250514         | [\$15.00 / \$75.00][2]     |
+| `gptOss()`         | Together   | gpt-oss-120B                   | [\$0.15 / \$0.60][7]       |
+| `opus41[think]()`  | Anthropic  | claude-opus-4-1-20250805       | [\$15.00 / \$75.00][2]     |
 | `sonnet4[think]()` | Anthropic  | claude-sonnet-4-20250514       | [\$3.00 / \$15.00][2]      |
 | `sonnet37[think]()`| Anthropic  | claude-3-7-sonnet-20250219     | [\$3.00 / \$15.00][2]      |
 | `sonnet35()`       | Anthropic  | claude-3-5-sonnet-20241022     | [\$3.00 / \$15.00][2]      |
