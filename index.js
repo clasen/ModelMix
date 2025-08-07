@@ -90,8 +90,11 @@ class ModelMix {
     gpt45({ options = {}, config = {} } = {}) {
         return this.attach('gpt-4.5-preview', new MixOpenAI({ options, config }));
     }
-    gptOss({ options = {}, config = {}, mix = { together: true } } = {}) {
+    gptOss({ options = {}, config = {}, mix = { together: false, cerebras: false, groq: true, lmstudio: false } } = {}) {
         if (mix.together) return this.attach('openai/gpt-oss-120b', new MixTogether({ options, config }));
+        if (mix.cerebras) return this.attach('gpt-oss-120b', new MixCerebras({ options, config }));
+        if (mix.groq) return this.attach('openai/gpt-oss-120b', new MixGroq({ options, config }));
+        if (mix.lmstudio) return this.attach('openai/gpt-oss-120b', new MixLMStudio({ options, config }));
         return this;
     }
     opus4think({ options = {}, config = {} } = {}) {
@@ -185,8 +188,9 @@ class ModelMix {
         return this;
     }
 
-    kimiK2({ options = {}, config = {}} = {}) {
-        this.attach('moonshotai/Kimi-K2-Instruct', new MixTogether({ options, config }));
+    kimiK2({ options = {}, config = {}, mix = { together: false, groq: true } } = {}) {
+        if (mix.together) this.attach('moonshotai/Kimi-K2-Instruct', new MixTogether({ options, config }));
+        if (mix.groq) this.attach('moonshotai/kimi-k2-instruct', new MixGroq({ options, config }));
         return this;
     }
 
@@ -264,30 +268,30 @@ class ModelMix {
         for (let i = 0; i < this.messages.length; i++) {
             const message = this.messages[i];
             if (!message.content) continue;
-            
+
             for (let j = 0; j < message.content.length; j++) {
                 const content = message.content[j];
                 if (content.type !== 'image' || content.source.type === 'base64') continue;
-                
+
                 try {
                     let buffer, mimeType;
-                    
+
                     switch (content.source.type) {
                         case 'url':
                             const response = await axios.get(content.source.data, { responseType: 'arraybuffer' });
                             buffer = Buffer.from(response.data);
                             mimeType = response.headers['content-type'];
                             break;
-                            
+
                         case 'file':
                             buffer = this.readFile(content.source.data, { encoding: null });
                             break;
-                            
+
                         case 'buffer':
                             buffer = content.source.data;
                             break;
                     }
-                    
+
                     // Detect mimeType if not provided
                     if (!mimeType) {
                         const fileType = await fromBuffer(buffer);
@@ -296,7 +300,7 @@ class ModelMix {
                         }
                         mimeType = fileType.mime;
                     }
-                    
+
                     // Update the content with processed image
                     message.content[j] = {
                         type: "image",
@@ -306,7 +310,7 @@ class ModelMix {
                             data: buffer.toString('base64')
                         }
                     };
-                    
+
                 } catch (error) {
                     console.error(`Error processing image:`, error);
                     // Remove failed image from content
@@ -1139,6 +1143,16 @@ class MixLMStudio extends MixCustom {
             ...customConfig
         });
     }
+
+    create({ config = {}, options = {} } = {}) {
+        if (config.schema) {
+            options.response_format = {
+                type: 'json_schema',
+                json_schema: { schema: config.schema }
+            };
+        }
+        return super.create({ config, options });
+    }
 }
 
 class MixGroq extends MixCustom {
@@ -1190,6 +1204,11 @@ class MixCerebras extends MixCustom {
             apiKey: process.env.CEREBRAS_API_KEY,
             ...customConfig
         });
+    }
+
+    create({ config = {}, options = {} } = {}) {
+        delete options.response_format;
+        return super.create({ config, options });
     }
 }
 
