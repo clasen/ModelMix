@@ -754,6 +754,8 @@ class MixCustom {
 
         if (data.choices[0].message?.reasoning_content) {
             return data.choices[0].message.reasoning_content;
+        } else if (data.choices[0].message?.reasoning) {
+            return data.choices[0].message.reasoning;
         }
 
         const message = data.choices[0].message?.content?.trim() || '';
@@ -1152,6 +1154,51 @@ class MixLMStudio extends MixCustom {
             };
         }
         return super.create({ config, options });
+    }
+
+    static extractThink(data) {
+        const message = data.choices[0].message?.content?.trim() || '';
+
+        // Check for LMStudio special tags
+        const startTag = '<|channel|>analysis<|message|>';
+        const endTag = '<|end|><|start|>assistant<|channel|>final<|message|>';
+
+        const startIndex = message.indexOf(startTag);
+        const endIndex = message.indexOf(endTag);
+
+        if (startIndex !== -1 && endIndex !== -1) {
+            // Extract content between the special tags
+            const thinkContent = message.substring(startIndex + startTag.length, endIndex).trim();
+            return thinkContent;
+        }
+
+        // Fall back to default extraction method
+        return MixCustom.extractThink(data);
+    }
+
+    static extractMessage(data) {
+        const message = data.choices[0].message?.content?.trim() || '';
+
+        // Check for LMStudio special tags and extract final message
+        const endTag = '<|end|><|start|>assistant<|channel|>final<|message|>';
+        const endIndex = message.indexOf(endTag);
+
+        if (endIndex !== -1) {
+            // Return only the content after the final message tag
+            return message.substring(endIndex + endTag.length).trim();
+        }
+
+        // Fall back to default extraction method
+        return MixCustom.extractMessage(data);
+    }
+
+    processResponse(response) {
+        return {
+            message: MixLMStudio.extractMessage(response.data),
+            think: MixLMStudio.extractThink(response.data),
+            toolCalls: MixCustom.extractToolCalls(response.data),
+            response: response.data
+        };
     }
 }
 
