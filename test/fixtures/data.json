@@ -1,0 +1,36 @@
+{
+  "users": [
+    {
+      "id": 1,
+      "name": "Alice Smith",
+      "email": "alice@example.com",
+      "role": "admin",
+      "active": true
+    },
+    {
+      "id": 2,
+      "name": "Bob Johnson",
+      "email": "bob@example.com",
+      "role": "user",
+      "active": false
+    },
+    {
+      "id": 3,
+      "name": "Carol Davis",
+      "email": "carol@example.com",
+      "role": "moderator",
+      "active": true
+    }
+  ],
+  "settings": {
+    "theme": "dark",
+    "notifications": true,
+    "language": "en",
+    "timezone": "UTC"
+  },
+  "metadata": {
+    "version": "1.0.0",
+    "last_updated": "2023-12-01T10:00:00Z",
+    "total_users": 3
+  }
+}

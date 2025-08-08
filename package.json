@@ -56,19 +56,19 @@
   },
   "devDependencies": {
     "chai": "^5.2.1",
+    "dotenv": "^17.2.1",
     "mocha": "^11.7.1",
     "nock": "^14.0.9",
     "sinon": "^21.0.0"
   },
   "scripts": {
-    "test": "mocha test/**/*.js --timeout 10000 --require test/setup.js",
+    "test": "mocha test/**/*.js --timeout 10000 --require dotenv/config --require test/setup.js",
     "test:watch": "mocha test/**/*.js --watch --timeout 10000 --require test/setup.js",
     "test:json": "mocha test/json.test.js --timeout 10000 --require test/setup.js",
     "test:fallback": "mocha test/fallback.test.js --timeout 10000 --require test/setup.js",
     "test:templates": "mocha test/templates.test.js --timeout 10000 --require test/setup.js",
     "test:images": "mocha test/images.test.js --timeout 10000 --require test/setup.js",
-    "test:mcp": "mocha test/mcp.test.js --timeout 10000 --require test/setup.js",
     "test:bottleneck": "mocha test/bottleneck.test.js --timeout 10000 --require test/setup.js",
-    "test:integration": "mocha test/integration.test.js --timeout 10000 --require test/setup.js"
+    "test:live": "mocha test/live.test.js --timeout 10000 --require dotenv/config --require test/setup.js"
   }
 }

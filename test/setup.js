@@ -19,16 +19,16 @@ chai.config.showDiff = true;
 const TIMEOUT = 10000;
 
 // Set dummy environment variables for testing to prevent library initialization errors
-process.env.ANTHROPIC_API_KEY = 'sk-ant-test-dummy-key-for-testing-purposes';
-process.env.OPENAI_API_KEY = 'sk-proj-test-dummy-key-for-testing-purposes';
-process.env.PPLX_API_KEY = 'pplx-test-dummy-key-for-testing-purposes';
-process.env.GROQ_API_KEY = 'gsk_test-dummy-key-for-testing-purposes';
-process.env.TOGETHER_API_KEY = '49a96test-dummy-key-for-testing-purposes';
-process.env.XAI_API_KEY = 'xai-test-dummy-key-for-testing-purposes';
-process.env.CEREBRAS_API_KEY = 'csk-test-dummy-key-for-testing-purposes';
-process.env.GOOGLE_API_KEY = 'AIzatest-dummy-key-for-testing-purposes';
-process.env.LAMBDA_API_KEY = 'secret_test-dummy-key-for-testing-purposes';
-process.env.BRAVE_API_KEY = 'BSA0test-dummy-key-for-testing-purposes_fm';
+process.env.ANTHROPIC_API_KEY = process.env.ANTHROPIC_API_KEY || 'sk-ant-test-dummy-key-for-testing-purposes';
+process.env.OPENAI_API_KEY = process.env.OPENAI_API_KEY || 'sk-proj-test-dummy-key-for-testing-purposes';
+process.env.PPLX_API_KEY = process.env.PPLX_API_KEY || 'pplx-test-dummy-key-for-testing-purposes';
+process.env.GROQ_API_KEY = process.env.GROQ_API_KEY || 'gsk_test-dummy-key-for-testing-purposes';
+process.env.TOGETHER_API_KEY = process.env.TOGETHER_API_KEY || '49a96test-dummy-key-for-testing-purposes';
+process.env.XAI_API_KEY = process.env.XAI_API_KEY || 'xai-test-dummy-key-for-testing-purposes';
+process.env.CEREBRAS_API_KEY = process.env.CEREBRAS_API_KEY || 'csk-test-dummy-key-for-testing-purposes';
+process.env.GOOGLE_API_KEY = process.env.GOOGLE_API_KEY || 'AIzatest-dummy-key-for-testing-purposes';
+process.env.LAMBDA_API_KEY = process.env.LAMBDA_API_KEY || 'secret_test-dummy-key-for-testing-purposes';
+process.env.BRAVE_API_KEY = process.env.BRAVE_API_KEY || 'BSA0test-dummy-key-for-testing-purposes_fm';
 
 // Global test configuration
 global.TEST_CONFIG = {

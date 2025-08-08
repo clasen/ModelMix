@@ -2,6 +2,31 @@
 
 This comprehensive test suite provides complete coverage for the ModelMix library, testing all core functionality and advanced features.
 
+## 🔴 Live Integration Tests
+
+**WARNING**: `live-integration.test.js` makes **REAL API calls** and will incur costs!
+
+These tests require actual API keys and test the complete integration:
+- Real image processing with multiple providers
+- Actual JSON structured output  
+- Template replacement with real models
+- Multi-modal combinations
+- Performance testing with real APIs
+
+### Running Live Tests
+
+```bash
+# Set API keys first
+export OPENAI_API_KEY="sk-..."
+export ANTHROPIC_API_KEY="sk-ant-..."
+export GOOGLE_API_KEY="AIza..."
+
+# Run only live integration tests
+npm test -- --grep "Live Integration"
+```
+
+**Note**: Live tests will be skipped automatically if API keys are not available.
+
 ## ✅ Completed Test Suites
 
 ### 1. JSON Schema Generation (`json.test.js`)
@@ -37,16 +62,8 @@ This comprehensive test suite provides complete coverage for the ModelMix librar
 - ✅ Multimodal fallback
 - ✅ Template integration
 
-### 5. MCP Integration (`mcp.test.js`)
-- ✅ MCP server connection
-- ✅ Tool formatting for OpenAI
-- ✅ Tool formatting for Anthropic
-- ✅ Tool execution
-- ✅ MCP with fallback
-- ✅ Tool error handling
-- ✅ Automatic max_history configuration
 
-### 6. Rate Limiting with Bottleneck (`bottleneck.test.js`)
+### 5. Rate Limiting with Bottleneck (`bottleneck.test.js`)
 - ✅ Default configuration
 - ✅ Minimum time between requests
 - ✅ Concurrency limits
@@ -54,15 +71,6 @@ This comprehensive test suite provides complete coverage for the ModelMix librar
 - ✅ Error handling with rate limiting
 - ✅ Advanced features (reservoir, priority)
 - ✅ Statistics and events
-
-### 7. Integration Tests (`integration.test.js`)
-- ✅ Complete workflows
-- ✅ Templates + Images + JSON output
-- ✅ Multi-step conversations with fallbacks
-- ✅ File loading with provider switching
-- ✅ Error recovery
-- ✅ Performance and scalability
-- ✅ Edge cases and boundary conditions
 
 ## 🧪 Test Configuration
 
@@ -131,16 +139,9 @@ DEBUG_TESTS=true npm test
 - ✅ Automatic fallback
 
 ### Advanced Features (100% tested)
-- ✅ MCP integration
 - ✅ Multimodal support
-- ✅ File operations
 - ✅ Custom configurations
 - ✅ Error handling
-
-### Integration Tests (100% tested)
-- ✅ End-to-end workflows
-- ✅ Error recovery
-- ✅ Complex edge cases
 
 ## 🚀 Next Steps
 

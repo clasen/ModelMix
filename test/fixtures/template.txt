@@ -1,0 +1,15 @@
+Hello {{name}}, welcome to {{platform}}!
+
+Your account details:
+- Username: {{username}}
+- Role: {{role}}
+- Created: {{created_date}}
+
+Please visit {{website}} for more information.
+
+{{#if premium}}
+Thank you for being a premium member!
+{{/if}}
+
+Best regards,
+The {{company}} Team
