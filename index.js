@@ -304,7 +304,7 @@ class ModelMix {
 
             for (let j = 0; j < message.content.length; j++) {
                 const content = message.content[j];
-                if (content.type !== 'image' || content.source.type === 'base64' || content.source.type === 'url') continue;
+                if (content.type !== 'image' || content.source.type === 'base64') continue;
 
                 try {
                     let buffer, mimeType;
@@ -886,24 +886,13 @@ class MixOpenAI extends MixCustom {
             if (Array.isArray(message.content)) {
                 message.content = message.content.map(content => {
                     if (content.type === 'image') {
-                        const { type, media_type, data } = content.source;
-                        if (type === 'url') {
-                            // Remote URL - send directly
-                            return {
-                                type: 'image_url',
-                                image_url: {
-                                    url: data
-                                }
-                            };
-                        } else {
-                            // Base64 data
-                            return {
-                                type: 'image_url',
-                                image_url: {
-                                    url: `data:${media_type};base64,${data}`
-                                }
-                            };
-                        }
+                        const { media_type, data } = content.source;
+                        return {
+                            type: 'image_url',
+                            image_url: {
+                                url: `data:${media_type};base64,${data}`
+                            }
+                        };
                     }
                     return content;
                 });
