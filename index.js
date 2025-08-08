@@ -41,6 +41,7 @@ class ModelMix {
 
     }
 
+
     replace(keyValues) {
         this.config.replace = { ...this.config.replace, ...keyValues };
         return this;
@@ -141,7 +142,7 @@ class ModelMix {
         return this.attach('claude-3-5-haiku-20241022', new MixAnthropic({ options, config }));
     }
     gemini25flash({ options = {}, config = {} } = {}) {
-        return this.attach('gemini-2.5-flash-preview-04-17', new MixGoogle({ options, config }));
+        return this.attach('gemini-2.5-flash', new MixGoogle({ options, config }));
     }
     gemini25proExp({ options = {}, config = {} } = {}) {
         return this.attach('gemini-2.5-pro-exp-03-25', new MixGoogle({ options, config }));
@@ -245,6 +246,12 @@ class ModelMix {
     }
 
     addImage(filePath, { role = "user" } = {}) {
+        const absolutePath = path.resolve(filePath);
+        
+        if (!fs.existsSync(absolutePath)) {
+            throw new Error(`Image file not found: ${filePath}`);
+        }
+
         this.messages.push({
             role,
             content: [{
@@ -259,28 +266,45 @@ class ModelMix {
     }
 
     addImageFromUrl(url, { role = "user" } = {}) {
+        let source;
+        if (url.startsWith('data:')) {
+            // Parse data URL: data:image/jpeg;base64,/9j/4AAQ...
+            const match = url.match(/^data:([^;]+);base64,(.+)$/);
+            if (match) {
+                source = {
+                    type: "base64",
+                    media_type: match[1],
+                    data: match[2]
+                };
+            } else {
+                throw new Error('Invalid data URL format');
+            }
+        } else {
+            source = {
+                type: "url", 
+                data: url
+            };
+        }
+        
         this.messages.push({
             role,
             content: [{
                 type: "image",
-                source: {
-                    type: "url",
-                    data: url
-                }
+                source
             }]
         });
+        
         return this;
     }
 
     async processImages() {
-        // Process images that are in messages
         for (let i = 0; i < this.messages.length; i++) {
             const message = this.messages[i];
-            if (!message.content) continue;
+            if (!Array.isArray(message.content)) continue;
 
             for (let j = 0; j < message.content.length; j++) {
                 const content = message.content[j];
-                if (content.type !== 'image' || content.source.type === 'base64') continue;
+                if (content.type !== 'image' || content.source.type === 'base64' || content.source.type === 'url') continue;
 
                 try {
                     let buffer, mimeType;
@@ -826,6 +850,15 @@ class MixOpenAI extends MixCustom {
             delete options.max_tokens;
             delete options.temperature;
         }
+        
+        // Use max_completion_tokens and remove temperature for GPT-5 models
+        if (options.model?.includes('gpt-5')) {
+            if (options.max_tokens) {
+                options.max_completion_tokens = options.max_tokens;
+                delete options.max_tokens;
+            }
+            delete options.temperature;
+        }
 
         return super.create({ config, options });
     }
@@ -850,18 +883,31 @@ class MixOpenAI extends MixCustom {
                 continue;
             }
 
-            if (Array.isArray(message.content))
-                for (const content of message.content) {
+            if (Array.isArray(message.content)) {
+                message.content = message.content.map(content => {
                     if (content.type === 'image') {
                         const { type, media_type, data } = content.source;
-                        message.content = [{
-                            type: 'image_url',
-                            image_url: {
-                                url: `data:${media_type};${type},${data}`
-                            }
-                        }];
+                        if (type === 'url') {
+                            // Remote URL - send directly
+                            return {
+                                type: 'image_url',
+                                image_url: {
+                                    url: data
+                                }
+                            };
+                        } else {
+                            // Base64 data
+                            return {
+                                type: 'image_url',
+                                image_url: {
+                                    url: `data:${media_type};base64,${data}`
+                                }
+                            };
+                        }
                     }
-                }
+                    return content;
+                });
+            }
 
             results.push(message);
         }
