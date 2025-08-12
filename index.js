@@ -99,11 +99,10 @@ class ModelMix {
     gpt5nano({ options = {}, config = {} } = {}) {
         return this.attach('gpt-5-nano', new MixOpenAI({ options, config }));
     }    
-    gptOss({ options = {}, config = {}, mix = { together: false, cerebras: false, groq: true, lmstudio: false } } = {}) {
+    gptOss({ options = {}, config = {}, mix = { together: false, cerebras: false, groq: true } } = {}) {
         if (mix.together) return this.attach('openai/gpt-oss-120b', new MixTogether({ options, config }));
         if (mix.cerebras) return this.attach('gpt-oss-120b', new MixCerebras({ options, config }));
         if (mix.groq) return this.attach('openai/gpt-oss-120b', new MixGroq({ options, config }));
-        if (mix.lmstudio) return this.attach('openai/gpt-oss-120b', new MixLMStudio({ options, config }));
         return this;
     }
     
@@ -202,6 +201,10 @@ class ModelMix {
         if (mix.together) this.attach('moonshotai/Kimi-K2-Instruct', new MixTogether({ options, config }));
         if (mix.groq) this.attach('moonshotai/kimi-k2-instruct', new MixGroq({ options, config }));
         return this;
+    }
+
+    lmstudio({ options = {}, config = {} } = {}) {
+        return this.attach('lmstudio', new MixLMStudio({ options, config }));
     }
 
     addText(text, { role = "user" } = {}) {
