@@ -39,7 +39,7 @@ import { ModelMix } from 'modelmix';
 
 // Get structured JSON responses
 const model = ModelMix.new()
-    .sonnet37() // Anthropic claude-3-7-sonnet-20250219
+    .sonnet4() // Anthropic claude-sonnet-4-20250514
     .addText("Name and capital of 3 South American countries.");
 
 const outputExample = { countries: [{ name: "", capital: "" }] };
@@ -58,9 +58,9 @@ const setup = {
 
 const model = await ModelMix.new(setup)
     .sonnet4() // (main model) Anthropic claude-sonnet-4-20250514
-    .o4mini() // (fallback 1) OpenAI o4-mini
-    .gemini25proExp({ config: { temperature: 0 } }) // (fallback 2) Google gemini-2.5-pro-exp-03-25
-    .gpt41nano() // (fallback 3) OpenAI gpt-4.1-nano
+    .gpt5mini() // (fallback 1) OpenAI gpt-5-mini
+    .gemini25flash({ config: { temperature: 0 } }) // (fallback 2) Google gemini-2.5-flash
+    .gpt5nano() // (fallback 3) OpenAI gpt-5-nano
     .grok3mini() // (fallback 4) Grok grok-3-mini
     .addText("What's your name?");
 
@@ -94,7 +94,7 @@ BRAVE_API_KEY="BSA0..._fm"
 ```
 
 ```javascript
-const mmix = ModelMix.new({ config: { max_history: 10 } }).gpt41nano();
+const mmix = ModelMix.new({ config: { max_history: 10 } }).gpt5nano();
 mmix.setSystem('You are an assistant and today is ' + new Date().toISOString());
 
 // Add web search capability through MCP
