@@ -1,6 +1,6 @@
 {
   "name": "modelmix",
-  "version": "3.8.4",
+  "version": "3.8.6",
   "description": "🧬 ModelMix - Unified API for Diverse AI LLM.",
   "main": "index.js",
   "repository": {
@@ -52,7 +52,7 @@
     "bottleneck": "^2.19.5",
     "file-type": "^16.5.4",
     "form-data": "^4.0.4",
-    "lemonlog": "^1.1.2"
+    "lemonlog": "^1.2.0"
   },
   "devDependencies": {
     "chai": "^5.2.1",
@@ -69,6 +69,7 @@
     "test:templates": "mocha test/templates.test.js --timeout 10000 --require test/setup.js",
     "test:images": "mocha test/images.test.js --timeout 10000 --require test/setup.js",
     "test:bottleneck": "mocha test/bottleneck.test.js --timeout 10000 --require test/setup.js",
-    "test:live": "mocha test/live.test.js --timeout 10000 --require dotenv/config --require test/setup.js"
+    "test:live": "mocha test/live.test.js --timeout 10000 --require dotenv/config --require test/setup.js",
+    "test:live.mcp": "mocha test/live.mcp.js --timeout 60000 --require dotenv/config --require test/setup.js"
   }
 }

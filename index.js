@@ -7,6 +7,7 @@ const path = require('path');
 const generateJsonSchema = require('./schema');
 const { Client } = require("@modelcontextprotocol/sdk/client/index.js");
 const { StdioClientTransport } = require("@modelcontextprotocol/sdk/client/stdio.js");
+const { MCPToolsManager } = require('./mcp-tools');
 
 class ModelMix {
 
@@ -16,6 +17,7 @@ class ModelMix {
         this.tools = {};
         this.toolClient = {};
         this.mcp = {};
+        this.mcpToolsManager = new MCPToolsManager();
         this.options = {
             max_tokens: 5000,
             temperature: 1, // 1 --> More creative, 0 --> More deterministic.
@@ -198,8 +200,8 @@ class ModelMix {
     }
 
     kimiK2({ options = {}, config = {}, mix = { together: false, groq: true } } = {}) {
-        if (mix.together) this.attach('moonshotai/Kimi-K2-Instruct', new MixTogether({ options, config }));
-        if (mix.groq) this.attach('moonshotai/kimi-k2-instruct', new MixGroq({ options, config }));
+        if (mix.together) this.attach('moonshotai/Kimi-K2-Instruct-0905', new MixTogether({ options, config }));
+        if (mix.groq) this.attach('moonshotai/kimi-k2-instruct-0905', new MixGroq({ options, config }));
         return this;
     }
 
@@ -471,7 +473,28 @@ class ModelMix {
     async prepareMessages() {
         await this.processImages();
         this.applyTemplate();
-        this.messages = this.messages.slice(-this.config.max_history);
+        
+        // Smart message slicing to preserve tool call sequences
+        if (this.config.max_history > 0) {
+            let sliceStart = Math.max(0, this.messages.length - this.config.max_history);
+            
+            // If we're slicing and there's a tool message at the start, 
+            // ensure we include the preceding assistant message with tool_calls
+            while (sliceStart > 0 && 
+                   sliceStart < this.messages.length && 
+                   this.messages[sliceStart].role === 'tool') {
+                sliceStart--;
+                // Also need to include the assistant message with tool_calls
+                if (sliceStart > 0 && 
+                    this.messages[sliceStart].role === 'assistant' && 
+                    this.messages[sliceStart].tool_calls) {
+                    break;
+                }
+            }
+            
+            this.messages = this.messages.slice(sliceStart);
+        }
+        
         this.messages = this.groupByRoles(this.messages);
         this.options.messages = this.messages;
     }
@@ -493,7 +516,7 @@ class ModelMix {
 
     async execute({ config = {}, options = {} } = {}) {
         if (!this.models || this.models.length === 0) {
-            throw new Error("No models specified. Use methods like .gpt41mini(), .sonnet4() first.");
+            throw new Error("No models specified. Use methods like .gpt5(), .sonnet4() first.");
         }
 
         return this.limiter.schedule(async () => {
@@ -555,7 +578,7 @@ class ModelMix {
                             }
                         }
 
-                        this.messages.push({ role: "assistant", content: result.toolCalls, tool_calls: result.toolCalls });
+                        this.messages.push({ role: "assistant", content: null, tool_calls: result.toolCalls });
 
                         const content = await this.processToolCalls(result.toolCalls);
                         this.messages.push({ role: 'tool', content });
@@ -596,18 +619,67 @@ class ModelMix {
         const result = []
 
         for (const toolCall of toolCalls) {
-            const client = this.toolClient[toolCall.function.name];
+            // Handle different tool call formats more robustly
+            let toolName, toolArgs, toolId;
+            
+            try {
+                if (toolCall.function) {
+                    // Formato OpenAI/normalizado
+                    toolName = toolCall.function.name;
+                    toolArgs = typeof toolCall.function.arguments === 'string' 
+                        ? JSON.parse(toolCall.function.arguments) 
+                        : toolCall.function.arguments;
+                    toolId = toolCall.id;
+                } else if (toolCall.name) {
+                    // Formato directo (posible formato alternativo)
+                    toolName = toolCall.name;
+                    toolArgs = toolCall.input || toolCall.arguments || {};
+                    toolId = toolCall.id;
+                } else {
+                    console.error('Unknown tool call format:', JSON.stringify(toolCall, null, 2));
+                    continue;
+                }
 
-            const response = await client.callTool({
-                name: toolCall.function.name,
-                arguments: JSON.parse(toolCall.function.arguments)
-            });
+                // Validar que tenemos los datos necesarios
+                if (!toolName) {
+                    console.error('Tool call missing name:', JSON.stringify(toolCall, null, 2));
+                    continue;
+                }
 
-            result.push({
-                name: toolCall.function.name,
-                tool_call_id: toolCall.id,
-                content: response.content.map(item => item.text).join("\n")
-            });
+                // Verificar si es una herramienta local registrada
+                if (this.mcpToolsManager.hasTool(toolName)) {
+                    const response = await this.mcpToolsManager.executeTool(toolName, toolArgs);
+                    result.push({
+                        name: toolName,
+                        tool_call_id: toolId,
+                        content: response.content.map(item => item.text).join("\n")
+                    });
+                } else {
+                    // Usar el cliente MCP externo
+                    const client = this.toolClient[toolName];
+                    if (!client) {
+                        throw new Error(`No client found for tool: ${toolName}`);
+                    }
+
+                    const response = await client.callTool({
+                        name: toolName,
+                        arguments: toolArgs
+                    });
+
+                    result.push({
+                        name: toolName,
+                        tool_call_id: toolId,
+                        content: response.content.map(item => item.text).join("\n")
+                    });
+                }
+            } catch (error) {
+                console.error(`Error processing tool call ${toolName}:`, error);
+                result.push({
+                    name: toolName || 'unknown',
+                    tool_call_id: toolId || 'unknown',
+                    content: `Error: ${error.message}`
+                });
+            }
         }
         return result;
     }
@@ -654,6 +726,56 @@ class ModelMix {
         }
 
     }
+
+    addTool(toolDefinition, callback) {
+
+        if (this.config.max_history < 3) {
+            log.warn(`MCP ${toolDefinition.name} requires at least 3 max_history. Setting to 3.`);
+            this.config.max_history = 3;
+        }
+
+        this.mcpToolsManager.registerTool(toolDefinition, callback);
+        
+        // Agregar la herramienta al sistema de tools para que sea incluida en las requests
+        if (!this.tools.local) {
+            this.tools.local = [];
+        }
+        this.tools.local.push({
+            name: toolDefinition.name,
+            description: toolDefinition.description,
+            inputSchema: toolDefinition.inputSchema
+        });
+        
+        return this;
+    }
+
+    addTools(toolsWithCallbacks) {
+        for (const { tool, callback } of toolsWithCallbacks) {
+            this.addTool(tool, callback);
+        }
+        return this;
+    }
+
+    removeTool(toolName) {
+        this.mcpToolsManager.removeTool(toolName);
+        
+        // Also remove from the tools system
+        if (this.tools.local) {
+            this.tools.local = this.tools.local.filter(tool => tool.name !== toolName);
+        }
+        
+        return this;
+    }
+
+    listTools() {
+        const localTools = this.mcpToolsManager.getToolsForMCP();
+        const mcpTools = Object.values(this.tools).flat();
+        
+        return {
+            local: localTools,
+            mcp: mcpTools.filter(tool => !localTools.find(local => local.name === tool.name))
+        };
+    }
 }
 
 class MixCustom {
@@ -661,7 +783,7 @@ class MixCustom {
         this.config = this.getDefaultConfig(config);
         this.options = this.getDefaultOptions(options);
         this.headers = this.getDefaultHeaders(headers);
-        this.streamCallback = null; // Definimos streamCallback aquí
+        this.streamCallback = null; // Define streamCallback here
     }
 
     getDefaultOptions(customOptions) {
@@ -881,14 +1003,18 @@ class MixOpenAI extends MixCustom {
 
             if (message.role === 'tool') {
                 for (const content of message.content) {
-                    results.push({ role: 'tool', ...content })
+                    results.push({ 
+                        role: 'tool', 
+                        tool_call_id: content.tool_call_id,
+                        content: content.content 
+                    })
                 }
                 continue;
             }
 
             if (Array.isArray(message.content)) {
-                message.content = message.content.map(content => {
-                    if (content.type === 'image') {
+                message.content = message.content.filter(content => content !== null && content !== undefined).map(content => {
+                    if (content && content.type === 'image') {
                         const { media_type, data } = content.source;
                         return {
                             type: 'image_url',
@@ -903,6 +1029,7 @@ class MixOpenAI extends MixCustom {
 
             results.push(message);
         }
+        
         return results;
     }
 
@@ -967,7 +1094,16 @@ class MixAnthropic extends MixCustom {
         delete options.response_format;
 
         options.system = config.system;
-        return super.create({ config, options });
+        
+        try {
+            return await super.create({ config, options });
+        } catch (error) {
+            // Log the error details for debugging
+            if (error.response && error.response.data) {
+                console.error('Anthropic API Error:', JSON.stringify(error.response.data, null, 2));
+            }
+            throw error;
+        }
     }
 
     convertMessages(messages, config) {
@@ -975,7 +1111,27 @@ class MixAnthropic extends MixCustom {
     }
 
     static convertMessages(messages, config) {
-        return messages.map(message => {
+        // Filter out orphaned tool results for Anthropic
+        const filteredMessages = [];
+        for (let i = 0; i < messages.length; i++) {
+            if (messages[i].role === 'tool') {
+                // Check if there's a preceding assistant message with tool_calls
+                let foundToolCall = false;
+                for (let j = i - 1; j >= 0; j--) {
+                    if (messages[j].role === 'assistant' && messages[j].tool_calls) {
+                        foundToolCall = true;
+                        break;
+                    }
+                }
+                if (!foundToolCall) {
+                    // Skip orphaned tool results
+                    continue;
+                }
+            }
+            filteredMessages.push(messages[i]);
+        }
+        
+        return filteredMessages.map(message => {
             if (message.role === 'tool') {
                 return {
                     role: "user",
@@ -987,17 +1143,31 @@ class MixAnthropic extends MixCustom {
                 }
             }
 
-            message.content = message.content.map(content => {
-                if (content.type === 'function') {
-                    return {
-                        type: 'tool_use',
-                        id: content.id,
-                        name: content.function.name,
-                        input: JSON.parse(content.function.arguments)
+            // Handle messages with tool_calls (assistant messages that call tools)
+            if (message.tool_calls) {
+                const content = message.tool_calls.map(call => ({
+                    type: 'tool_use',
+                    id: call.id,
+                    name: call.function.name,
+                    input: JSON.parse(call.function.arguments)
+                }));
+                return { role: 'assistant', content };
+            }
+
+            // Handle content conversion for other messages
+            if (message.content && Array.isArray(message.content)) {
+                message.content = message.content.filter(content => content !== null && content !== undefined).map(content => {
+                    if (content && content.type === 'function') {
+                        return {
+                            type: 'tool_use',
+                            id: content.id,
+                            name: content.function.name,
+                            input: JSON.parse(content.function.arguments)
+                        }
                     }
-                }
-                return content;
-            });
+                    return content;
+                });
+            }
 
             return message;
         });
@@ -1068,7 +1238,6 @@ class MixAnthropic extends MixCustom {
         for (const tool in tools) {
             for (const item of tools[tool]) {
                 options.tools.push({
-                    type: 'custom',
                     name: item.name,
                     description: item.description,
                     input_schema: item.inputSchema
@@ -1328,6 +1497,19 @@ class MixGoogle extends MixCustom {
 
     static convertMessages(messages, config) {
         return messages.map(message => {
+
+            // Handle assistant messages with tool_calls (content is null)
+            if (message.role === 'assistant' && message.tool_calls) {
+                return {
+                    role: 'model',
+                    parts: message.tool_calls.map(toolCall => ({
+                        functionCall: {
+                            name: toolCall.function.name,
+                            args: JSON.parse(toolCall.function.arguments)
+                        }
+                    }))
+                }
+            }
 
             if (!Array.isArray(message.content)) return message;
             const role = (message.role === 'assistant' || message.role === 'tool') ? 'model' : 'user'

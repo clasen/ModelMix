@@ -23,6 +23,7 @@ const testFiles = [
     'fallback.test.js', 
     'templates.test.js',
     'images.test.js',
+    'live.mcp.js',
 ];
 
 console.log('🧬 ModelMix Test Suite Runner');
@@ -51,6 +52,7 @@ function runTests() {
             console.log('- ✅ File Operations & Templates');
             console.log('- ✅ Image Processing & Multimodal');
             console.log('- ✅ MCP Integration');
+            console.log('- ✅ Live MCP Tools Testing');
             console.log('- ✅ Rate Limiting with Bottleneck');
             console.log('- ✅ Integration & Edge Cases');
         } else {
