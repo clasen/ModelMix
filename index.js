@@ -21,7 +21,6 @@ class ModelMix {
         this.options = {
             max_tokens: 5000,
             temperature: 1, // 1 --> More creative, 0 --> More deterministic.
-            top_p: 1, // 100% --> The model considers all possible tokens.
             ...options
         };
 
@@ -100,21 +99,14 @@ class ModelMix {
     }
     gpt5nano({ options = {}, config = {} } = {}) {
         return this.attach('gpt-5-nano', new MixOpenAI({ options, config }));
-    }    
+    }
     gptOss({ options = {}, config = {}, mix = { together: false, cerebras: false, groq: true } } = {}) {
         if (mix.together) return this.attach('openai/gpt-oss-120b', new MixTogether({ options, config }));
         if (mix.cerebras) return this.attach('gpt-oss-120b', new MixCerebras({ options, config }));
         if (mix.groq) return this.attach('openai/gpt-oss-120b', new MixGroq({ options, config }));
         return this;
     }
-    
-    opus4think({ options = {}, config = {} } = {}) {
-        options = { ...MixAnthropic.thinkingOptions, ...options };
-        return this.attach('claude-opus-4-20250514', new MixAnthropic({ options, config }));
-    }
-    opus4({ options = {}, config = {} } = {}) {
-        return this.attach('claude-opus-4-20250514', new MixAnthropic({ options, config }));
-    }
+
     opus41({ options = {}, config = {} } = {}) {
         return this.attach('claude-opus-4-1-20250805', new MixAnthropic({ options, config }));
     }
@@ -129,15 +121,19 @@ class ModelMix {
         options = { ...MixAnthropic.thinkingOptions, ...options };
         return this.attach('claude-sonnet-4-20250514', new MixAnthropic({ options, config }));
     }
+    sonnet45({ options = {}, config = {} } = {}) {
+        return this.attach('claude-sonnet-4-5-20250929', new MixAnthropic({ options, config }));
+    }
+    sonnet45think({ options = {}, config = {} } = {}) {
+        options = { ...MixAnthropic.thinkingOptions, ...options };
+        return this.attach('claude-sonnet-4-5-20250929', new MixAnthropic({ options, config }));
+    }
     sonnet37({ options = {}, config = {} } = {}) {
         return this.attach('claude-3-7-sonnet-20250219', new MixAnthropic({ options, config }));
     }
     sonnet37think({ options = {}, config = {} } = {}) {
         options = { ...MixAnthropic.thinkingOptions, ...options };
         return this.attach('claude-3-7-sonnet-20250219', new MixAnthropic({ options, config }));
-    }
-    sonnet35({ options = {}, config = {} } = {}) {
-        return this.attach('claude-3-5-sonnet-20241022', new MixAnthropic({ options, config }));
     }
     haiku35({ options = {}, config = {} } = {}) {
         return this.attach('claude-3-5-haiku-20241022', new MixAnthropic({ options, config }));
@@ -252,7 +248,7 @@ class ModelMix {
 
     addImage(filePath, { role = "user" } = {}) {
         const absolutePath = path.resolve(filePath);
-        
+
         if (!fs.existsSync(absolutePath)) {
             throw new Error(`Image file not found: ${filePath}`);
         }
@@ -286,11 +282,11 @@ class ModelMix {
             }
         } else {
             source = {
-                type: "url", 
+                type: "url",
                 data: url
             };
         }
-        
+
         this.messages.push({
             role,
             content: [{
@@ -298,7 +294,7 @@ class ModelMix {
                 source
             }]
         });
-        
+
         return this;
     }
 
@@ -473,28 +469,28 @@ class ModelMix {
     async prepareMessages() {
         await this.processImages();
         this.applyTemplate();
-        
+
         // Smart message slicing to preserve tool call sequences
         if (this.config.max_history > 0) {
             let sliceStart = Math.max(0, this.messages.length - this.config.max_history);
-            
+
             // If we're slicing and there's a tool message at the start, 
             // ensure we include the preceding assistant message with tool_calls
-            while (sliceStart > 0 && 
-                   sliceStart < this.messages.length && 
-                   this.messages[sliceStart].role === 'tool') {
+            while (sliceStart > 0 &&
+                sliceStart < this.messages.length &&
+                this.messages[sliceStart].role === 'tool') {
                 sliceStart--;
                 // Also need to include the assistant message with tool_calls
-                if (sliceStart > 0 && 
-                    this.messages[sliceStart].role === 'assistant' && 
+                if (sliceStart > 0 &&
+                    this.messages[sliceStart].role === 'assistant' &&
                     this.messages[sliceStart].tool_calls) {
                     break;
                 }
             }
-            
+
             this.messages = this.messages.slice(sliceStart);
         }
-        
+
         this.messages = this.groupByRoles(this.messages);
         this.options.messages = this.messages;
     }
@@ -621,13 +617,13 @@ class ModelMix {
         for (const toolCall of toolCalls) {
             // Handle different tool call formats more robustly
             let toolName, toolArgs, toolId;
-            
+
             try {
                 if (toolCall.function) {
                     // Formato OpenAI/normalizado
                     toolName = toolCall.function.name;
-                    toolArgs = typeof toolCall.function.arguments === 'string' 
-                        ? JSON.parse(toolCall.function.arguments) 
+                    toolArgs = typeof toolCall.function.arguments === 'string'
+                        ? JSON.parse(toolCall.function.arguments)
                         : toolCall.function.arguments;
                     toolId = toolCall.id;
                 } else if (toolCall.name) {
@@ -735,7 +731,7 @@ class ModelMix {
         }
 
         this.mcpToolsManager.registerTool(toolDefinition, callback);
-        
+
         // Agregar la herramienta al sistema de tools para que sea incluida en las requests
         if (!this.tools.local) {
             this.tools.local = [];
@@ -745,7 +741,7 @@ class ModelMix {
             description: toolDefinition.description,
             inputSchema: toolDefinition.inputSchema
         });
-        
+
         return this;
     }
 
@@ -758,19 +754,19 @@ class ModelMix {
 
     removeTool(toolName) {
         this.mcpToolsManager.removeTool(toolName);
-        
+
         // Also remove from the tools system
         if (this.tools.local) {
             this.tools.local = this.tools.local.filter(tool => tool.name !== toolName);
         }
-        
+
         return this;
     }
 
     listTools() {
         const localTools = this.mcpToolsManager.getToolsForMCP();
         const mcpTools = Object.values(this.tools).flat();
-        
+
         return {
             local: localTools,
             mcp: mcpTools.filter(tool => !localTools.find(local => local.name === tool.name))
@@ -975,7 +971,7 @@ class MixOpenAI extends MixCustom {
             delete options.max_tokens;
             delete options.temperature;
         }
-        
+
         // Use max_completion_tokens and remove temperature for GPT-5 models
         if (options.model?.includes('gpt-5')) {
             if (options.max_tokens) {
@@ -1003,10 +999,10 @@ class MixOpenAI extends MixCustom {
 
             if (message.role === 'tool') {
                 for (const content of message.content) {
-                    results.push({ 
-                        role: 'tool', 
+                    results.push({
+                        role: 'tool',
                         tool_call_id: content.tool_call_id,
-                        content: content.content 
+                        content: content.content
                     })
                 }
                 continue;
@@ -1029,7 +1025,7 @@ class MixOpenAI extends MixCustom {
 
             results.push(message);
         }
-        
+
         return results;
     }
 
@@ -1080,21 +1076,10 @@ class MixAnthropic extends MixCustom {
 
     async create({ config = {}, options = {} } = {}) {
 
-        // Remove top_p for thinking
-        if (options.thinking) {
-            delete options.top_p;
-        }
-
-        if (options.model && options.model.includes('claude-opus-4-1')) {
-            if (options.temperature !== undefined && options.top_p !== undefined) {
-                delete options.top_p;
-            }
-        }
-
         delete options.response_format;
 
         options.system = config.system;
-        
+
         try {
             return await super.create({ config, options });
         } catch (error) {
@@ -1130,7 +1115,7 @@ class MixAnthropic extends MixCustom {
             }
             filteredMessages.push(messages[i]);
         }
-        
+
         return filteredMessages.map(message => {
             if (message.role === 'tool') {
                 return {
@@ -1575,8 +1560,11 @@ class MixGoogle extends MixCustom {
         options.messages = MixGoogle.convertMessages(options.messages);
 
         const generationConfig = {
-            topP: options.top_p,
             maxOutputTokens: options.max_tokens,
+        }
+
+        if (options.top_p) {
+            generationConfig.topP = options.top_p;
         }
 
         generationConfig.responseMimeType = "text/plain";

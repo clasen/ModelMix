@@ -126,9 +126,8 @@ Here's a comprehensive list of available methods:
 | `o3()`             | OpenAI     | o3                             | [\$10.00 / \$40.00][1]     |
 | `gptOss()`         | Together   | gpt-oss-120B                   | [\$0.15 / \$0.60][7]       |
 | `opus41[think]()`  | Anthropic  | claude-opus-4-1-20250805       | [\$15.00 / \$75.00][2]     |
+| `sonnet45[think]()`| Anthropic  | claude-sonnet-4-5-20250929     | [\$3.00 / \$15.00][2]      |
 | `sonnet4[think]()` | Anthropic  | claude-sonnet-4-20250514       | [\$3.00 / \$15.00][2]      |
-| `sonnet37[think]()`| Anthropic  | claude-3-7-sonnet-20250219     | [\$3.00 / \$15.00][2]      |
-| `sonnet35()`       | Anthropic  | claude-3-5-sonnet-20241022     | [\$3.00 / \$15.00][2]      |
 | `haiku35()`        | Anthropic  | claude-3-5-haiku-20241022      | [\$0.80 / \$4.00][2]       |
 | `gemini25flash()`   | Google     | gemini-2.5-flash-preview-04-17  | [\$0.00 / \$0.00][3]       |
 | `gemini25proExp()` | Google     | gemini-2.5-pro-exp-03-25       | [\$0.00 / \$0.00][3]       |
@@ -331,7 +330,6 @@ new ModelMix(args = { options: {}, config: {} })
   - **options**: This object contains default options that are applied to all models. These options can be overridden when creating a specific model instance. Examples of default options include:
     - `max_tokens`: Sets the maximum number of tokens to generate, e.g., 2000.
     - `temperature`: Controls the randomness of the model's output, e.g., 1.
-    - `top_p`: Controls the diversity of the output, e.g., 1.
     - ...(Additional default options can be added as needed)
   - **config**: This object contains configuration settings that control the behavior of the `ModelMix` instance. These settings can also be overridden for specific model instances. Examples of configuration settings include:
     - `system`: Sets the default system message for the model, e.g., "You are an assistant."

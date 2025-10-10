@@ -6,6 +6,11 @@ const path = require('path');
 const { ModelMix } = require('../index.js');
 
 describe('Template and File Operations Tests', () => {
+    
+    // Setup test hooks
+    if (global.setupTestHooks) {
+        global.setupTestHooks();
+    }
 
     afterEach(() => {
         nock.cleanAll();

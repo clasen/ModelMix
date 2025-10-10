@@ -31,7 +31,7 @@ describe('Live Integration Tests', function () {
         });
 
         it('should process images with Anthropic Claude', async function () {
-            const model = ModelMix.new(setup).sonnet35();
+            const model = ModelMix.new(setup).sonnet45();
 
             model.addImageFromUrl(blueSquareBase64)
                 .addText('What color is this image? Answer in one word only.');
@@ -82,8 +82,8 @@ describe('Live Integration Tests', function () {
             expect(result.skills).to.be.an('array');
         });
 
-        it('should return structured JSON with Sonnet Think', async function () {
-            const model = ModelMix.new(setup).sonnet4think();
+        it('should return structured JSON with Sonnet 4.5 thinking', async function () {
+            const model = ModelMix.new(setup).sonnet45think();
 
             model.addText('Generate information about a fictional city.');
 

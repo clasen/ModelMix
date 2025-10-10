@@ -6,6 +6,11 @@ const Bottleneck = require('bottleneck');
 
 describe('Rate Limiting with Bottleneck Tests', () => {
     
+    // Setup test hooks
+    if (global.setupTestHooks) {
+        global.setupTestHooks();
+    }
+    
     afterEach(() => {
         nock.cleanAll();
         sinon.restore();
@@ -55,6 +60,13 @@ describe('Rate Limiting with Bottleneck Tests', () => {
                     }
                 }
             });
+        });
+
+        afterEach(async () => {
+            // Clean up bottleneck state
+            if (model && model.limiter) {
+                await model.limiter.stop({ dropWaitingJobs: true });
+            }
         });
 
         it('should enforce minimum time between requests', async () => {
@@ -162,6 +174,13 @@ describe('Rate Limiting with Bottleneck Tests', () => {
             });
         });
 
+        afterEach(async () => {
+            // Clean up bottleneck state
+            if (model && model.limiter) {
+                await model.limiter.stop({ dropWaitingJobs: true });
+            }
+        });
+
         it('should apply rate limiting to OpenAI requests', async () => {
             const requestTimes = [];
             
@@ -238,6 +257,13 @@ describe('Rate Limiting with Bottleneck Tests', () => {
                     }
                 }
             });
+        });
+
+        afterEach(async () => {
+            // Clean up bottleneck state
+            if (model && model.limiter) {
+                await model.limiter.stop({ dropWaitingJobs: true });
+            }
         });
 
         it('should handle rate limiting with API errors', async () => {

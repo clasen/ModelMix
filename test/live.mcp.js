@@ -528,7 +528,7 @@ describe('Live MCP Integration Tests', function () {
         it('should work with same MCP tools across different Anthropic models', async function () {
             const models = [
                 { name: 'Sonnet 4', model: ModelMix.new(setup).sonnet4() },
-                { name: 'Sonnet 3.7', model: ModelMix.new(setup).sonnet37() },
+                { name: 'Sonnet 4.5', model: ModelMix.new(setup).sonnet45() },
                 { name: 'Haiku 3.5', model: ModelMix.new(setup).haiku35() }
             ];
 

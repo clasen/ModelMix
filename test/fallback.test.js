@@ -4,6 +4,11 @@ const nock = require('nock');
 const { ModelMix } = require('../index.js');
 
 describe('Provider Fallback Chain Tests', () => {
+    
+    // Setup test hooks
+    if (global.setupTestHooks) {
+        global.setupTestHooks();
+    }
 
     afterEach(() => {
         nock.cleanAll();

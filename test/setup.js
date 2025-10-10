@@ -39,8 +39,24 @@ global.TEST_CONFIG = {
 
 // Global cleanup function
 global.cleanup = function() {
+    // More thorough nock cleanup
     nock.cleanAll();
+    nock.restore();
+    nock.activate();
     sinon.restore();
+    
+    // Clear any pending timers and intervals
+    const highestTimeoutId = setTimeout(() => {}, 0);
+    clearTimeout(highestTimeoutId);
+    for (let i = 0; i < highestTimeoutId; i++) {
+        clearTimeout(i);
+        clearInterval(i);
+    }
+    
+    // Force garbage collection if available
+    if (global.gc) {
+        global.gc();
+    }
 };
 
 // Console override for testing (suppress debug logs unless needed)
@@ -151,6 +167,10 @@ global.testUtils = {
 // Export hooks for tests to use
 global.setupTestHooks = function() {
     beforeEach(() => {
+        // Ensure clean state before each test
+        nock.cleanAll();
+        sinon.restore();
+        
         // Disable real HTTP requests
         if (global.TEST_CONFIG.MOCK_APIS) {
             nock.disableNetConnect();
@@ -164,6 +184,11 @@ global.setupTestHooks = function() {
         
         if (global.TEST_CONFIG.MOCK_APIS) {
             nock.enableNetConnect();
+        }
+        
+        // Force garbage collection if available
+        if (global.gc) {
+            global.gc();
         }
     });
 };
