@@ -2,9 +2,7 @@ const { expect } = require('chai');
 const { ModelMix } = require('../index.js');
 const nock = require('nock');
 
-// Completely disable nock for live tests
-nock.restore();
-nock.cleanAll();
+// Note: This test file makes real API calls and disables nock locally
 
 const setup = {
     options: { temperature: 0 },
@@ -27,7 +25,8 @@ describe('Live MCP Integration Tests', function () {
     });
     
     after(() => {
-        nock.restore();
+        // Re-activate nock for subsequent tests
+        nock.activate();
     });
 
     describe('Basic MCP Tool Integration', function () {

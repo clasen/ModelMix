@@ -1,5 +1,6 @@
 const { expect } = require('chai');
 const { ModelMix, MixOpenAI, MixAnthropic, MixGoogle } = require('../index.js');
+const nock = require('nock');
 const path = require('path');
 const fixturesPath = path.join(__dirname, 'fixtures');
 
@@ -13,6 +14,22 @@ const setup = {
 describe('Live Integration Tests', function () {
     // Increase timeout for real API calls
     this.timeout(30000);
+    
+    // Ensure nock doesn't interfere with live tests but restore it after
+    before(() => {
+        nock.restore();
+        nock.cleanAll();
+    });
+    
+    beforeEach(() => {
+        nock.restore();
+        nock.cleanAll();
+    });
+    
+    after(() => {
+        // Re-activate nock for subsequent tests
+        nock.activate();
+    });
 
     describe('Image Processing', function () {
 
