@@ -129,6 +129,7 @@ Here's a comprehensive list of available methods:
 | `sonnet45[think]()`| Anthropic  | claude-sonnet-4-5-20250929     | [\$3.00 / \$15.00][2]      |
 | `sonnet4[think]()` | Anthropic  | claude-sonnet-4-20250514       | [\$3.00 / \$15.00][2]      |
 | `haiku35()`        | Anthropic  | claude-3-5-haiku-20241022      | [\$0.80 / \$4.00][2]       |
+| `haiku45[think]()` | Anthropic  | claude-haiku-4-5-20251001      | [\$1.00 / \$5.00][2]       |
 | `gemini25flash()`   | Google     | gemini-2.5-flash-preview-04-17  | [\$0.00 / \$0.00][3]       |
 | `gemini25proExp()` | Google     | gemini-2.5-pro-exp-03-25       | [\$0.00 / \$0.00][3]       |
 | `gemini25pro()`    | Google     | gemini-2.5-pro-preview-05-06   | [\$2.50 / \$15.00][3]      |

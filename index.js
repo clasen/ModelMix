@@ -138,6 +138,13 @@ class ModelMix {
     haiku35({ options = {}, config = {} } = {}) {
         return this.attach('claude-3-5-haiku-20241022', new MixAnthropic({ options, config }));
     }
+    haiku45({ options = {}, config = {} } = {}) {
+        return this.attach('claude-haiku-4-5-20251001', new MixAnthropic({ options, config }));
+    }
+    haiku45think({ options = {}, config = {} } = {}) {
+        options = { ...MixAnthropic.thinkingOptions, ...options };
+        return this.attach('claude-haiku-4-5-20251001', new MixAnthropic({ options, config }));
+    }    
     gemini25flash({ options = {}, config = {} } = {}) {
         return this.attach('gemini-2.5-flash', new MixGoogle({ options, config }));
     }
