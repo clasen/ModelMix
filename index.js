@@ -208,6 +208,10 @@ class ModelMix {
         return this;
     }
 
+    kimiK2think({ options = {}, config = {} } = {}) {
+        return this.attach('moonshotai/Kimi-K2-Thinking', new MixTogether({ options, config }));
+    }
+
     lmstudio({ options = {}, config = {} } = {}) {
         return this.attach('lmstudio', new MixLMStudio({ options, config }));
     }

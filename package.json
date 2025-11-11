@@ -1,6 +1,6 @@
 {
   "name": "modelmix",
-  "version": "3.9.2",
+  "version": "3.9.4",
   "description": "🧬 ModelMix - Unified API for Diverse AI LLM.",
   "main": "index.js",
   "repository": {
@@ -33,11 +33,11 @@
     "nano",
     "deepseek",
     "oss",
-    "nousresearch",
+    "k2",
     "reasoning",
     "bottleneck",
     "cerebras",
-    "scout",
+    "thinking",
     "clasen"
   ],
   "author": "Martin Clasen",
