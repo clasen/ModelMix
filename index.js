@@ -100,6 +100,9 @@ class ModelMix {
     gpt5nano({ options = {}, config = {} } = {}) {
         return this.attach('gpt-5-nano', new MixOpenAI({ options, config }));
     }
+    gpt51({ options = {}, config = {} } = {}) {
+        return this.attach('gpt-5.1', new MixOpenAI({ options, config }));
+    }    
     gptOss({ options = {}, config = {}, mix = { together: false, cerebras: false, groq: true } } = {}) {
         if (mix.together) return this.attach('openai/gpt-oss-120b', new MixTogether({ options, config }));
         if (mix.cerebras) return this.attach('gpt-oss-120b', new MixCerebras({ options, config }));
