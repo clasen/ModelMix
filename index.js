@@ -216,6 +216,14 @@ class ModelMix {
         return this.attach('lmstudio', new MixLMStudio({ options, config }));
     }
 
+    minimaxM2({ options = {}, config = {} } = {}) {
+        return this.attach('MiniMax-M2', new MixMiniMax({ options, config }));
+    }
+
+    minimaxM2Stable({ options = {}, config = {} } = {}) {
+        return this.attach('MiniMax-M2-Stable', new MixMiniMax({ options, config }));
+    }    
+
     addText(text, { role = "user" } = {}) {
         const content = [{
             type: "text",
@@ -569,7 +577,7 @@ class ModelMix {
 
                     const result = await providerInstance.create({ options: currentOptions, config: currentConfig });
 
-                    if (result.toolCalls.length > 0) {
+                    if (result.toolCalls && result.toolCalls.length > 0) {
 
                         if (result.message) {
                             if (result.signature) {
@@ -902,7 +910,12 @@ class MixCustom {
                 }
             });
 
-            response.data.on('end', () => resolve({ response: raw, message: message.trim() }));
+            response.data.on('end', () => resolve({ 
+                response: raw, 
+                message: message.trim(),
+                toolCalls: [],
+                think: null
+            }));
             response.data.on('error', reject);
         });
     }
@@ -1242,6 +1255,29 @@ class MixAnthropic extends MixCustom {
         }
 
         return options;
+    }
+}
+
+class MixMiniMax extends MixOpenAI {
+    getDefaultConfig(customConfig) {
+
+        if (!process.env.MINIMAX_API_KEY) {
+            throw new Error('MiniMax API key not found. Please provide it in config or set MINIMAX_API_KEY environment variable.');
+        }
+
+        return MixCustom.prototype.getDefaultConfig.call(this, {
+            url: 'https://api.minimax.io/v1/chat/completions',
+            apiKey: process.env.MINIMAX_API_KEY,
+            ...customConfig
+        });
+    }
+
+    extractDelta(data) {
+        // MiniMax might send different formats during streaming
+        if (data.choices && data.choices[0] && data.choices[0].delta && data.choices[0].delta.content) {
+            return data.choices[0].delta.content;
+        }
+        return '';
     }
 }
 
@@ -1662,4 +1698,4 @@ class MixGoogle extends MixCustom {
     }
 }
 
-module.exports = { MixCustom, ModelMix, MixAnthropic, MixOpenAI, MixPerplexity, MixOllama, MixLMStudio, MixGroq, MixTogether, MixGrok, MixCerebras, MixGoogle };
+module.exports = { MixCustom, ModelMix, MixAnthropic, MixMiniMax, MixOpenAI, MixPerplexity, MixOllama, MixLMStudio, MixGroq, MixTogether, MixGrok, MixCerebras, MixGoogle };

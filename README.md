@@ -27,6 +27,7 @@ Only the API keys you plan to use are required.
 ```plaintext
 ANTHROPIC_API_KEY="sk-ant-..."
 OPENAI_API_KEY="sk-proj-..."
+MINIMAX_API_KEY="your-minimax-key..."
 ...
 GOOGLE_API_KEY="AIza..."
 ```
@@ -136,6 +137,7 @@ Here's a comprehensive list of available methods:
 | `grok3()`          | Grok       | grok-3                         | [\$3.00 / \$15.00][6]      |
 | `grok3mini()`      | Grok       | grok-3-mini                    | [\$0.30 / \$0.50][6]       |
 | `grok4()`          | Grok       | grok-4-0709                    | [\$3.00 / \$15.00][6]      |
+| `minimaxM2()`      | MiniMax    | MiniMax-M2                     | [\$0.30 / \$1.20][9]       |
 | `sonar()`          | Perplexity | sonar                          | [\$1.00 / \$1.00][4]       |
 | `sonarPro()`       | Perplexity | sonar-pro                      | [\$3.00 / \$15.00][4]      |
 | `scout()`          | Groq       | Llama-4-Scout-17B-16E-Instruct | [\$0.11 / \$0.34][5]       |
@@ -153,6 +155,7 @@ Here's a comprehensive list of available methods:
 [6]: https://docs.x.ai/docs/models "xAI"
 [7]: https://www.together.ai/pricing "Together AI"
 [8]: https://lambda.ai/inference "Lambda Pricing"
+[9]: https://www.minimax.io/price "MiniMax Pricing"
 
 Each method accepts optional `options` and `config` parameters to customize the model's behavior. For example:
 

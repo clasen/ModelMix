@@ -342,4 +342,14 @@ All providers inherit from `MixCustom` base class which provides common function
 - **Base URL**: `https://api.groq.com/openai/v1/chat/completions`
 - **Input Format**: Same as OpenAI
 - **Output Format**: Same as OpenAI
-- **Special Notes**: Uses OpenAI-compatible format 
+- **Special Notes**: Uses OpenAI-compatible format
+
+### MiniMax (MixMiniMax)
+- **Base URL**: `https://api.minimax.io/v1/chat/completions`
+- **Input Format**: Same as OpenAI
+- **Output Format**: Same as OpenAI
+- **Special Notes**: 
+  - Uses OpenAI-compatible API interface
+  - Requires `MINIMAX_API_KEY` environment variable
+  - Inherits all OpenAI functionality including tool calling
+  - Available models: `MiniMax-M2` 
