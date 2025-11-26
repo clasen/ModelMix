@@ -1,4 +1,4 @@
-import 'dotenv/config';
+process.loadEnvFile();
 import { ModelMix } from '../index.js';
 
 const mmix = ModelMix.new({ config: { max_history: 10 } }).gpt41nano();

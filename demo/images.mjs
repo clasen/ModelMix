@@ -1,4 +1,4 @@
-import 'dotenv/config';
+process.loadEnvFile();
 import { ModelMix } from '../index.js';
 
 const model = ModelMix.new({ config: { max_history: 2, debug: true } }).maverick()

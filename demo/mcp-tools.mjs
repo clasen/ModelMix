@@ -1,4 +1,4 @@
-import 'dotenv/config';
+process.loadEnvFile();
 import { ModelMix } from '../index.js';
 import fs from 'fs';
 import axios from 'axios';

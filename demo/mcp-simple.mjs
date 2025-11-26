@@ -1,4 +1,4 @@
-import 'dotenv/config';
+process.loadEnvFile();
 import { ModelMix } from '../index.js';
 
 console.log('🧬 ModelMix - Simple MCP Tools Demo');

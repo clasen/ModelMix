@@ -127,6 +127,7 @@ Here's a comprehensive list of available methods:
 | `gpt41nano()`      | OpenAI     | gpt-4.1-nano                   | [\$0.10 / \$0.40][1]       |
 | `o3()`             | OpenAI     | o3                             | [\$10.00 / \$40.00][1]     |
 | `gptOss()`         | Together   | gpt-oss-120B                   | [\$0.15 / \$0.60][7]       |
+| `opus45[think]()`  | Anthropic  | claude-opus-4-5-20251101       | [\$5.00 / \$25.00][2]      |
 | `opus41[think]()`  | Anthropic  | claude-opus-4-1-20250805       | [\$15.00 / \$75.00][2]     |
 | `sonnet45[think]()`| Anthropic  | claude-sonnet-4-5-20250929     | [\$3.00 / \$15.00][2]      |
 | `sonnet4[think]()` | Anthropic  | claude-sonnet-4-20250514       | [\$3.00 / \$15.00][2]      |

@@ -109,7 +109,9 @@ class ModelMix {
         if (mix.groq) return this.attach('openai/gpt-oss-120b', new MixGroq({ options, config }));
         return this;
     }
-
+    opus45({ options = {}, config = {} } = {}) {
+        return this.attach('claude-opus-4-5-20251101', new MixAnthropic({ options, config }));
+    }  
     opus41({ options = {}, config = {} } = {}) {
         return this.attach('claude-opus-4-1-20250805', new MixAnthropic({ options, config }));
     }
@@ -151,6 +153,12 @@ class ModelMix {
     gemini25flash({ options = {}, config = {} } = {}) {
         return this.attach('gemini-2.5-flash', new MixGoogle({ options, config }));
     }
+    gemini3pro({ options = {}, config = {} } = {}) {
+        return this.attach('gemini-3-pro-preview', new MixGoogle({ options, config }));
+    }
+    gemini25pro({ options = {}, config = {} } = {}) {
+        return this.attach('gemini-2.5-pro', new MixGoogle({ options, config }));
+    }    
     gemini25proExp({ options = {}, config = {} } = {}) {
         return this.attach('gemini-2.5-pro-exp-03-25', new MixGoogle({ options, config }));
     }
