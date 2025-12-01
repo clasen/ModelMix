@@ -29,7 +29,7 @@ ANTHROPIC_API_KEY="sk-ant-..."
 OPENAI_API_KEY="sk-proj-..."
 MINIMAX_API_KEY="your-minimax-key..."
 ...
-GOOGLE_API_KEY="AIza..."
+GEMINI_API_KEY="AIza..."
 ```
 
 3. **Create and configure your models**:

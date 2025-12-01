@@ -19,7 +19,7 @@ These tests require actual API keys and test the complete integration:
 # Set API keys first
 export OPENAI_API_KEY="sk-..."
 export ANTHROPIC_API_KEY="sk-ant-..."
-export GOOGLE_API_KEY="AIza..."
+export GEMINI_API_KEY="AIza..."
 
 # Run only live integration tests
 npm test -- --grep "Live Integration"

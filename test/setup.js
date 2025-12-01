@@ -26,7 +26,7 @@ process.env.GROQ_API_KEY = process.env.GROQ_API_KEY || 'gsk_test-dummy-key-for-t
 process.env.TOGETHER_API_KEY = process.env.TOGETHER_API_KEY || '49a96test-dummy-key-for-testing-purposes';
 process.env.XAI_API_KEY = process.env.XAI_API_KEY || 'xai-test-dummy-key-for-testing-purposes';
 process.env.CEREBRAS_API_KEY = process.env.CEREBRAS_API_KEY || 'csk-test-dummy-key-for-testing-purposes';
-process.env.GOOGLE_API_KEY = process.env.GOOGLE_API_KEY || 'AIzatest-dummy-key-for-testing-purposes';
+process.env.GEMINI_API_KEY = process.env.GEMINI_API_KEY || 'AIzatest-dummy-key-for-testing-purposes';
 process.env.LAMBDA_API_KEY = process.env.LAMBDA_API_KEY || 'secret_test-dummy-key-for-testing-purposes';
 process.env.BRAVE_API_KEY = process.env.BRAVE_API_KEY || 'BSA0test-dummy-key-for-testing-purposes_fm';
 

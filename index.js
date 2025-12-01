@@ -1527,7 +1527,7 @@ class MixGoogle extends MixCustom {
     getDefaultConfig(customConfig) {
         return super.getDefaultConfig({
             url: 'https://generativelanguage.googleapis.com/v1beta/models',
-            apiKey: process.env.GOOGLE_API_KEY,
+            apiKey: process.env.GEMINI_API_KEY,
         });
     }
 
@@ -1604,7 +1604,7 @@ class MixGoogle extends MixCustom {
 
     async create({ config = {}, options = {} } = {}) {
         if (!this.config.apiKey) {
-            throw new Error('Google API key not found. Please provide it in config or set GOOGLE_API_KEY environment variable.');
+            throw new Error('Gemini API key not found. Please provide it in config or set GEMINI_API_KEY environment variable.');
         }
 
         const generateContentApi = options.stream ? 'streamGenerateContent' : 'generateContent';
