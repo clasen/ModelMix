@@ -159,12 +159,6 @@ class ModelMix {
     gemini25pro({ options = {}, config = {} } = {}) {
         return this.attach('gemini-2.5-pro', new MixGoogle({ options, config }));
     }    
-    gemini25proExp({ options = {}, config = {} } = {}) {
-        return this.attach('gemini-2.5-pro-exp-03-25', new MixGoogle({ options, config }));
-    }
-    gemini25pro({ options = {}, config = {} } = {}) {
-        return this.attach('gemini-2.5-pro-preview-05-06', new MixGoogle({ options, config }));
-    }
     sonarPro({ options = {}, config = {} } = {}) {
         return this.attach('sonar-pro', new MixPerplexity({ options, config }));
     }
