@@ -118,6 +118,7 @@ Here's a comprehensive list of available methods:
 
 | Method             | Provider   | Model                          | Price (I/O) per 1 M tokens |
 | ------------------ | ---------- | ------------------------------ | -------------------------- |
+| `gpt52()`          | OpenAI     | gpt-5.2                        | [\$1.75 / \$14.00][1]      |
 | `gpt51()`          | OpenAI     | gpt-5.1                        | [\$1.25 / \$10.00][1]      |
 | `gpt5()`           | OpenAI     | gpt-5                          | [\$1.25 / \$10.00][1]      |
 | `gpt5mini()`       | OpenAI     | gpt-5-mini                     | [\$0.25 / \$2.00][1]       |
@@ -125,7 +126,6 @@ Here's a comprehensive list of available methods:
 | `gpt41()`          | OpenAI     | gpt-4.1                        | [\$2.00 / \$8.00][1]       |
 | `gpt41mini()`      | OpenAI     | gpt-4.1-mini                   | [\$0.40 / \$1.60][1]       |
 | `gpt41nano()`      | OpenAI     | gpt-4.1-nano                   | [\$0.10 / \$0.40][1]       |
-| `o3()`             | OpenAI     | o3                             | [\$10.00 / \$40.00][1]     |
 | `gptOss()`         | Together   | gpt-oss-120B                   | [\$0.15 / \$0.60][7]       |
 | `opus45[think]()`  | Anthropic  | claude-opus-4-5-20251101       | [\$5.00 / \$25.00][2]      |
 | `opus41[think]()`  | Anthropic  | claude-opus-4-1-20250805       | [\$15.00 / \$75.00][2]     |
@@ -149,7 +149,7 @@ Here's a comprehensive list of available methods:
 | `kimiK2()`         | Together   | Kimi-K2-Instruct               | [\$1.00 / \$3.00][7]       |
 | `kimiK2think()`    | Together   | moonshotai/Kimi-K2-Thinking    | [\$1.20 / \$4.00][7]       |
 
-[1]: https://openai.com/api/pricing/ "Pricing | OpenAI"
+[1]: https://platform.openai.com/docs/pricing "Pricing | OpenAI"
 [2]: https://docs.anthropic.com/en/docs/about-claude/pricing "Pricing - Anthropic"
 [3]: https://ai.google.dev/gemini-api/docs/pricing "Google AI for Developers"
 [4]: https://docs.perplexity.ai/guides/pricing "Pricing - Perplexity"
