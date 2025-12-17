@@ -1,6 +1,7 @@
 const axios = require('axios');
 const fs = require('fs');
 const { fromBuffer } = require('file-type');
+const { inspect } = require('util');
 const log = require('lemonlog')('ModelMix');
 const Bottleneck = require('bottleneck');
 const path = require('path');
@@ -46,7 +47,7 @@ class ModelMix {
     replace(keyValues) {
         this.config.replace = { ...this.config.replace, ...keyValues };
         return this;
-    }
+    } 
 
     static new({ options = {}, config = {} } = {}) {
         return new ModelMix({ options, config });
@@ -54,6 +55,26 @@ class ModelMix {
 
     new() {
         return new ModelMix({ options: this.options, config: this.config });
+    }
+
+    static formatJSON(obj) {
+        return inspect(obj, { 
+            depth: null, 
+            colors: true, 
+            maxArrayLength: null,
+            breakLength: 80,
+            compact: false
+        });
+    }
+
+    static formatMessage(message) {
+        if (typeof message !== 'string') return message;
+        
+        try {
+            return ModelMix.formatJSON(JSON.parse(message.trim()));
+        } catch (e) {
+            return message;
+        }
     }
 
     attach(key, provider) {
@@ -397,8 +418,11 @@ class ModelMix {
             stream: false,
         }
 
+        // Apply template replacements to system before adding extra instructions
+        let systemWithReplacements = this._template(this.config.system, this.config.replace);
+
         let config = {
-            system: this.config.system,
+            system: systemWithReplacements,
         }
 
         if (schemaExample) {
@@ -424,8 +448,11 @@ class ModelMix {
     }
 
     async block({ addSystemExtra = true } = {}) {
+        // Apply template replacements to system before adding extra instructions
+        let systemWithReplacements = this._template(this.config.system, this.config.replace);
+
         let config = {
-            system: this.config.system,
+            system: systemWithReplacements,
         }
 
         if (addSystemExtra) {
@@ -613,8 +640,24 @@ class ModelMix {
                     }
 
                     if (currentConfig.debug) {
-                        log.debug(`Request successful with model: ${currentModelKey}`);
-                        log.inspect(result.response);
+                        console.log(`\nRequest successful: ${currentModelKey}`);
+                        
+                        if (result.response) {
+                            console.log('\nRAW RESPONSE:');
+                            console.log(ModelMix.formatJSON(result.response));
+                        }
+                        
+                        if (result.message) {
+                            console.log('\nMESSAGE:');
+                            console.log(ModelMix.formatMessage(result.message));
+                        }
+                        
+                        if (result.think) {
+                            console.log('\nTHINKING:');
+                            console.log(result.think);
+                        }
+                        
+                        console.log('');
                     }
 
                     return result;
@@ -624,10 +667,10 @@ class ModelMix {
                     log.warn(`Model ${currentModelKey} failed (Attempt #${i + 1}/${this.models.length}).`);
                     if (error.message) log.warn(`Error: ${error.message}`);
                     if (error.statusCode) log.warn(`Status Code: ${error.statusCode}`);
-                    if (error.details) log.warn(`Details: ${JSON.stringify(error.details)}`);
+                    if (error.details) log.warn(`Details:\n${ModelMix.formatJSON(error.details)}`);
 
                     if (i === this.models.length - 1) {
-                        log.error(`All ${this.models.length} model(s) failed. Throwing last error from ${currentModelKey}.`);
+                        console.error(`All ${this.models.length} model(s) failed. Throwing last error from ${currentModelKey}.`);
                         throw lastError;
                     } else {
                         const nextModelKey = this.models[i + 1].key;
@@ -662,13 +705,13 @@ class ModelMix {
                     toolArgs = toolCall.input || toolCall.arguments || {};
                     toolId = toolCall.id;
                 } else {
-                    console.error('Unknown tool call format:', JSON.stringify(toolCall, null, 2));
+                    log.error('Unknown tool call format:\n', toolCall);
                     continue;
                 }
 
                 // Validar que tenemos los datos necesarios
                 if (!toolName) {
-                    console.error('Tool call missing name:', JSON.stringify(toolCall, null, 2));
+                    log.error('Tool call missing name:\n', toolCall);
                     continue;
                 }
 
@@ -845,10 +888,15 @@ class MixCustom {
             options.messages = this.convertMessages(options.messages, config);
 
             if (config.debug) {
-                log.debug("config");
-                log.info(config);
-                log.debug("options");
-                log.inspect(options);
+                console.log('\nREQUEST:');
+                
+                console.log('\nCONFIG:');
+                const configToLog = { ...config };
+                delete configToLog.debug;
+                console.log(ModelMix.formatJSON(configToLog));
+                
+                console.log('\nOPTIONS:');
+                console.log(ModelMix.formatJSON(options));
             }
 
             if (options.stream) {
@@ -1120,7 +1168,7 @@ class MixAnthropic extends MixCustom {
         } catch (error) {
             // Log the error details for debugging
             if (error.response && error.response.data) {
-                console.error('Anthropic API Error:', JSON.stringify(error.response.data, null, 2));
+                log.error('Anthropic API Error:\n', error.response.data);
             }
             throw error;
         }
@@ -1636,10 +1684,15 @@ class MixGoogle extends MixCustom {
 
         try {
             if (config.debug) {
-                log.debug("config");
-                log.info(config);
-                log.debug("payload");
-                log.inspect(payload);
+                console.log('\nREQUEST (GOOGLE):');
+                
+                console.log('\nCONFIG:');
+                const configToLog = { ...config };
+                delete configToLog.debug;
+                console.log(ModelMix.formatJSON(configToLog));
+                
+                console.log('\nPAYLOAD:');
+                console.log(ModelMix.formatJSON(payload));
             }
 
             if (options.stream) {

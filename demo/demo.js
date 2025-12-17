@@ -1,5 +1,5 @@
 import 'dotenv/config';
-import { ModelMix, MixOpenAI, MixAnthropic, MixPerplexity, MixOllama } from '../index.js';
+import { ModelMix } from '../index.js';
 
 
 const mmix = new ModelMix({
@@ -27,15 +27,10 @@ const pplxSettings = {
 mmix.replace({ '{name}': 'ALF' });
 
 console.log("\n" + '--------| gpt51() |--------');
-const opt = {
-    config: {
-        temperature: 0,
-        reasoning: { effort: 'none' }
-    }
-};
+const opt = { reasoning_effort: 'none', verbosity: 'low' };
 const gpt = mmix.gpt51(opt).addText("Have you ever eaten a {animal}?");
 gpt.replace({ '{animal}': 'cat' });
-console.log(await gpt.json({ time: '24:00:00', message: 'Hello' }, { time: 'Time in format HH:MM:SS' }));
+await gpt.json({ time: '24:00:00', message: 'Hello' }, { time: 'Time in format HH:MM:SS' });
 
 console.log("\n" + '--------| sonnet45() |--------');
 const claude = mmix.new({ config: { debug: true } }).sonnet45();
