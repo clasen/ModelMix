@@ -47,7 +47,7 @@ class ModelMix {
     replace(keyValues) {
         this.config.replace = { ...this.config.replace, ...keyValues };
         return this;
-    } 
+    }
 
     static new({ options = {}, config = {} } = {}) {
         return new ModelMix({ options, config });
@@ -58,9 +58,9 @@ class ModelMix {
     }
 
     static formatJSON(obj) {
-        return inspect(obj, { 
-            depth: null, 
-            colors: true, 
+        return inspect(obj, {
+            depth: null,
+            colors: true,
             maxArrayLength: null,
             breakLength: 80,
             compact: false
@@ -69,7 +69,7 @@ class ModelMix {
 
     static formatMessage(message) {
         if (typeof message !== 'string') return message;
-        
+
         try {
             return ModelMix.formatJSON(JSON.parse(message.trim()));
         } catch (e) {
@@ -129,7 +129,7 @@ class ModelMix {
     }
     gpt52chat({ options = {}, config = {} } = {}) {
         return this.attach('gpt-5.2-chat-latest', new MixOpenAI({ options, config }));
-    }            
+    }
     gptOss({ options = {}, config = {}, mix = { together: false, cerebras: false, groq: true } } = {}) {
         if (mix.together) return this.attach('openai/gpt-oss-120b', new MixTogether({ options, config }));
         if (mix.cerebras) return this.attach('gpt-oss-120b', new MixCerebras({ options, config }));
@@ -138,7 +138,7 @@ class ModelMix {
     }
     opus45({ options = {}, config = {} } = {}) {
         return this.attach('claude-opus-4-5-20251101', new MixAnthropic({ options, config }));
-    }  
+    }
     opus41({ options = {}, config = {} } = {}) {
         return this.attach('claude-opus-4-1-20250805', new MixAnthropic({ options, config }));
     }
@@ -176,7 +176,7 @@ class ModelMix {
     haiku45think({ options = {}, config = {} } = {}) {
         options = { ...MixAnthropic.thinkingOptions, ...options };
         return this.attach('claude-haiku-4-5-20251001', new MixAnthropic({ options, config }));
-    }    
+    }
     gemini25flash({ options = {}, config = {} } = {}) {
         return this.attach('gemini-2.5-flash', new MixGoogle({ options, config }));
     }
@@ -185,7 +185,7 @@ class ModelMix {
     }
     gemini25pro({ options = {}, config = {} } = {}) {
         return this.attach('gemini-2.5-pro', new MixGoogle({ options, config }));
-    }    
+    }
     sonarPro({ options = {}, config = {} } = {}) {
         return this.attach('sonar-pro', new MixPerplexity({ options, config }));
     }
@@ -201,6 +201,12 @@ class ModelMix {
     }
     grok4({ options = {}, config = {} } = {}) {
         return this.attach('grok-4-0709', new MixGrok({ options, config }));
+    }
+    grok41think({ options = {}, config = {} } = {}) {
+        return this.attach('grok-4-1-fast-reasoning', new MixGrok({ options, config }));
+    }
+    grok41({ options = {}, config = {} } = {}) {
+        return this.attach('grok-4-1-fast-non-reasoning', new MixGrok({ options, config }));
     }
 
     qwen3({ options = {}, config = {}, mix = { together: true, cerebras: false } } = {}) {
@@ -254,7 +260,7 @@ class ModelMix {
 
     minimaxM2Stable({ options = {}, config = {} } = {}) {
         return this.attach('MiniMax-M2-Stable', new MixMiniMax({ options, config }));
-    }    
+    }
 
     addText(text, { role = "user" } = {}) {
         const content = [{
@@ -641,22 +647,22 @@ class ModelMix {
 
                     if (currentConfig.debug) {
                         console.log(`\nRequest successful: ${currentModelKey}`);
-                        
+
                         if (result.response) {
                             console.log('\nRAW RESPONSE:');
                             console.log(ModelMix.formatJSON(result.response));
                         }
-                        
+
                         if (result.message) {
                             console.log('\nMESSAGE:');
                             console.log(ModelMix.formatMessage(result.message));
                         }
-                        
+
                         if (result.think) {
                             console.log('\nTHINKING:');
                             console.log(result.think);
                         }
-                        
+
                         console.log('');
                     }
 
@@ -889,12 +895,12 @@ class MixCustom {
 
             if (config.debug) {
                 console.log('\nREQUEST:');
-                
+
                 console.log('\nCONFIG:');
                 const configToLog = { ...config };
                 delete configToLog.debug;
                 console.log(ModelMix.formatJSON(configToLog));
-                
+
                 console.log('\nOPTIONS:');
                 console.log(ModelMix.formatJSON(options));
             }
@@ -969,8 +975,8 @@ class MixCustom {
                 }
             });
 
-            response.data.on('end', () => resolve({ 
-                response: raw, 
+            response.data.on('end', () => resolve({
+                response: raw,
                 message: message.trim(),
                 toolCalls: [],
                 think: null
@@ -1685,12 +1691,12 @@ class MixGoogle extends MixCustom {
         try {
             if (config.debug) {
                 console.log('\nREQUEST (GOOGLE):');
-                
+
                 console.log('\nCONFIG:');
                 const configToLog = { ...config };
                 delete configToLog.debug;
                 console.log(ModelMix.formatJSON(configToLog));
-                
+
                 console.log('\nPAYLOAD:');
                 console.log(ModelMix.formatJSON(payload));
             }
