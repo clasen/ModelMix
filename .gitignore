@@ -132,3 +132,4 @@ dist
 .DS_Store
 demo/jailbreak.mjs
 CLAUDE.md
+demo/jailbreak.js
