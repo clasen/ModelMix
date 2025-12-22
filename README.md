@@ -134,6 +134,7 @@ Here's a comprehensive list of available methods:
 | `haiku35()`        | Anthropic  | claude-3-5-haiku-20241022      | [\$0.80 / \$4.00][2]       |
 | `haiku45[think]()` | Anthropic  | claude-haiku-4-5-20251001      | [\$1.00 / \$5.00][2]       |
 | `gemini3pro()`     | Google     | gemini-3-pro-preview           | [\$2.00 / \$12.00][3]      |
+| `gemini3flash()`    | Google     | gemini-3-flash-preview          | [\$0.50 / \$3.00][3]       |
 | `gemini25pro()`    | Google     | gemini-2.5-pro                 | [\$1.25 / \$10.00][3]      |
 | `gemini25flash()`   | Google     | gemini-2.5-flash                | [\$0.30 / \$2.50][3]       |
 | `grok3()`          | Grok       | grok-3                         | [\$3.00 / \$15.00][6]      |
