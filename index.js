@@ -261,6 +261,10 @@ class ModelMix {
         return this.attach('MiniMax-M2', new MixMiniMax({ options, config }));
     }
 
+    minimaxM21({ options = {}, config = {} } = {}) {
+        return this.attach('MiniMax-M2.1', new MixMiniMax({ options, config }));
+    }
+
     minimaxM2Stable({ options = {}, config = {} } = {}) {
         return this.attach('MiniMax-M2-Stable', new MixMiniMax({ options, config }));
     }
