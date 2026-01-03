@@ -139,6 +139,8 @@ Here's a comprehensive list of available methods:
 | `gemini25flash()`   | Google     | gemini-2.5-flash                | [\$0.30 / \$2.50][3]       |
 | `grok4()`          | Grok       | grok-4-0709                    | [\$3.00 / \$15.00][6]      |
 | `grok41[think]()`  | Grok       | grok-4-1-fast                  | [\$0.20 / \$0.50][6]       |
+| `deepseekV32()`    | Fireworks  | fireworks/models/deepseek-v3p2  | [\$0.56 / \$1.68][10]      |
+| `GLM47()`          | Fireworks  | fireworks/models/glm-4p7        | [\$0.55 / \$2.19][10]      |
 | `minimaxM21()`     | MiniMax    | MiniMax-M2.1                   | [\$0.30 / \$1.20][9]       |
 | `sonar()`          | Perplexity | sonar                          | [\$1.00 / \$1.00][4]       |
 | `sonarPro()`       | Perplexity | sonar-pro                      | [\$3.00 / \$15.00][4]      |
@@ -158,6 +160,7 @@ Here's a comprehensive list of available methods:
 [7]: https://www.together.ai/pricing "Together AI"
 [8]: https://lambda.ai/inference "Lambda Pricing"
 [9]: https://www.minimax.io/price "MiniMax Pricing"
+[10]: https://fireworks.ai/pricing#serverless-pricing "Fireworks Pricing"
 
 Each method accepts optional `options` and `config` parameters to customize the model's behavior. For example:
 

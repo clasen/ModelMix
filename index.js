@@ -269,6 +269,16 @@ class ModelMix {
         return this.attach('MiniMax-M2-Stable', new MixMiniMax({ options, config }));
     }
 
+    deepseekV32({ options = {}, config = {}, mix = { fireworks: true } } = {}) {
+        if (mix.fireworks) this.attach('accounts/fireworks/models/deepseek-v3p2', new MixFireworks({ options, config }));
+        return this;
+    }
+
+    GLM47({ options = {}, config = {}, mix = { fireworks: true } } = {}) {
+        if (mix.fireworks) this.attach('accounts/fireworks/models/glm-4p7', new MixFireworks({ options, config }));
+        return this;
+    }    
+
     addText(text, { role = "user" } = {}) {
         const content = [{
             type: "text",
@@ -1584,6 +1594,21 @@ class MixCerebras extends MixCustom {
     }
 }
 
+class MixFireworks extends MixCustom {
+    getDefaultConfig(customConfig) {
+
+        if (!process.env.FIREWORKS_API_KEY) {
+            throw new Error('Fireworks API key not found. Please provide it in config or set FIREWORKS_API_KEY environment variable.');
+        }
+
+        return super.getDefaultConfig({
+            url: 'https://api.fireworks.ai/inference/v1/chat/completions',
+            apiKey: process.env.FIREWORKS_API_KEY,
+            ...customConfig
+        });
+    }
+}
+
 class MixGoogle extends MixCustom {
     getDefaultConfig(customConfig) {
         return super.getDefaultConfig({
@@ -1775,4 +1800,4 @@ class MixGoogle extends MixCustom {
     }
 }
 
-module.exports = { MixCustom, ModelMix, MixAnthropic, MixMiniMax, MixOpenAI, MixPerplexity, MixOllama, MixLMStudio, MixGroq, MixTogether, MixGrok, MixCerebras, MixGoogle };
+module.exports = { MixCustom, ModelMix, MixAnthropic, MixMiniMax, MixOpenAI, MixPerplexity, MixOllama, MixLMStudio, MixGroq, MixTogether, MixGrok, MixCerebras, MixGoogle, MixFireworks };
