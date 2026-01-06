@@ -8,7 +8,7 @@ Ever found yourself wanting to integrate AI models into your projects but worrie
 
 - **Unified Interface**: Interact with multiple AI models through a single, coherent API.
 - **Request Rate Control**: Manage the rate of requests to adhere to provider limitations using Bottleneck.
-- **Flexible Integration**: Easily integrate popular models like OpenAI, Anthropic, Gemini, Perplexity, Groq, Together AI, Lambda, Ollama, LM Studio or custom models.
+- **Flexible Integration**: Easily integrate popular models like OpenAI, Anthropic, Gemini, Perplexity, Groq, Together AI, Lambda, OpenRouter, Ollama, LM Studio or custom models.
 - **History Tracking**: Automatically logs the conversation history with model responses, allowing you to limit the number of historical messages with `max_history`.
 - **Model Fallbacks**: Automatically try different models if one fails or is unavailable.
 - **Chain Multiple Models**: Create powerful chains of models that work together, with automatic fallback if one fails.
@@ -27,6 +27,7 @@ Only the API keys you plan to use are required.
 ```plaintext
 ANTHROPIC_API_KEY="sk-ant-..."
 OPENAI_API_KEY="sk-proj-..."
+OPENROUTER_API_KEY="sk-or-..."
 MINIMAX_API_KEY="your-minimax-key..."
 ...
 GEMINI_API_KEY="AIza..."
@@ -75,6 +76,16 @@ const ETH = ModelMix.new()
   .addText('How much is ETH trading in USD?')
   .json({ price: 1000.1 });
 console.log(ETH.price);
+```
+
+**This example uses providers with free quotas (OpenRouter, Groq, Cerebras) - just get the API key and you're ready to go. If one model runs out of quota, ModelMix automatically falls back to the next model in the chain.**
+```javascript
+ModelMix.new()
+  .gptOss()
+  .kimiK2()
+  .deepseekR1()
+  .hermes3()
+  .addText('What is the capital of France?');
 ```
 
 This pattern allows you to:
@@ -408,6 +419,16 @@ new MixOpenAI(args = { config: {}, options: {} })
 - **args**: Configuration object with `config` and `options` properties.
   - **config**: Specific configuration settings for OpenAI, including the `apiKey`.
   - **options**: Default options for OpenAI model instances.
+
+### MixOpenRouter Class Overview
+
+```javascript
+new MixOpenRouter(args = { config: {}, options: {} })
+```
+
+- **args**: Configuration object with `config` and `options` properties.
+  - **config**: Specific configuration settings for OpenRouter, including the `apiKey`.
+  - **options**: Default options for OpenRouter model instances.
 
 ### MixAnthropic Class Overview
 

@@ -1,7 +1,7 @@
 {
   "name": "modelmix",
-  "version": "4.2.0",
-  "description": "🧬 ModelMix - Unified API for Diverse AI LLM.",
+  "version": "4.2.2",
+  "description": "🧬 Reliable interface with automatic fallback for AI LLMs.",
   "main": "index.js",
   "repository": {
     "type": "git",
@@ -25,9 +25,9 @@
     "gpt5",
     "opus",
     "sonnet",
-    "multimodal",
+    "openrouter",
     "gemini",
-    "ollama",
+    "glm",
     "lmstudio",
     "deepseek",
     "oss",

@@ -6,6 +6,7 @@ async function main() {
         const ai = ModelMix.new();
 
         const response = await ai
+            .GLM46()
             .deepseekV32()
             .GLM47()
             .addText('What is the capital of France?')

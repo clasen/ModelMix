@@ -12,7 +12,7 @@ const { MCPToolsManager } = require('./mcp-tools');
 
 class ModelMix {
 
-    constructor({ options = {}, config = {} } = {}) {
+    constructor({ options = {}, config = {}, mix = {} } = {}) {
         this.models = [];
         this.messages = [];
         this.tools = {};
@@ -38,6 +38,8 @@ class ModelMix {
             bottleneck: defaultBottleneckConfig,
             ...config
         }
+        const freeMix = { openrouter: true, cerebras: true, groq: true, together: false, lambda: false };
+        this.mix = { ...freeMix, ...mix };
 
         this.limiter = new Bottleneck(this.config.bottleneck);
 
@@ -49,8 +51,8 @@ class ModelMix {
         return this;
     }
 
-    static new({ options = {}, config = {} } = {}) {
-        return new ModelMix({ options, config });
+    static new({ options = {}, config = {}, mix = {} } = {}) {
+        return new ModelMix({ options, config, mix });
     }
 
     new() {
@@ -130,10 +132,12 @@ class ModelMix {
     gpt52chat({ options = {}, config = {} } = {}) {
         return this.attach('gpt-5.2-chat-latest', new MixOpenAI({ options, config }));
     }
-    gptOss({ options = {}, config = {}, mix = { together: false, cerebras: false, groq: true } } = {}) {
-        if (mix.together) return this.attach('openai/gpt-oss-120b', new MixTogether({ options, config }));
-        if (mix.cerebras) return this.attach('gpt-oss-120b', new MixCerebras({ options, config }));
-        if (mix.groq) return this.attach('openai/gpt-oss-120b', new MixGroq({ options, config }));
+    gptOss({ options = {}, config = {}, mix = {} } = {}) {
+        mix = { ...this.mix, ...mix };
+        if (mix.together) this.attach('openai/gpt-oss-120b', new MixTogether({ options, config }));
+        if (mix.cerebras) this.attach('gpt-oss-120b', new MixCerebras({ options, config }));
+        if (mix.groq) this.attach('openai/gpt-oss-120b', new MixGroq({ options, config }));
+        if (mix.openrouter) this.attach('openai/gpt-oss-120b:free', new MixOpenRouter({ options, config }));
         return this;
     }
     opus45({ options = {}, config = {} } = {}) {
@@ -218,39 +222,50 @@ class ModelMix {
         return this;
     }
 
-    scout({ options = {}, config = {}, mix = { groq: true, together: false, cerebras: false } } = {}) {
+    scout({ options = {}, config = {}, mix = {} } = {}) {
+        mix = { ...this.mix, ...mix };
         if (mix.groq) this.attach('meta-llama/llama-4-scout-17b-16e-instruct', new MixGroq({ options, config }));
         if (mix.together) this.attach('meta-llama/Llama-4-Scout-17B-16E-Instruct', new MixTogether({ options, config }));
         if (mix.cerebras) this.attach('llama-4-scout-17b-16e-instruct', new MixCerebras({ options, config }));
         return this;
     }
-    maverick({ options = {}, config = {}, mix = { groq: true, together: false, lambda: false } } = {}) {
+    maverick({ options = {}, config = {}, mix = {} } = {}) {
+        mix = { ...this.mix, ...mix };
         if (mix.groq) this.attach('meta-llama/llama-4-maverick-17b-128e-instruct', new MixGroq({ options, config }));
         if (mix.together) this.attach('meta-llama/Llama-4-Maverick-17B-128E-Instruct-FP8', new MixTogether({ options, config }));
         if (mix.lambda) this.attach('llama-4-maverick-17b-128e-instruct-fp8', new MixLambda({ options, config }));
         return this;
     }
 
-    deepseekR1({ options = {}, config = {}, mix = { groq: true, together: false, cerebras: false } } = {}) {
+    deepseekR1({ options = {}, config = {}, mix = {} } = {}) {
+        mix = { ...this.mix, ...mix };
         if (mix.groq) this.attach('deepseek-r1-distill-llama-70b', new MixGroq({ options, config }));
         if (mix.together) this.attach('deepseek-ai/DeepSeek-R1', new MixTogether({ options, config }));
         if (mix.cerebras) this.attach('deepseek-r1-distill-llama-70b', new MixCerebras({ options, config }));
+        if (mix.openrouter) this.attach('deepseek/deepseek-r1-0528:free', new MixOpenRouter({ options, config }));
         return this;
     }
 
-    hermes3({ options = {}, config = {}, mix = { lambda: true } } = {}) {
-        this.attach('Hermes-3-Llama-3.1-405B-FP8', new MixLambda({ options, config }));
+    hermes3({ options = {}, config = {}, mix = {} } = {}) {
+        mix = { ...this.mix, ...mix };
+        if (mix.lambda) this.attach('Hermes-3-Llama-3.1-405B-FP8', new MixLambda({ options, config }));
+        if (mix.openrouter) this.attach('nousresearch/hermes-3-llama-3.1-405b:free', new MixOpenRouter({ options, config }));
         return this;
     }
 
-    kimiK2({ options = {}, config = {}, mix = { together: false, groq: true } } = {}) {
+    kimiK2({ options = {}, config = {}, mix = {} } = {}) {
+        mix = { ...this.mix, ...mix };
         if (mix.together) this.attach('moonshotai/Kimi-K2-Instruct-0905', new MixTogether({ options, config }));
         if (mix.groq) this.attach('moonshotai/kimi-k2-instruct-0905', new MixGroq({ options, config }));
+        if (mix.openrouter) this.attach('moonshotai/kimi-k2:free', new MixOpenRouter({ options, config }));
         return this;
     }
 
-    kimiK2think({ options = {}, config = {} } = {}) {
-        return this.attach('moonshotai/Kimi-K2-Thinking', new MixTogether({ options, config }));
+    kimiK2think({ options = {}, config = {}, mix = { together: true } } = {}) {
+        mix = { ...this.mix, ...mix };
+        if (mix.together) this.attach('moonshotai/Kimi-K2-Thinking', new MixTogether({ options, config }));
+        if (mix.openrouter) this.attach('moonshotai/kimi-k2-thinking', new MixOpenRouter({ options, config }));
+        return this;
     }
 
     lmstudio({ options = {}, config = {} } = {}) {
@@ -269,15 +284,30 @@ class ModelMix {
         return this.attach('MiniMax-M2-Stable', new MixMiniMax({ options, config }));
     }
 
-    deepseekV32({ options = {}, config = {}, mix = { fireworks: true } } = {}) {
+    deepseekV32({ options = {}, config = {}, mix = {} } = {}) {
+        mix = { ...this.mix, ...mix };
         if (mix.fireworks) this.attach('accounts/fireworks/models/deepseek-v3p2', new MixFireworks({ options, config }));
+        if (mix.openrouter) this.attach('deepseek/deepseek-v3.2', new MixOpenRouter({ options, config }));
         return this;
     }
 
     GLM47({ options = {}, config = {}, mix = { fireworks: true } } = {}) {
         if (mix.fireworks) this.attach('accounts/fireworks/models/glm-4p7', new MixFireworks({ options, config }));
+        if (mix.openrouter) this.attach('z-ai/glm-4.7', new MixOpenRouter({ options, config }));
         return this;
-    }    
+    }
+
+    GLM46({ options = {}, config = {}, mix = { cerebras: true } } = {}) {
+        mix = { ...this.mix, ...mix };
+        if (mix.cerebras) this.attach('zai-glm-4.6', new MixCerebras({ options, config }));
+        return this;
+    }
+
+    GLM45({ options = {}, config = {}, mix = { openrouter: true } } = {}) {
+        mix = { ...this.mix, ...mix };
+        if (mix.openrouter) this.attach('z-ai/glm-4.5-air:free', new MixOpenRouter({ options, config }));
+        return this;
+    }
 
     addText(text, { role = "user" } = {}) {
         const content = [{
@@ -1157,6 +1187,21 @@ class MixOpenAI extends MixCustom {
     }
 }
 
+class MixOpenRouter extends MixOpenAI {
+    getDefaultConfig(customConfig) {
+
+        if (!process.env.OPENROUTER_API_KEY) {
+            throw new Error('OpenRouter API key not found. Please provide it in config or set OPENROUTER_API_KEY environment variable.');
+        }
+
+        return MixCustom.prototype.getDefaultConfig.call(this, {
+            url: 'https://openrouter.ai/api/v1/chat/completions',
+            apiKey: process.env.OPENROUTER_API_KEY,
+            ...customConfig
+        });
+    }
+}
+
 class MixAnthropic extends MixCustom {
 
     static thinkingOptions = {
@@ -1800,4 +1845,4 @@ class MixGoogle extends MixCustom {
     }
 }
 
-module.exports = { MixCustom, ModelMix, MixAnthropic, MixMiniMax, MixOpenAI, MixPerplexity, MixOllama, MixLMStudio, MixGroq, MixTogether, MixGrok, MixCerebras, MixGoogle, MixFireworks };
+module.exports = { MixCustom, ModelMix, MixAnthropic, MixMiniMax, MixOpenAI, MixOpenRouter, MixPerplexity, MixOllama, MixLMStudio, MixGroq, MixTogether, MixGrok, MixCerebras, MixGoogle, MixFireworks };
