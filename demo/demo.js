@@ -27,8 +27,8 @@ const pplxSettings = {
 mmix.replace({ '{name}': 'ALF' });
 
 console.log("\n" + '--------| gpt51() |--------');
-const opt = { reasoning_effort: 'none', verbosity: 'low' };
-const gpt = mmix.gpt51(opt).addText("Have you ever eaten a {animal}?");
+const gptArgs = { options: { reasoning_effort: "none", verbosity: "low" } };
+const gpt = mmix.gpt51(gptArgs).addText("Have you ever eaten a {animal}?");
 gpt.replace({ '{animal}': 'cat' });
 await gpt.json({ time: '24:00:00', message: 'Hello' }, { time: 'Time in format HH:MM:SS' });
 

@@ -25,7 +25,7 @@ describe('Image Processing and Multimodal Support Tests', () => {
         it('should handle base64 image data correctly', async () => {
             const base64Image = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAoAAAAKCAYAAACNMs+9AAAAFUlEQVR42mP8z8BQz0AEYBxVSF+FABJADveWkH6oAAAAAElFTkSuQmCC';
 
-            model.gpt4o()
+            model.gpt41()
                 .addText('What do you see in this image?')
                 .addImageFromUrl(base64Image);
 

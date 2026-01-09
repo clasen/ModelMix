@@ -41,7 +41,7 @@ import { ModelMix } from 'modelmix';
 
 // Get structured JSON responses
 const model = ModelMix.new()
-    .sonnet4() // Anthropic claude-sonnet-4-20250514
+    .sonnet45() // Anthropic claude-sonnet-4-20250514
     .addText("Name and capital of 3 South American countries.");
 
 const outputExample = { countries: [{ name: "", capital: "" }] };
@@ -59,10 +59,9 @@ const setup = {
 };
 
 const model = await ModelMix.new(setup)
-    .sonnet4() // (main model) Anthropic claude-sonnet-4-20250514
-    .gpt5mini() // (fallback 1) OpenAI gpt-5-mini
-    .gemini25flash({ config: { temperature: 0 } }) // (fallback 2) Google gemini-2.5-flash
-    .gpt5nano() // (fallback 3) OpenAI gpt-5-nano
+    .sonnet45() // (main model) Anthropic claude-sonnet-4-5-20250929
+    .gpt5mini() // (fallback 2) OpenAI gpt-5-mini
+    .gemini3flash({ config: { temperature: 0 } }) // (fallback 3) Google gemini-3-flash
     .grok3mini() // (fallback 4) Grok grok-3-mini
     .addText("What's your name?");
 

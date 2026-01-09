@@ -8,14 +8,9 @@ const mmix = new ModelMix({
 });
 
 console.log("\n" + '--------| gpt51() |--------');
-const gpt = mmix.gpt51({ 
-    config: { 
-        reasoning: {
-            effort: "low",
-            summary: "auto"
-        }
-    } 
-});
+
+const gptArgs = { options: { reasoning_effort: "none", verbosity: "low" } };  
+const gpt = mmix.gpt51(gptArgs);
 
 gpt.addText("Explain quantum entanglement in simple terms.");
 const response = await gpt.message();

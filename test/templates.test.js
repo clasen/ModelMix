@@ -27,7 +27,7 @@ describe('Template and File Operations Tests', () => {
         });
 
         it('should replace simple template variables', async () => {
-            model.gpt4o()
+            model.gpt41()
                 .replace({
                     '{{name}}': 'Alice',
                     '{{age}}': '30',
@@ -56,7 +56,7 @@ describe('Template and File Operations Tests', () => {
         });
 
         it('should handle multiple template replacements', async () => {
-            model.gpt4o()
+            model.gpt41()
                 .replace({ '{{greeting}}': 'Hello' })
                 .replace({ '{{name}}': 'Bob' })
                 .replace({ '{{action}}': 'welcome' })
@@ -82,7 +82,7 @@ describe('Template and File Operations Tests', () => {
         });
 
         it('should handle nested template objects', async () => {
-            model.gpt4o()
+            model.gpt41()
                 .replace({
                     '{{user_name}}': 'Charlie',
                     '{{user_role}}': 'admin',
@@ -111,7 +111,7 @@ describe('Template and File Operations Tests', () => {
         });
 
         it('should preserve unreplaced templates', async () => {
-            model.gpt4o()
+            model.gpt41()
                 .replace({ '{{name}}': 'David' })
                 .addText('Hello {{name}}, your ID is {{user_id}} and status is {{status}}');
 
@@ -135,7 +135,7 @@ describe('Template and File Operations Tests', () => {
         });
 
         it('should handle empty and special character replacements', async () => {
-            model.gpt4o()
+            model.gpt41()
                 .replace({
                     '{{empty}}': '',
                     '{{special}}': 'Hello & "World" <test>',
@@ -175,7 +175,7 @@ describe('Template and File Operations Tests', () => {
         });
 
         it('should load and replace from template file', async () => {
-            model.gpt4o()
+            model.gpt41()
                 .replaceKeyFromFile('{{template}}', path.join(fixturesPath, 'template.txt'))
                 .replace({
                     '{{name}}': 'Eve',
@@ -214,7 +214,7 @@ describe('Template and File Operations Tests', () => {
         });
 
         it('should load and process JSON data file', async () => {
-            model.gpt4o()
+            model.gpt41()
                 .replaceKeyFromFile('{{data}}', path.join(fixturesPath, 'data.json'))
                 .addText('Process this data: {{data}}');
 
@@ -246,7 +246,7 @@ describe('Template and File Operations Tests', () => {
         });
 
         it('should handle file loading errors gracefully', async () => {
-            model.gpt4o()
+            model.gpt41()
                 .replaceKeyFromFile('{{missing}}', path.join(fixturesPath, 'nonexistent.txt'))
                 .addText('This should contain: {{missing}}');
 
@@ -271,7 +271,7 @@ describe('Template and File Operations Tests', () => {
         });
 
         it('should handle multiple file replacements', async () => {
-            model.gpt4o()
+            model.gpt41()
                 .replaceKeyFromFile('{{template}}', path.join(fixturesPath, 'template.txt'))
                 .replaceKeyFromFile('{{data}}', path.join(fixturesPath, 'data.json'))
                 .replace({
@@ -315,7 +315,7 @@ describe('Template and File Operations Tests', () => {
         it('should handle relative and absolute paths', async () => {
             const absolutePath = path.resolve(fixturesPath, 'template.txt');
 
-            model.gpt4o()
+            model.gpt41()
                 .replaceKeyFromFile('{{absolute}}', absolutePath)
                 .replace({
                     '{{name}}': 'Grace',
@@ -362,7 +362,7 @@ describe('Template and File Operations Tests', () => {
         });
 
         it('should combine file loading with template replacement in complex scenarios', async () => {
-            model.gpt4o()
+            model.gpt41()
                 .replaceKeyFromFile('{{user_data}}', path.join(fixturesPath, 'data.json'))
                 .replace({
                     '{{action}}': 'analyze',
@@ -402,7 +402,7 @@ describe('Template and File Operations Tests', () => {
                 roles: ['admin', 'user']
             };
 
-            model.gpt4o()
+            model.gpt41()
                 .replaceKeyFromFile('{{data}}', path.join(fixturesPath, 'data.json'))
                 .replace({ '{{instruction}}': 'Count active users by role' })
                 .addText('{{instruction}} from this data: {{data}}');
@@ -447,16 +447,16 @@ describe('Template and File Operations Tests', () => {
 
         it('should handle template replacement errors gracefully', () => {
             expect(() => {
-                model.gpt4o().replace(null);
+                model.gpt41().replace(null);
             }).to.not.throw();
 
             expect(() => {
-                model.gpt4o().replace(undefined);
+                model.gpt41().replace(undefined);
             }).to.not.throw();
         });
 
         it('should handle file reading errors without crashing', async () => {
-            model.gpt4o()
+            model.gpt41()
                 .replaceKeyFromFile('{{bad_file}}', '/path/that/does/not/exist.txt')
                 .addText('Content: {{bad_file}}');
 

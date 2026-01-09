@@ -198,7 +198,7 @@ describe('JSON Schema and Structured Output Tests', () => {
                 }]
             };
             
-            model.gpt4o().addText('List 3 countries');
+            model.gpt41().addText('List 3 countries');
             
             // Mock the API response
             nock('https://api.openai.com')
@@ -270,7 +270,7 @@ describe('JSON Schema and Structured Output Tests', () => {
         });
 
         it('should handle JSON parsing errors gracefully', async () => {
-            model.gpt4o().addText('Generate invalid JSON');
+            model.gpt41().addText('Generate invalid JSON');
             
             // Mock invalid JSON response
             nock('https://api.openai.com')

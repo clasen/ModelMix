@@ -72,7 +72,7 @@ describe('Rate Limiting with Bottleneck Tests', () => {
         it('should enforce minimum time between requests', async () => {
             const startTimes = [];
             
-            model.gpt4o();
+            model.gpt41();
             
             // Mock API responses
             nock('https://api.openai.com')
@@ -122,7 +122,7 @@ describe('Rate Limiting with Bottleneck Tests', () => {
                 }
             });
             
-            model.gpt4o();
+            model.gpt41();
             
             // Mock API with delay to simulate concurrent requests
             nock('https://api.openai.com')
@@ -184,7 +184,7 @@ describe('Rate Limiting with Bottleneck Tests', () => {
         it('should apply rate limiting to OpenAI requests', async () => {
             const requestTimes = [];
             
-            model.gpt4o();
+            model.gpt41();
             
             nock('https://api.openai.com')
                 .post('/v1/chat/completions')
@@ -267,7 +267,7 @@ describe('Rate Limiting with Bottleneck Tests', () => {
         });
 
         it('should handle rate limiting with API errors', async () => {
-            model.gpt4o();
+            model.gpt41();
             
             nock('https://api.openai.com')
                 .post('/v1/chat/completions')
@@ -289,7 +289,7 @@ describe('Rate Limiting with Bottleneck Tests', () => {
         it('should continue rate limiting after errors', async () => {
             const requestTimes = [];
             
-            model.gpt4o();
+            model.gpt41();
             
             // First request fails
             nock('https://api.openai.com')
@@ -345,7 +345,7 @@ describe('Rate Limiting with Bottleneck Tests', () => {
                 }
             });
             
-            model.gpt4o();
+            model.gpt41();
             
             let requestCount = 0;
             
@@ -392,7 +392,7 @@ describe('Rate Limiting with Bottleneck Tests', () => {
                 }
             });
             
-            model.gpt4o();
+            model.gpt41();
             
             const results = [];
             
@@ -440,7 +440,7 @@ describe('Rate Limiting with Bottleneck Tests', () => {
                 }
             });
             
-            model.gpt4o();
+            model.gpt41();
             
             nock('https://api.openai.com')
                 .post('/v1/chat/completions')
@@ -489,7 +489,7 @@ describe('Rate Limiting with Bottleneck Tests', () => {
                 done();
             });
             
-            model.gpt4o();
+            model.gpt41();
             
             nock('https://api.openai.com')
                 .post('/v1/chat/completions')
