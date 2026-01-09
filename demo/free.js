@@ -1,9 +1,4 @@
-import { fileURLToPath } from 'url';
-import { dirname, join } from 'path';
-
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = dirname(__filename);
-process.loadEnvFile(join(__dirname, '../.env'));
+process.loadEnvFile();
 import { ModelMix } from '../index.js';
 
 const ai = ModelMix.new({ config: { debug: true } })

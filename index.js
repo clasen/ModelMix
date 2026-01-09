@@ -55,8 +55,8 @@ class ModelMix {
         return new ModelMix({ options, config, mix });
     }
 
-    new() {
-        return new ModelMix({ options: this.options, config: this.config });
+    new({ options = {}, config = {}, mix = {} } = {}) {
+        return new ModelMix({ options: { ...this.options, ...options }, config: { ...this.config, ...config }, mix: { ...this.mix, ...mix } });
     }
 
     static formatJSON(obj) {
@@ -1680,7 +1680,8 @@ class MixGoogle extends MixCustom {
                         functionCall: {
                             name: toolCall.function.name,
                             args: JSON.parse(toolCall.function.arguments)
-                        }
+                        },
+                        thought_signature: toolCall.thought_signature || ""
                     }))
                 }
             }
@@ -1808,7 +1809,8 @@ class MixGoogle extends MixCustom {
                     function: {
                         name: part.functionCall.name,
                         arguments: JSON.stringify(part.functionCall.args)
-                    }
+                    },
+                    thought_signature: part.thoughtSignature || ""
                 };
             }
             return null;
