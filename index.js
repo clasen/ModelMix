@@ -46,7 +46,6 @@ class ModelMix {
 
     }
 
-
     replace(keyValues) {
         this.config.replace = { ...this.config.replace, ...keyValues };
         return this;
@@ -109,26 +108,38 @@ class ModelMix {
             inputText = lastMessage.content;
         }
 
-        const lines = [];
-        lines.push(`  📝 System: ${ModelMix.truncate(system, 60)}`);
-        lines.push(`  💬 Input: ${ModelMix.truncate(inputText, 150)}`);
-        lines.push(`  📊 Messages: ${messages.length}`);
-        return lines.join('\n');
+        const systemStr = `System: ${ModelMix.truncate(system, 50)}`;
+        const inputStr = `Input: ${ModelMix.truncate(inputText, 120)}`;
+        const msgCount = `(${messages.length} msg${messages.length !== 1 ? 's' : ''})`;
+        
+        return `${systemStr} \n| ${inputStr} ${msgCount}`;
     }
 
-    static formatOutputSummary(result) {
-        const lines = [];
+    static formatOutputSummary(result, verboseLevel = 2) {
+        const parts = [];
         if (result.message) {
-            lines.push(`  📤 Output: ${ModelMix.truncate(result.message, 200)}`);
+            // Try to parse as JSON for better formatting
+            try {
+                const parsed = JSON.parse(result.message.trim());
+                // If it's valid JSON and verbose >= 2, show it formatted
+                if (verboseLevel >= 2) {
+                    parts.push(`Output (JSON):\n${ModelMix.formatJSON(parsed)}`);
+                } else {
+                    parts.push(`Output: ${ModelMix.truncate(result.message, 150)}`);
+                }
+            } catch (e) {
+                // Not JSON, show truncated as before
+                parts.push(`Output: ${ModelMix.truncate(result.message, 150)}`);
+            }
         }
         if (result.think) {
-            lines.push(`  🧠 Thinking: ${ModelMix.truncate(result.think, 100)}`);
+            parts.push(`Thinking: ${ModelMix.truncate(result.think, 80)}`);
         }
         if (result.toolCalls && result.toolCalls.length > 0) {
             const toolNames = result.toolCalls.map(t => t.function?.name || t.name).join(', ');
-            lines.push(`  🔧 Tools: ${toolNames}`);
+            parts.push(`Tools: ${toolNames}`);
         }
-        return lines.join('\n');
+        return parts.join(' | ');
     }
 
     attach(key, provider) {
@@ -714,12 +725,15 @@ class ModelMix {
 
                 if (verboseLevel >= 1) {
                     const isPrimary = i === 0;
-                    const tag = isPrimary ? '🚀' : '🔄';
-                    console.log(`\n${tag} [${currentModelKey}] Attempt #${i + 1}` + (isPrimary ? '' : ' (Fallback)'));
-                }
-
-                if (verboseLevel >= 2) {
-                    console.log(ModelMix.formatInputSummary(this.messages, currentConfig.system));
+                    const prefix = isPrimary ? '→' : '↻';
+                    const suffix = isPrimary ? '' : ' (fallback)';
+                    const header = `\n${prefix} [${currentModelKey}] #${i + 1}${suffix}`;
+                    
+                    if (verboseLevel >= 2) {
+                        console.log(`${header} | ${ModelMix.formatInputSummary(this.messages, currentConfig.system)}`);
+                    } else {
+                        console.log(header);
+                    }
                 }
 
                 try {
@@ -754,29 +768,29 @@ class ModelMix {
                     }
 
                     // Verbose level 1: Just success indicator
-                    if (verboseLevel >= 1) {
-                        console.log(`  ✅ Success`);
+                    if (verboseLevel === 1) {
+                        console.log(`✓ Success`);
                     }
 
                     // Verbose level 2: Readable summary of output
                     if (verboseLevel >= 2) {
-                        console.log(ModelMix.formatOutputSummary(result));
+                        console.log(`✓ ${ModelMix.formatOutputSummary(result, verboseLevel).trim()}`);
                     }
 
                     // Verbose level 3 (debug): Full response details
                     if (verboseLevel >= 3) {
                         if (result.response) {
-                            console.log('\n  📦 RAW RESPONSE:');
+                            console.log('\n[RAW RESPONSE]');
                             console.log(ModelMix.formatJSON(result.response));
                         }
 
                         if (result.message) {
-                            console.log('\n  💬 FULL MESSAGE:');
+                            console.log('\n[FULL MESSAGE]');
                             console.log(ModelMix.formatMessage(result.message));
                         }
 
                         if (result.think) {
-                            console.log('\n  🧠 FULL THINKING:');
+                            console.log('\n[FULL THINKING]');
                             console.log(result.think);
                         }
                     }
@@ -1014,15 +1028,15 @@ class MixCustom {
 
             // Verbose level 3 (debug): Full request details
             if (verboseLevel >= 3) {
-                console.log('\n  📡 REQUEST DETAILS:');
+                console.log('\n[REQUEST DETAILS]');
 
-                console.log('\n  ⚙️  CONFIG:');
+                console.log('\n[CONFIG]');
                 const configToLog = { ...config };
                 delete configToLog.debug;
                 delete configToLog.verbose;
                 console.log(ModelMix.formatJSON(configToLog));
 
-                console.log('\n  📋 OPTIONS:');
+                console.log('\n[OPTIONS]');
                 console.log(ModelMix.formatJSON(options));
             }
 
@@ -1845,15 +1859,15 @@ class MixGoogle extends MixCustom {
 
             // Verbose level 3 (debug): Full request details
             if (verboseLevel >= 3) {
-                console.log('\n  📡 REQUEST DETAILS (GOOGLE):');
+                console.log('\n[REQUEST DETAILS - GOOGLE]');
 
-                console.log('\n  ⚙️  CONFIG:');
+                console.log('\n[CONFIG]');
                 const configToLog = { ...config };
                 delete configToLog.debug;
                 delete configToLog.verbose;
                 console.log(ModelMix.formatJSON(configToLog));
 
-                console.log('\n  📋 PAYLOAD:');
+                console.log('\n[PAYLOAD]');
                 console.log(ModelMix.formatJSON(payload));
             }
 
