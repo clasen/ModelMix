@@ -34,9 +34,9 @@ class ModelMix {
         this.config = {
             system: 'You are an assistant.',
             max_history: 1, // Default max history
-            debug: false,
-            verbose: 2, // 0=silent, 1=minimal, 2=readable summary, 3=full details
+            debug: 0, // 0=silent, 1=minimal, 2=readable summary, 3=full details
             bottleneck: defaultBottleneckConfig,
+            roundRobin: false, // false=fallback mode, true=round robin rotation
             ...config
         }
         const freeMix = { openrouter: true, cerebras: true, groq: true, together: false, lambda: false };
@@ -56,7 +56,9 @@ class ModelMix {
     }
 
     new({ options = {}, config = {}, mix = {} } = {}) {
-        return new ModelMix({ options: { ...this.options, ...options }, config: { ...this.config, ...config }, mix: { ...this.mix, ...mix } });
+        const instance = new ModelMix({ options: { ...this.options, ...options }, config: { ...this.config, ...config }, mix: { ...this.mix, ...mix } });
+        instance.models = this.models;
+        return instance;
     }
 
     static formatJSON(obj) {
@@ -79,22 +81,10 @@ class ModelMix {
         }
     }
 
-    // Verbose logging helpers
+    // debug logging helpers
     static truncate(str, maxLen = 100) {
         if (!str || typeof str !== 'string') return str;
         return str.length > maxLen ? str.substring(0, maxLen) + '...' : str;
-    }
-
-    static getVerboseLevel(config) {
-        // debug=true acts as verbose level 3
-        return config.verbose || 0;
-    }
-
-    static verboseLog(level, config, ...args) {
-        const verboseLevel = ModelMix.getVerboseLevel(config);
-        if (verboseLevel >= level) {
-            console.log(...args);
-        }
     }
 
     static formatInputSummary(messages, system) {
@@ -115,14 +105,14 @@ class ModelMix {
         return `${systemStr} \n| ${inputStr} ${msgCount}`;
     }
 
-    static formatOutputSummary(result, verboseLevel = 2) {
+    static formatOutputSummary(result, debug) {
         const parts = [];
         if (result.message) {
             // Try to parse as JSON for better formatting
             try {
                 const parsed = JSON.parse(result.message.trim());
-                // If it's valid JSON and verbose >= 2, show it formatted
-                if (verboseLevel >= 2) {
+                // If it's valid JSON and debug >= 2, show it formatted
+                if (debug >= 2) {
                     parts.push(`Output (JSON):\n${ModelMix.formatJSON(parsed)}`);
                 } else {
                     parts.push(`Output: ${ModelMix.truncate(result.message, 150)}`);
@@ -610,7 +600,13 @@ class ModelMix {
 
     groupByRoles(messages) {
         return messages.reduce((acc, currentMessage, index) => {
-            if (index === 0 || currentMessage.role !== messages[index - 1].role) {
+            // Don't group tool messages or assistant messages with tool_calls
+            // Each tool response must be separate with its own tool_call_id
+            const shouldNotGroup = currentMessage.role === 'tool' || 
+                                  currentMessage.tool_calls || 
+                                  currentMessage.tool_call_id;
+            
+            if (index === 0 || currentMessage.role !== messages[index - 1].role || shouldNotGroup) {
                 // acc.push({
                 //     role: currentMessage.role,
                 //     content: currentMessage.content
@@ -697,11 +693,23 @@ class ModelMix {
                 throw new Error("No user messages have been added. Use addText(prompt), addTextFromFile(filePath), addImage(filePath), or addImageFromUrl(url) to add a prompt.");
             }
 
+            // Merge config to get final roundRobin value
+            const finalConfig = { ...this.config, ...config };
+
+            // Round robin: rotate models array so fallback works naturally
+            if (finalConfig.roundRobin && this.models.length > 1) {
+                const firstModel = this.models.shift();
+                this.models.push(firstModel);
+            }
+
+            // Try all models in order (first is primary, rest are fallbacks)
+            const modelsToTry = this.models.map((model, index) => ({ model, index }));
+
             let lastError = null;
 
-            for (let i = 0; i < this.models.length; i++) {
+            for (let i = 0; i < modelsToTry.length; i++) {
 
-                const currentModel = this.models[i];
+                const { model: currentModel, index: originalIndex } = modelsToTry[i];
                 const currentModelKey = currentModel.key;
                 const providerInstance = currentModel.provider;
                 const optionsTools = providerInstance.getOptionsTools(this.tools);
@@ -721,15 +729,17 @@ class ModelMix {
                     ...config,
                 };
 
-                const verboseLevel = ModelMix.getVerboseLevel(currentConfig);
-
-                if (verboseLevel >= 1) {
+                if (currentConfig.debug >= 1) {
                     const isPrimary = i === 0;
                     const prefix = isPrimary ? '→' : '↻';
-                    const suffix = isPrimary ? '' : ' (fallback)';
-                    const header = `\n${prefix} [${currentModelKey}] #${i + 1}${suffix}`;
+                    const suffix = isPrimary 
+                        ? (currentConfig.roundRobin ? ` (round-robin #${originalIndex + 1})` : '') 
+                        : ' (fallback)';
+                    // Extract provider name from class name (e.g., "MixOpenRouter" -> "openrouter")
+                    const providerName = providerInstance.constructor.name.replace(/^Mix/, '').toLowerCase();
+                    const header = `\n${prefix} [${providerName}:${currentModelKey}] #${originalIndex + 1}${suffix}`;
                     
-                    if (verboseLevel >= 2) {
+                    if (currentConfig.debug >= 2) {
                         console.log(`${header} | ${ModelMix.formatInputSummary(this.messages, currentConfig.system)}`);
                     } else {
                         console.log(header);
@@ -761,24 +771,30 @@ class ModelMix {
 
                         this.messages.push({ role: "assistant", content: null, tool_calls: result.toolCalls });
 
-                        const content = await this.processToolCalls(result.toolCalls);
-                        this.messages.push({ role: 'tool', content });
+                        const toolResults = await this.processToolCalls(result.toolCalls);
+                        for (const toolResult of toolResults) {
+                            this.messages.push({
+                                role: 'tool',
+                                tool_call_id: toolResult.tool_call_id,
+                                content: toolResult.content
+                            });
+                        }
 
                         return this.execute();
                     }
 
-                    // Verbose level 1: Just success indicator
-                    if (verboseLevel === 1) {
+                    // debug level 1: Just success indicator
+                    if (currentConfig.debug === 1) {
                         console.log(`✓ Success`);
                     }
 
-                    // Verbose level 2: Readable summary of output
-                    if (verboseLevel >= 2) {
-                        console.log(`✓ ${ModelMix.formatOutputSummary(result, verboseLevel).trim()}`);
+                    // debug level 2: Readable summary of output
+                    if (currentConfig.debug >= 2) {
+                        console.log(`✓ ${ModelMix.formatOutputSummary(result, currentConfig.debug).trim()}`);
                     }
 
-                    // Verbose level 3 (debug): Full response details
-                    if (verboseLevel >= 3) {
+                    // debug level 3 (debug): Full response details
+                    if (currentConfig.debug >= 3) {
                         if (result.response) {
                             console.log('\n[RAW RESPONSE]');
                             console.log(ModelMix.formatJSON(result.response));
@@ -795,22 +811,22 @@ class ModelMix {
                         }
                     }
 
-                    if (verboseLevel >= 1) console.log('');
+                    if (currentConfig.debug >= 1) console.log('');
 
                     return result;
 
                 } catch (error) {
                     lastError = error;
-                    log.warn(`Model ${currentModelKey} failed (Attempt #${i + 1}/${this.models.length}).`);
+                    log.warn(`Model ${currentModelKey} failed (Attempt #${i + 1}/${modelsToTry.length}).`);
                     if (error.message) log.warn(`Error: ${error.message}`);
                     if (error.statusCode) log.warn(`Status Code: ${error.statusCode}`);
                     if (error.details) log.warn(`Details:\n${ModelMix.formatJSON(error.details)}`);
 
-                    if (i === this.models.length - 1) {
-                        console.error(`All ${this.models.length} model(s) failed. Throwing last error from ${currentModelKey}.`);
+                    if (i === modelsToTry.length - 1) {
+                        console.error(`All ${modelsToTry.length} model(s) failed. Throwing last error from ${currentModelKey}.`);
                         throw lastError;
                     } else {
-                        const nextModelKey = this.models[i + 1].key;
+                        const nextModelKey = modelsToTry[i + 1].model.key;
                         log.info(`-> Proceeding to next model: ${nextModelKey}`);
                     }
                 }
@@ -1024,16 +1040,13 @@ class MixCustom {
 
             options.messages = this.convertMessages(options.messages, config);
 
-            const verboseLevel = ModelMix.getVerboseLevel(config);
-
-            // Verbose level 3 (debug): Full request details
-            if (verboseLevel >= 3) {
+            // debug level 3 (debug): Full request details
+            if (config.debug >= 3) {
                 console.log('\n[REQUEST DETAILS]');
 
                 console.log('\n[CONFIG]');
                 const configToLog = { ...config };
                 delete configToLog.debug;
-                delete configToLog.verbose;
                 console.log(ModelMix.formatJSON(configToLog));
 
                 console.log('\n[OPTIONS]');
@@ -1222,12 +1235,23 @@ class MixOpenAI extends MixCustom {
             }
 
             if (message.role === 'tool') {
-                for (const content of message.content) {
+                // Handle new format: tool_call_id directly on message
+                if (message.tool_call_id) {
                     results.push({
                         role: 'tool',
-                        tool_call_id: content.tool_call_id,
-                        content: content.content
-                    })
+                        tool_call_id: message.tool_call_id,
+                        content: message.content
+                    });
+                } 
+                // Handle old format: content is an array
+                else if (Array.isArray(message.content)) {
+                    for (const content of message.content) {
+                        results.push({
+                            role: 'tool',
+                            tool_call_id: content.tool_call_id,
+                            content: content.content
+                        })
+                    }
                 }
                 continue;
             }
@@ -1855,16 +1879,13 @@ class MixGoogle extends MixCustom {
         };
 
         try {
-            const verboseLevel = ModelMix.getVerboseLevel(config);
-
-            // Verbose level 3 (debug): Full request details
-            if (verboseLevel >= 3) {
+            // debug level 3 (debug): Full request details
+            if (config.debug >= 3) {
                 console.log('\n[REQUEST DETAILS - GOOGLE]');
 
                 console.log('\n[CONFIG]');
                 const configToLog = { ...config };
                 delete configToLog.debug;
-                delete configToLog.verbose;
                 console.log(ModelMix.formatJSON(configToLog));
 
                 console.log('\n[PAYLOAD]');

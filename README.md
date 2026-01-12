@@ -11,6 +11,7 @@ Ever found yourself wanting to integrate AI models into your projects but worrie
 - **Flexible Integration**: Easily integrate popular models like OpenAI, Anthropic, Gemini, Perplexity, Groq, Together AI, Lambda, OpenRouter, Ollama, LM Studio or custom models.
 - **History Tracking**: Automatically logs the conversation history with model responses, allowing you to limit the number of historical messages with `max_history`.
 - **Model Fallbacks**: Automatically try different models if one fails or is unavailable.
+- **Round Robin Load Balancing**: Rotate through multiple models on each request to distribute load and maximize free tier quotas.
 - **Chain Multiple Models**: Create powerful chains of models that work together, with automatic fallback if one fails.
 - **Model Context Protocol (MCP) Support**: Seamlessly integrate external tools and capabilities like web search, code execution, or custom functions through the Model Context Protocol standard.
 
@@ -354,6 +355,7 @@ new ModelMix(args = { options: {}, config: {} })
   - **config**: This object contains configuration settings that control the behavior of the `ModelMix` instance. These settings can also be overridden for specific model instances. Examples of configuration settings include:
     - `system`: Sets the default system message for the model, e.g., "You are an assistant."
     - `max_history`: Limits the number of historical messages to retain, e.g., 1.
+    - `roundRobin`: When `true`, rotates through attached models on each request for load balancing. When `false` (default), uses fallback mode where models are tried sequentially only if previous ones fail.
     - `bottleneck`: Configures the rate limiting behavior using Bottleneck. For example:
       - `maxConcurrent`: Maximum number of concurrent requests
       - `minTime`: Minimum time between requests (in ms)
