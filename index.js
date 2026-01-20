@@ -57,7 +57,7 @@ class ModelMix {
 
     new({ options = {}, config = {}, mix = {} } = {}) {
         const instance = new ModelMix({ options: { ...this.options, ...options }, config: { ...this.config, ...config }, mix: { ...this.mix, ...mix } });
-        instance.models = this.models;
+        instance.models = this.models; // Share models array for round-robin rotation
         return instance;
     }
 
@@ -101,7 +101,7 @@ class ModelMix {
         const systemStr = `System: ${ModelMix.truncate(system, 50)}`;
         const inputStr = `Input: ${ModelMix.truncate(inputText, 120)}`;
         const msgCount = `(${messages.length} msg${messages.length !== 1 ? 's' : ''})`;
-        
+
         return `${systemStr} \n| ${inputStr} ${msgCount}`;
     }
 
@@ -123,7 +123,7 @@ class ModelMix {
             }
         }
         if (result.think) {
-            parts.push(`Thinking: ${ModelMix.truncate(result.think, 80)}`);
+            parts.push(`Think: ${ModelMix.truncate(result.think, 80)}`);
         }
         if (result.toolCalls && result.toolCalls.length > 0) {
             const toolNames = result.toolCalls.map(t => t.function?.name || t.name).join(', ');
@@ -318,8 +318,8 @@ class ModelMix {
         return this;
     }
 
-    lmstudio({ options = {}, config = {} } = {}) {
-        return this.attach('lmstudio', new MixLMStudio({ options, config }));
+    lmstudio(model = 'lmstudio', { options = {}, config = {} } = {}) {
+        return this.attach(model, new MixLMStudio({ options, config }));
     }
 
     minimaxM2({ options = {}, config = {} } = {}) {
@@ -602,10 +602,10 @@ class ModelMix {
         return messages.reduce((acc, currentMessage, index) => {
             // Don't group tool messages or assistant messages with tool_calls
             // Each tool response must be separate with its own tool_call_id
-            const shouldNotGroup = currentMessage.role === 'tool' || 
-                                  currentMessage.tool_calls || 
-                                  currentMessage.tool_call_id;
-            
+            const shouldNotGroup = currentMessage.role === 'tool' ||
+                currentMessage.tool_calls ||
+                currentMessage.tool_call_id;
+
             if (index === 0 || currentMessage.role !== messages[index - 1].role || shouldNotGroup) {
                 // acc.push({
                 //     role: currentMessage.role,
@@ -696,14 +696,14 @@ class ModelMix {
             // Merge config to get final roundRobin value
             const finalConfig = { ...this.config, ...config };
 
-            // Round robin: rotate models array so fallback works naturally
+            // Try all models in order (first is primary, rest are fallbacks)
+            const modelsToTry = this.models.map((model, index) => ({ model, index }));
+
+            // Round robin: rotate models array AFTER using current for next request
             if (finalConfig.roundRobin && this.models.length > 1) {
                 const firstModel = this.models.shift();
                 this.models.push(firstModel);
             }
-
-            // Try all models in order (first is primary, rest are fallbacks)
-            const modelsToTry = this.models.map((model, index) => ({ model, index }));
 
             let lastError = null;
 
@@ -732,13 +732,13 @@ class ModelMix {
                 if (currentConfig.debug >= 1) {
                     const isPrimary = i === 0;
                     const prefix = isPrimary ? '→' : '↻';
-                    const suffix = isPrimary 
-                        ? (currentConfig.roundRobin ? ` (round-robin #${originalIndex + 1})` : '') 
+                    const suffix = isPrimary
+                        ? (currentConfig.roundRobin ? ` (round-robin #${originalIndex + 1})` : '')
                         : ' (fallback)';
                     // Extract provider name from class name (e.g., "MixOpenRouter" -> "openrouter")
                     const providerName = providerInstance.constructor.name.replace(/^Mix/, '').toLowerCase();
                     const header = `\n${prefix} [${providerName}:${currentModelKey}] #${originalIndex + 1}${suffix}`;
-                    
+
                     if (currentConfig.debug >= 2) {
                         console.log(`${header} | ${ModelMix.formatInputSummary(this.messages, currentConfig.system)}`);
                     } else {
@@ -1242,7 +1242,7 @@ class MixOpenAI extends MixCustom {
                         tool_call_id: message.tool_call_id,
                         content: message.content
                     });
-                } 
+                }
                 // Handle old format: content is an array
                 else if (Array.isArray(message.content)) {
                     for (const content of message.content) {
@@ -1279,10 +1279,10 @@ class MixOpenAI extends MixCustom {
 
     static getOptionsTools(tools) {
         const options = {};
-        options.tools = [];
+        const toolsArray = [];
         for (const tool in tools) {
             for (const item of tools[tool]) {
-                options.tools.push({
+                toolsArray.push({
                     type: 'function',
                     function: {
                         name: item.name,
@@ -1293,7 +1293,11 @@ class MixOpenAI extends MixCustom {
             }
         }
 
-        // options.tool_choice = "auto";
+        // Solo incluir tools si el array no está vacío
+        if (toolsArray.length > 0) {
+            options.tools = toolsArray;
+            // options.tool_choice = "auto";
+        }
 
         return options;
     }
@@ -1482,15 +1486,20 @@ class MixAnthropic extends MixCustom {
 
     static getOptionsTools(tools) {
         const options = {};
-        options.tools = [];
+        const toolsArray = [];
         for (const tool in tools) {
             for (const item of tools[tool]) {
-                options.tools.push({
+                toolsArray.push({
                     name: item.name,
                     description: item.description,
                     input_schema: item.inputSchema
                 });
             }
+        }
+
+        // Solo incluir tools si el array no está vacío
+        if (toolsArray.length > 0) {
+            options.tools = toolsArray;
         }
 
         return options;
@@ -1946,11 +1955,14 @@ class MixGoogle extends MixCustom {
             }
         }
 
-        const options = {
-            tools: [{
+        const options = {};
+        
+        // Solo incluir tools si el array no está vacío
+        if (functionDeclarations.length > 0) {
+            options.tools = [{
                 functionDeclarations
-            }]
-        };
+            }];
+        }
 
         return options;
     }

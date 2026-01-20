@@ -1,7 +1,7 @@
 import 'dotenv/config';
 import { ModelMix, MixLMStudio } from '../index.js';
 
-const mmix = ModelMix.new({options:{max_tokens: 10000}, config: { debug: true } })
+const mmix = ModelMix.new({ options: { max_tokens: 10000 }, config: { debug: true } })
     .grok41think()
     // .attach('openai/gpt-oss-20b', new MixLMStudio())
     // .kimiK2()
