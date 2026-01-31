@@ -311,6 +311,14 @@ class ModelMix {
         return this;
     }
 
+    kimiK25think({ options = {}, config = {}, mix = { together: true } } = {}) {
+        mix = { ...this.mix, ...mix };
+        if (mix.together) this.attach('moonshotai/Kimi-K2.5', new MixTogether({ options, config }));
+        if (mix.fireworks) this.attach('accounts/fireworks/models/kimi-k2p5', new MixFireworks({ options, config }));
+        if (mix.openrouter) this.attach('moonshotai/kimi-k2.5', new MixOpenRouter({ options, config }));
+        return this;
+    }    
+
     kimiK2think({ options = {}, config = {}, mix = { together: true } } = {}) {
         mix = { ...this.mix, ...mix };
         if (mix.together) this.attach('moonshotai/Kimi-K2-Thinking', new MixTogether({ options, config }));
@@ -552,7 +560,7 @@ class ModelMix {
 
     _extractBlock(response) {
         const block = response.match(/```(?:\w+)?\s*([\s\S]*?)```/);
-        return block ? block[1].trim() : response;
+        return block ? block[1].trim() : response.trim();
     }
 
     async block({ addSystemExtra = true } = {}) {

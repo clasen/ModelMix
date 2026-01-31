@@ -160,7 +160,7 @@ Here's a comprehensive list of available methods:
 | `hermes3()`        | Lambda     | Hermes-3-Llama-3.1-405B-FP8    | [\$0.80 / \$0.80][8]       |
 | `qwen3()`          | Together   | Qwen3-235B-A22B-fp8-tput       | [\$0.20 / \$0.60][7]       |
 | `kimiK2()`         | Together   | Kimi-K2-Instruct               | [\$1.00 / \$3.00][7]       |
-| `kimiK2think()`    | Together   | moonshotai/Kimi-K2-Thinking    | [\$1.20 / \$4.00][7]       |
+| `kimiK25think()`   | Together   | Kimi-K2.5                      | [\$0.50 / \$2.80][7]       |
 
 [1]: https://platform.openai.com/docs/pricing "Pricing | OpenAI"
 [2]: https://docs.anthropic.com/en/docs/about-claude/pricing "Pricing - Anthropic"
