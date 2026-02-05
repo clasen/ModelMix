@@ -1,6 +1,6 @@
 {
   "name": "modelmix",
-  "version": "4.3.0",
+  "version": "4.3.2",
   "description": "🧬 Reliable interface with automatic fallback for AI LLMs.",
   "main": "index.js",
   "repository": {
@@ -46,7 +46,7 @@
   },
   "homepage": "https://github.com/clasen/ModelMix#readme",
   "dependencies": {
-    "@modelcontextprotocol/sdk": "^1.25.3",
+    "@modelcontextprotocol/sdk": "^1.26.0",
     "axios": "^1.12.2",
     "bottleneck": "^2.19.5",
     "file-type": "^16.5.4",
@@ -69,6 +69,7 @@
     "test:images": "mocha test/images.test.js --timeout 10000 --require test/setup.js",
     "test:bottleneck": "mocha test/bottleneck.test.js --timeout 10000 --require test/setup.js",
     "test:live": "mocha test/live.test.js --timeout 10000 --require dotenv/config --require test/setup.js",
-    "test:live.mcp": "mocha test/live.mcp.js --timeout 60000 --require dotenv/config --require test/setup.js"
+    "test:live.mcp": "mocha test/live.mcp.js --timeout 60000 --require dotenv/config --require test/setup.js",
+    "test:tokens": "mocha test/tokens.test.js --timeout 10000 --require dotenv/config --require test/setup.js"
   }
 }

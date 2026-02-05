@@ -92,6 +92,7 @@ This pattern allows you to:
 - Chain multiple models together
 - Automatically fall back to the next model if one fails
 - Get structured JSON responses when needed
+- Track token usage across all providers
 - Keep your code clean and maintainable
 
 ## 🔧 Model Context Protocol (MCP) Integration
@@ -291,6 +292,24 @@ const result = await model.json(
 
 These options give you fine-grained control over how much guidance you provide to the model for generating properly formatted JSON responses.
 
+## 📊 Token Usage Tracking
+
+ModelMix automatically tracks token usage for all requests across different providers, providing a unified format regardless of the underlying API.
+
+### How it works
+
+Every response from `raw()` now includes a `tokens` object with the following structure:
+
+```javascript
+{
+  tokens: {
+    input: 150,    // Number of tokens in the prompt/input
+    output: 75,    // Number of tokens in the completion/output
+    total: 225     // Total tokens used (input + output)
+  }
+}
+```
+
 ## 🐛 Enabling Debug Mode
 
 To activate debug mode in ModelMix and view detailed request information, follow these two steps:
@@ -375,7 +394,12 @@ new ModelMix(args = { options: {}, config: {} })
 - `addImage(filePath, config = { role: "user" })`: Adds an image message from a file path.
 - `addImageFromUrl(url, config = { role: "user" })`: Adds an image message from URL.
 - `message()`: Sends the message and returns the response.
-- `raw()`: Sends the message and returns the raw response data.
+- `raw()`: Sends the message and returns the complete response data including:
+  - `message`: The text response from the model
+  - `think`: Reasoning/thinking content (if available)
+  - `toolCalls`: Array of tool calls made by the model (if any)
+  - `tokens`: Object with `input`, `output`, and `total` token counts
+  - `response`: The raw API response
 - `stream(callback)`: Sends the message and streams the response, invoking the callback with each streamed part.
 - `json(schemaExample, descriptions = {})`: Forces the model to return a response in a specific JSON format.
   - `schemaExample`: Optional example of the JSON structure to be returned.

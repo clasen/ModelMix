@@ -1135,7 +1135,8 @@ class MixCustom {
                 response: raw,
                 message: message.trim(),
                 toolCalls: [],
-                think: null
+                think: null,
+                tokens: raw.length > 0 ? MixCustom.extractTokens(raw[raw.length - 1]) : { input: 0, output: 0, total: 0 }
             }));
             response.data.on('error', reject);
         });
@@ -1181,11 +1182,28 @@ class MixCustom {
         })) || []
     }
 
+    static extractTokens(data) {
+        // OpenAI/Groq/Together/Lambda/Cerebras/Fireworks format
+        if (data.usage) {
+            return {
+                input: data.usage.prompt_tokens || 0,
+                output: data.usage.completion_tokens || 0,
+                total: data.usage.total_tokens || 0
+            };
+        }
+        return {
+            input: 0,
+            output: 0,
+            total: 0
+        };
+    }
+
     processResponse(response) {
         return {
             message: MixCustom.extractMessage(response.data),
             think: MixCustom.extractThink(response.data),
             toolCalls: MixCustom.extractToolCalls(response.data),
+            tokens: MixCustom.extractTokens(response.data),
             response: response.data
         }
     }
@@ -1478,11 +1496,28 @@ class MixAnthropic extends MixCustom {
         return data.content[0]?.signature || null;
     }
 
+    static extractTokens(data) {
+        // Anthropic format
+        if (data.usage) {
+            return {
+                input: data.usage.input_tokens || 0,
+                output: data.usage.output_tokens || 0,
+                total: (data.usage.input_tokens || 0) + (data.usage.output_tokens || 0)
+            };
+        }
+        return {
+            input: 0,
+            output: 0,
+            total: 0
+        };
+    }
+
     processResponse(response) {
         return {
             message: MixAnthropic.extractMessage(response.data),
             think: MixAnthropic.extractThink(response.data),
             toolCalls: MixAnthropic.extractToolCalls(response.data),
+            tokens: MixAnthropic.extractTokens(response.data),
             response: response.data,
             signature: MixAnthropic.extractSignature(response.data)
         }
@@ -1706,6 +1741,7 @@ class MixLMStudio extends MixCustom {
             message: MixLMStudio.extractMessage(response.data),
             think: MixLMStudio.extractThink(response.data),
             toolCalls: MixCustom.extractToolCalls(response.data),
+            tokens: MixCustom.extractTokens(response.data),
             response: response.data
         };
     }
@@ -1926,6 +1962,7 @@ class MixGoogle extends MixCustom {
             message: MixGoogle.extractMessage(response.data),
             think: null,
             toolCalls: MixGoogle.extractToolCalls(response.data),
+            tokens: MixGoogle.extractTokens(response.data),
             response: response.data
         }
     }
@@ -1949,6 +1986,22 @@ class MixGoogle extends MixCustom {
 
     static extractMessage(data) {
         return data.candidates?.[0]?.content?.parts?.[0]?.text;
+    }
+
+    static extractTokens(data) {
+        // Google Gemini format
+        if (data.usageMetadata) {
+            return {
+                input: data.usageMetadata.promptTokenCount || 0,
+                output: data.usageMetadata.candidatesTokenCount || 0,
+                total: data.usageMetadata.totalTokenCount || 0
+            };
+        }
+        return {
+            input: 0,
+            output: 0,
+            total: 0
+        };
     }
 
     static getOptionsTools(tools) {
