@@ -190,6 +190,17 @@ class ModelMix {
         if (mix.openrouter) this.attach('openai/gpt-oss-120b:free', new MixOpenRouter({ options, config }));
         return this;
     }
+    opus46think({ options = {}, config = {} } = {}) {
+        options = { ...MixAnthropic.thinkingOptions, ...options };
+        return this.attach('claude-opus-4-6', new MixAnthropic({ options, config }));
+    }    
+    opus45think({ options = {}, config = {} } = {}) {
+        options = { ...MixAnthropic.thinkingOptions, ...options };
+        return this.attach('claude-opus-4-5-20251101', new MixAnthropic({ options, config }));
+    }    
+    opus46({ options = {}, config = {} } = {}) {
+        return this.attach('claude-opus-4-6', new MixAnthropic({ options, config }));
+    }    
     opus45({ options = {}, config = {} } = {}) {
         return this.attach('claude-opus-4-5-20251101', new MixAnthropic({ options, config }));
     }
@@ -1349,7 +1360,7 @@ class MixAnthropic extends MixCustom {
     static thinkingOptions = {
         thinking: {
             "type": "enabled",
-            "budget_tokens": 1024
+            "budget_tokens": 1638
         },
         temperature: 1
     };
