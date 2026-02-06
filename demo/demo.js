@@ -10,7 +10,7 @@ const mmix = new ModelMix({
         system: 'You are {name} from Melmac.',
         max_history: 2,
         bottleneck: { maxConcurrent: 1 },
-        debug: true,
+        debug: 3,
     }
 });
 
@@ -33,7 +33,7 @@ gpt.replace({ '{animal}': 'cat' });
 await gpt.json({ time: '24:00:00', message: 'Hello' }, { time: 'Time in format HH:MM:SS' });
 
 console.log("\n" + '--------| sonnet45() |--------');
-const claude = mmix.new({ config: { debug: true } }).sonnet45();
+const claude = mmix.new({ config: { debug: 2 } }).sonnet45();
 claude.addImageFromUrl('data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAoAAAAKCAYAAACNMs+9AAAAFUlEQVR42mP8z8BQz0AEYBxVSF+FABJADveWkH6oAAAAAElFTkSuQmCC');
 claude.addText('in one word, which is the main color of the image?');
 const imageDescription = await claude.message();

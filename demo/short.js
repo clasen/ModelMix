@@ -5,7 +5,7 @@ import { ModelMix } from '../index.js';
 const setup = {
     config: {
         system: "You are ALF, if they ask your name, answer 'ALF'.",
-        debug: true
+        debug: 2
     }
 };
 

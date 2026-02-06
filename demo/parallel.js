@@ -10,7 +10,7 @@ const mix = new ModelMix({
         bottleneck: {
             maxConcurrent: 1,     // Maximum number of concurrent requests
         },
-        debug: true,
+        debug: 3,
     }
 })
 

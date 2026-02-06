@@ -92,7 +92,7 @@ async function simpleCalculator() {
 async function contentGenerator() {
     console.log('\n=== Content Generator ===');
 
-    const mmix = ModelMix.new({ config: { debug: true, max_history: 1 } })
+    const mmix = ModelMix.new({ config: { debug: 2, max_history: 1 } })
         .gemini3flash()
         .setSystem('You are a creative assistant that can generate different types of content.');
 

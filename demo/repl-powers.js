@@ -11,7 +11,7 @@ const isolate = new ivm.Isolate({ memoryLimit: 128 }); // 128MB máximo
 async function replPowersExample() {
     console.log('\n=== JavaScript REPL - Potencias de 2 ===\n');
     const gptArgs = { options: { reasoning_effort: "none", verbosity: null } };
-    const mmix = ModelMix.new({ config: { debug: true, max_history: 10 } })
+    const mmix = ModelMix.new({ config: { debug: 2, max_history: 10 } })
         .gpt41nano()
         .gpt52(gptArgs)
         .gemini3flash()

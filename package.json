@@ -1,6 +1,6 @@
 {
   "name": "modelmix",
-  "version": "4.3.4",
+  "version": "4.3.6",
   "description": "🧬 Reliable interface with automatic fallback for AI LLMs.",
   "main": "index.js",
   "repository": {
@@ -9,6 +9,7 @@
   },
   "keywords": [
     "mcp",
+    "skill",
     "llm",
     "ai",
     "model",

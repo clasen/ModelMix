@@ -10,6 +10,81 @@ const { Client } = require("@modelcontextprotocol/sdk/client/index.js");
 const { StdioClientTransport } = require("@modelcontextprotocol/sdk/client/stdio.js");
 const { MCPToolsManager } = require('./mcp-tools');
 
+// Pricing per 1M tokens: [input, output] in USD
+// Based on provider pricing pages linked in README
+const MODEL_PRICING = {
+    // OpenAI
+    'gpt-5.2': [1.75, 14.00],
+    'gpt-5.2-chat-latest': [1.75, 14.00],
+    'gpt-5.1': [1.25, 10.00],
+    'gpt-5': [1.25, 10.00],
+    'gpt-5-mini': [0.25, 2.00],
+    'gpt-5-nano': [0.05, 0.40],
+    'gpt-4.1': [2.00, 8.00],
+    'gpt-4.1-mini': [0.40, 1.60],
+    'gpt-4.1-nano': [0.10, 0.40],
+    // gptOss (Together/Groq/Cerebras/OpenRouter)
+    'openai/gpt-oss-120b': [0.15, 0.60],
+    'gpt-oss-120b': [0.15, 0.60],
+    'openai/gpt-oss-120b:free': [0, 0],
+    // Anthropic
+    'claude-opus-4-6': [5.00, 25.00],
+    'claude-opus-4-5-20251101': [5.00, 25.00],
+    'claude-opus-4-1-20250805': [15.00, 75.00],
+    'claude-sonnet-4-5-20250929': [3.00, 15.00],
+    'claude-sonnet-4-20250514': [3.00, 15.00],
+    'claude-3-5-haiku-20241022': [0.80, 4.00],
+    'claude-haiku-4-5-20251001': [1.00, 5.00],
+    // Google
+    'gemini-3-pro-preview': [2.00, 12.00],
+    'gemini-3-flash-preview': [0.50, 3.00],
+    'gemini-2.5-pro': [1.25, 10.00],
+    'gemini-2.5-flash': [0.30, 2.50],
+    // Grok
+    'grok-4-0709': [3.00, 15.00],
+    'grok-4-1-fast-reasoning': [0.20, 0.50],
+    'grok-4-1-fast-non-reasoning': [0.20, 0.50],
+    // Fireworks
+    'accounts/fireworks/models/deepseek-v3p2': [0.56, 1.68],
+    'accounts/fireworks/models/glm-4p7': [0.55, 2.19],
+    'accounts/fireworks/models/kimi-k2p5': [0.50, 2.80],
+    // MiniMax
+    'MiniMax-M2.1': [0.30, 1.20],
+    // Perplexity
+    'sonar': [1.00, 1.00],
+    'sonar-pro': [3.00, 15.00],
+    // Scout (Groq/Together/Cerebras)
+    'meta-llama/llama-4-scout-17b-16e-instruct': [0.11, 0.34],
+    'meta-llama/Llama-4-Scout-17B-16E-Instruct': [0.11, 0.34],
+    'llama-4-scout-17b-16e-instruct': [0.11, 0.34],
+    // Maverick (Groq/Together/Lambda)
+    'meta-llama/llama-4-maverick-17b-128e-instruct': [0.20, 0.60],
+    'meta-llama/Llama-4-Maverick-17B-128E-Instruct-FP8': [0.20, 0.60],
+    'llama-4-maverick-17b-128e-instruct-fp8': [0.20, 0.60],
+    // Hermes3 (Lambda/OpenRouter)
+    'Hermes-3-Llama-3.1-405B-FP8': [0.80, 0.80],
+    'nousresearch/hermes-3-llama-3.1-405b:free': [0, 0],
+    // Qwen3 (Together/Cerebras)
+    'Qwen/Qwen3-235B-A22B-fp8-tput': [0.20, 0.60],
+    'qwen-3-32b': [0.20, 0.60],
+    // Kimi K2 (Together/Groq/OpenRouter)
+    'moonshotai/Kimi-K2-Instruct-0905': [1.00, 3.00],
+    'moonshotai/kimi-k2-instruct-0905': [1.00, 3.00],
+    'moonshotai/kimi-k2:free': [0, 0],
+    'moonshotai/Kimi-K2-Thinking': [1.00, 3.00],
+    'moonshotai/kimi-k2-thinking': [1.00, 3.00],
+    // Kimi K2.5 (Together/Fireworks/OpenRouter)
+    'moonshotai/Kimi-K2.5': [0.50, 2.80],
+    'moonshotai/kimi-k2.5': [0.50, 2.80],
+    // DeepSeek V3.2 (OpenRouter)
+    'deepseek/deepseek-v3.2': [0.56, 1.68],
+    // GLM 4.7 (OpenRouter/Cerebras)
+    'z-ai/glm-4.7': [0.55, 2.19],
+    'zai-glm-4.7': [0.55, 2.19],
+    // DeepSeek R1 (OpenRouter free)
+    'deepseek/deepseek-r1-0528:free': [0, 0],
+};
+
 class ModelMix {
 
     constructor({ options = {}, config = {}, mix = {} } = {}) {
@@ -19,6 +94,7 @@ class ModelMix {
         this.toolClient = {};
         this.mcp = {};
         this.mcpToolsManager = new MCPToolsManager();
+        this.lastRaw = null;
         this.options = {
             max_tokens: 8192,
             temperature: 1, // 1 --> More creative, 0 --> More deterministic.
@@ -82,9 +158,16 @@ class ModelMix {
     }
 
     // debug logging helpers
-    static truncate(str, maxLen = 100) {
+    static truncate(str, maxLen = 1000) {
         if (!str || typeof str !== 'string') return str;
         return str.length > maxLen ? str.substring(0, maxLen) + '...' : str;
+    }
+
+    static calculateCost(modelKey, tokens) {
+        const pricing = MODEL_PRICING[modelKey];
+        if (!pricing) return null;
+        const [inputPerMillion, outputPerMillion] = pricing;
+        return (tokens.input * inputPerMillion / 1_000_000) + (tokens.output * outputPerMillion / 1_000_000);
     }
 
     static formatInputSummary(messages, system) {
@@ -98,8 +181,8 @@ class ModelMix {
             inputText = lastMessage.content;
         }
 
-        const systemStr = `System: ${ModelMix.truncate(system, 50)}`;
-        const inputStr = `Input: ${ModelMix.truncate(inputText, 120)}`;
+        const systemStr = `System: ${ModelMix.truncate(system, 500)}`;
+        const inputStr = `Input: ${ModelMix.truncate(inputText, 1200)}`;
         const msgCount = `(${messages.length} msg${messages.length !== 1 ? 's' : ''})`;
 
         return `${systemStr} \n| ${inputStr} ${msgCount}`;
@@ -115,15 +198,15 @@ class ModelMix {
                 if (debug >= 2) {
                     parts.push(`Output (JSON):\n${ModelMix.formatJSON(parsed)}`);
                 } else {
-                    parts.push(`Output: ${ModelMix.truncate(result.message, 150)}`);
+                    parts.push(`Output: ${ModelMix.truncate(result.message, 1500)}`);
                 }
             } catch (e) {
                 // Not JSON, show truncated as before
-                parts.push(`Output: ${ModelMix.truncate(result.message, 150)}`);
+                parts.push(`Output: ${ModelMix.truncate(result.message, 1500)}`);
             }
         }
         if (result.think) {
-            parts.push(`Think: ${ModelMix.truncate(result.think, 80)}`);
+            parts.push(`Think: ${ModelMix.truncate(result.think, 800)}`);
         }
         if (result.toolCalls && result.toolCalls.length > 0) {
             const toolNames = result.toolCalls.map(t => t.function?.name || t.name).join(', ');
@@ -772,6 +855,11 @@ class ModelMix {
 
                     const result = await providerInstance.create({ options: currentOptions, config: currentConfig });
 
+                    // Calculate cost based on model pricing
+                    if (result.tokens) {
+                        result.tokens.cost = ModelMix.calculateCost(currentModelKey, result.tokens);
+                    }
+
                     if (result.toolCalls && result.toolCalls.length > 0) {
 
                         if (result.message) {
@@ -832,6 +920,7 @@ class ModelMix {
 
                     if (currentConfig.debug >= 1) console.log('');
 
+                    this.lastRaw = result;
                     return result;
 
                 } catch (error) {

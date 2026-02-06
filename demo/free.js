@@ -1,7 +1,7 @@
 process.loadEnvFile();
 import { ModelMix } from '../index.js';
 
-const ai = ModelMix.new({ config: { debug: true } })
+const ai = ModelMix.new({ config: { debug: 2 } })
     .gptOss()
     .kimiK2()
     .deepseekR1()

@@ -9,7 +9,7 @@ const mmix = new ModelMix({
     config: {
         system: 'You are ALF from Melmac.',
         max_history: 2,
-        debug: true
+        debug: 2
     }
 });
 

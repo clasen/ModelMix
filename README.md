@@ -23,6 +23,11 @@ Recommended: install dotenv to manage environment variables
 npm install modelmix dotenv
 ```
 
+> **AI Skill**: You can also add ModelMix as a skill for AI agentic development:
+> ```bash
+> npx skills add https://github.com/clasen/ModelMix --skill modelmix
+> ```
+
 2. **Setup your environment variables (.env file)**:
 Only the API keys you plan to use are required.
 ```plaintext
@@ -55,7 +60,7 @@ console.log(await model.json(outputExample));
 const setup = {
     config: {
         system: "You are ALF, if they ask your name, respond with 'ALF'.",
-        debug: true
+        debug: 2
     }
 };
 
@@ -187,107 +192,175 @@ const result = await ModelMix.new({
     .message();
 ```
 
-## 🔄 Templating Methods
+## 🔄 Templates
 
-### `replace` Method
+ModelMix includes a simple but powerful templating system. You can write your system prompts and user messages in external `.md` files with placeholders, then use `replace` to fill them in at runtime.
 
-The `replace` method is used to define key-value pairs for text replacement in the messages and system prompt. 
+### Core methods
 
-#### Usage:
+| Method | Description |
+| --- | --- |
+| `setSystemFromFile(path)` | Load the system prompt from a file |
+| `addTextFromFile(path)` | Load a user message from a file |
+| `replace({ key: value })` | Replace placeholders in all messages and the system prompt |
+| `replaceKeyFromFile(key, path)` | Replace a placeholder with the contents of a file |
+
+### Basic example with `replace`
+
 ```javascript
-model.replace({ '{{key1}}': 'value1', '{{key2}}': 'value2' });
+const gpt = ModelMix.new().gpt5mini();
+
+gpt.addText('Write a short story about a {animal} that lives in {place}.');
+gpt.replace({ '{animal}': 'cat', '{place}': 'a haunted castle' });
+
+console.log(await gpt.message());
 ```
 
-#### How it works:
-1. It updates the `config.replace` object with the provided key-value pairs.
-2. In the template, placeholders like `{{key1}}` will be replaced with 'value1'.
+### Loading prompts from `.md` files
 
-#### Example:
-```javascript
-model
-  .replace({ '{{name}}': 'Alice', '{{age}}': '30' })
-  .addText('Hello {{name}}, are you {{age}} years old?');
-```
-This would result in the message: "Hello Alice, are you 30 years old?"
+Instead of writing long prompts inline, keep them in separate Markdown files. This makes them easier to read, edit, and version control.
 
-### `replaceKeyFromFile` Method
-
-The `replaceKeyFromFile` method is similar to `replace`, but it reads the replacement value from a file.
-
-#### Usage:
-```javascript
-model.replaceKeyFromFile('longText', './path/to/file.txt');
+**`prompts/system.md`**
+```markdown
+You are {role}, an expert in {topic}.
+Always respond in {language}.
 ```
 
-#### How it works:
-1. It reads the content of the specified file synchronously.
-2. It then calls the `replace` method, using the provided key and the file content as the value.
+**`prompts/task.md`**
+```markdown
+Analyze the following and provide 3 key insights:
 
-#### Example:
-```javascript
-messageHandler
-  .replaceKeyFromFile('article_file_contents', './article.txt')
-  .addText('Please summarize this article: article_file_contents');
-```
-This would replace `article_file_contents` with the entire content of 'article.txt'.
-
-### When to use each method:
-- Use `replace` for short, inline replacements or dynamically generated content.
-- Use `replaceKeyFromFile` for longer texts or content that's stored externally.
-
-Both methods allow for flexible content insertion, enabling you to create dynamic and customizable prompts for your AI model interactions.
-
-## 🧩 JSON Export Options
-
-The `json` method signature includes these options:
-
-```javascript
-async json(schemaExample = null, schemaDescription = {}, { 
-    type = 'json_object', 
-    addExample = false, 
-    addSchema = true, 
-    addNote = false 
-} = {})
+{content}
 ```
 
-### Option Details
+**`app.js`**
+```javascript
+const gpt = ModelMix.new().gpt5mini();
 
-**`addSchema` (default: `true`)**
-- When set to `true`, includes the generated JSON schema in the system prompt
+gpt.setSystemFromFile('./prompts/system.md');
+gpt.addTextFromFile('./prompts/task.md');
 
-**`addExample` (default: `false`)**
-- When set to `true`, adds the example JSON structure to the system prompt
+gpt.replace({
+    '{role}': 'a senior analyst',
+    '{topic}': 'market trends',
+    '{language}': 'Spanish',
+    '{content}': 'Bitcoin surpassed $100,000 in December 2024...'
+});
 
-**`addNote` (default: `false`)**
-- When set to `true`, adds a technical note about JSON formatting requirements
-- Specifically adds this instruction to the system prompt:
-  ```
-  Output JSON Note: Escape all unescaped double quotes, backslashes, and ASCII control characters inside JSON strings, and ensure the output contains no comments.
-  ```
-- Helps prevent common JSON parsing errors
+console.log(await gpt.message());
+```
 
-### Usage Examples
+### Injecting file contents into a placeholder
+
+Use `replaceKeyFromFile` when the replacement value itself is a large text stored in a file.
+
+**`prompts/summarize.md`**
+```markdown
+Summarize the following article in 3 bullet points:
+
+{article}
+```
+
+**`app.js`**
+```javascript
+const gpt = ModelMix.new().gpt5mini();
+
+gpt.addTextFromFile('./prompts/summarize.md');
+gpt.replaceKeyFromFile('{article}', './data/article.md');
+
+console.log(await gpt.message());
+```
+
+### Full template workflow
+
+Combine all methods to build reusable, file-based prompt pipelines:
+
+**`prompts/system.md`**
+```markdown
+You are {role}. Follow these rules:
+- Be concise
+- Use examples when possible
+- Respond in {language}
+```
+
+**`prompts/review.md`**
+```markdown
+Review the following code and suggest improvements:
+
+{code}
+```
+
+**`app.js`**
+```javascript
+const gpt = ModelMix.new().gpt5mini();
+
+gpt.setSystemFromFile('./prompts/system.md');
+gpt.addTextFromFile('./prompts/review.md');
+
+gpt.replace({ '{role}': 'a senior code reviewer', '{language}': 'English' });
+gpt.replaceKeyFromFile('{code}', './src/utils.js');
+
+console.log(await gpt.message());
+```
+
+## 🧩 JSON Structured Output
+
+The `json` method forces the model to return a structured JSON response. You define the shape with an example object and optionally describe each field.
 
 ```javascript
-// Basic usage with example and note
+await model.json(schemaExample, schemaDescription, options)
+```
+
+### Basic usage
+
+```javascript
+const model = ModelMix.new()
+    .gpt5mini()
+    .addText('Name and capital of 3 South American countries.');
+
+const result = await model.json({ countries: [{ name: "", capital: "" }] });
+console.log(result);
+// { countries: [{ name: "Argentina", capital: "Buenos Aires" }, ...] }
+```
+
+### Adding field descriptions
+
+The second argument lets you describe each field so the model understands exactly what you expect:
+
+```javascript
+const model = ModelMix.new()
+    .gpt5mini()
+    .addText('Name and capital of 3 South American countries.');
+
 const result = await model.json(
-    { name: "John", age: 30, skills: ["JavaScript", "Python"] },
-    { name: "Person's full name", age: "Age in years" },
-    { addExample: true, addNote: true }
-);
-
-// Only add the example, skip the technical note
-const result = await model.json(
-    { status: "success", data: [] },
-    {},
-    { addExample: true, addNote: false }
-);
-
-// Add note for robust JSON parsing
-const result = await model.json(
-    { message: "Hello \"world\"" },
-    {},
+    { countries: [{ name: "Argentina", capital: "BUENOS AIRES" }] },
+    { countries: [{ name: "name of the country", capital: "capital of the country in uppercase" }] },
     { addNote: true }
+);
+console.log(result);
+// { countries: [
+//   { name: "Brazil", capital: "BRASILIA" },
+//   { name: "Colombia", capital: "BOGOTA" },
+//   { name: "Chile", capital: "SANTIAGO" }
+// ]}
+```
+
+The example values (like `"Argentina"` and `"BUENOS AIRES"`) show the model the expected format, while the descriptions clarify what each field should contain.
+
+### Options
+
+| Option | Default | Description |
+| --- | --- | --- |
+| `addSchema` | `true` | Include the generated JSON schema in the system prompt |
+| `addExample` | `false` | Include the example object in the system prompt |
+| `addNote` | `false` | Add a note about JSON escaping to prevent parsing errors |
+
+```javascript
+// Include the example and the escaping note
+const result = await model.json(
+    { name: "John", age: 30, skills: ["JavaScript"] },
+    { name: "Full name", age: "Age in years", skills: "List of programming languages" },
+    { addExample: true, addNote: true }
 );
 ```
 
@@ -311,16 +384,28 @@ Every response from `raw()` now includes a `tokens` object with the following st
 }
 ```
 
+### `lastRaw` — Access full response after `message()` or `json()`
+
+After calling `message()` or `json()`, use `lastRaw` to access the complete response (tokens, thinking, tool calls, etc.). It has the same structure as `raw()`.
+
+```javascript
+const text = await model.message();
+console.log(model.lastRaw.tokens);
+// { input: 122, output: 86, total: 541, cost: 0.000319 }
+```
+
+The `cost` field is the estimated cost in USD based on the model's pricing per 1M tokens (input/output). If the model is not found in the pricing table, `cost` will be `null`.
+
 ## 🐛 Enabling Debug Mode
 
 To activate debug mode in ModelMix and view detailed request information, follow these two steps:
 
-1. In the ModelMix constructor, include `debug: true` in the configuration:
+1. In the ModelMix constructor, include `debug: 3` in the configuration:
 
    ```javascript
    const mix = ModelMix.new({
      config: {
-       debug: true
+       debug: 3
        // ... other configuration options ...
      }
    });
@@ -390,10 +475,14 @@ new ModelMix(args = { options: {}, config: {} })
 - `new()`: `static` Creates a new `ModelMix`.
 - `new()`: Creates a new `ModelMix` using instance setup.
 
+- `setSystem(text)`: Sets the system prompt.
+- `setSystemFromFile(filePath)`: Sets the system prompt from a file.
 - `addText(text, config = { role: "user" })`: Adds a text message.
-- `addTextFromFile(filePath, config = { role: "user" })`: Adds a text message from a file path.
+- `addTextFromFile(filePath, config = { role: "user" })`: Adds a text message from a file.
 - `addImage(filePath, config = { role: "user" })`: Adds an image message from a file path.
 - `addImageFromUrl(url, config = { role: "user" })`: Adds an image message from URL.
+- `replace(keyValues)`: Defines placeholder replacements for messages and system prompt.
+- `replaceKeyFromFile(key, filePath)`: Defines a placeholder replacement with file contents as value.
 - `message()`: Sends the message and returns the response.
 - `raw()`: Sends the message and returns the complete response data including:
   - `message`: The text response from the model

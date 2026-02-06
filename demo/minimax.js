@@ -6,7 +6,7 @@ process.loadEnvFile();
 const main = async () => {
 
     const bot = ModelMix
-        .new({ config: { debug: true } })
+        .new({ config: { debug: 3 } })
         .minimaxM21()
         .setSystem('You are a helpful assistant.');
 

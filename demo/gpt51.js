@@ -3,7 +3,7 @@ import { ModelMix } from '../index.js';
 
 const mmix = new ModelMix({
     config: {
-        debug: true,
+        debug: 2,
     }
 });
 
