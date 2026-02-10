@@ -20,6 +20,23 @@ Do NOT use this skill for:
 - Python or non-Node.js projects
 - Direct HTTP calls to LLM APIs (use ModelMix instead)
 
+## Common Tasks
+
+- [Get a text response](#get-a-text-response)
+- [Get structured JSON](#get-structured-json)
+- [Stream a response](#stream-a-response)
+- [Get raw response (tokens, thinking, tool calls)](#get-raw-response-tokens-thinking-tool-calls)
+- [Access full response after `message()` or `json()` with `lastRaw`](#access-full-response-after-message-or-json-with-lastraw)
+- [Add images](#add-images)
+- [Use templates with placeholders](#use-templates-with-placeholders)
+- [Round-robin load balancing](#round-robin-load-balancing)
+- [MCP integration (external tools)](#mcp-integration-external-tools)
+- [Custom local tools (addTool)](#custom-local-tools-addtool)
+- [Rate limiting (Bottleneck)](#rate-limiting-bottleneck)
+- [Debug mode](#debug-mode)
+- [Use free-tier models](#use-free-tier-models)
+- [Conversation history](#conversation-history)
+
 ## Installation
 
 ```bash
@@ -46,7 +63,7 @@ const model = ModelMix.new({
     config: {
         system: "You are a helpful assistant.",
         max_history: 5,
-        debug: 0,           // 0=silent, 1=minimal, 2=summary, 3=full
+        debug: 0,           // 0=silent, 1=minimal, 2=summary, 3=full (no truncate), 4=verbose
         roundRobin: false    // false=fallback, true=rotate models
     }
 });
@@ -229,7 +246,7 @@ const model = ModelMix.new({
 
 ```javascript
 const model = ModelMix.new({
-    config: { debug: 2 }  // 0=silent, 1=minimal, 2=summary, 3=full
+    config: { debug: 2 }  // 0=silent, 1=minimal, 2=summary, 3=full (no truncate), 4=verbose
 }).gpt5mini();
 ```
 

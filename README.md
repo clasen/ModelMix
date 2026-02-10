@@ -18,11 +18,9 @@ Ever found yourself wanting to integrate AI models into your projects but worrie
 ## 🛠️ Usage
 
 1. **Install the ModelMix package:**
-Recommended: install dotenv to manage environment variables
 ```bash
-npm install modelmix dotenv
+npm install modelmix
 ```
-
 > **AI Skill**: You can also add ModelMix as a skill for AI agentic development:
 > ```bash
 > npx skills add https://github.com/clasen/ModelMix --skill modelmix
@@ -38,6 +36,8 @@ MINIMAX_API_KEY="your-minimax-key..."
 ...
 GEMINI_API_KEY="AIza..."
 ```
+
+For environment variables, use `dotenv` or Node's built-in `process.loadEnvFile()`.
 
 3. **Create and configure your models**:
 
@@ -400,12 +400,12 @@ The `cost` field is the estimated cost in USD based on the model's pricing per 1
 
 To activate debug mode in ModelMix and view detailed request information, follow these two steps:
 
-1. In the ModelMix constructor, include `debug: 3` in the configuration:
+1. In the ModelMix constructor, include a `debug` level in the configuration:
 
    ```javascript
    const mix = ModelMix.new({
      config: {
-       debug: 3
+       debug: 4 // 0=silent, 1=minimal, 2=summary, 3=full (no truncate), 4=verbose (raw details)
        // ... other configuration options ...
      }
    });

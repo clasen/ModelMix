@@ -110,7 +110,7 @@ class ModelMix {
         this.config = {
             system: 'You are an assistant.',
             max_history: 1, // Default max history
-            debug: 0, // 0=silent, 1=minimal, 2=readable summary, 3=full details
+            debug: 0, // 0=silent, 1=minimal, 2=readable summary, 3=full (no truncate), 4=verbose (raw details)
             bottleneck: defaultBottleneckConfig,
             roundRobin: false, // false=fallback mode, true=round robin rotation
             ...config
@@ -170,7 +170,7 @@ class ModelMix {
         return (tokens.input * inputPerMillion / 1_000_000) + (tokens.output * outputPerMillion / 1_000_000);
     }
 
-    static formatInputSummary(messages, system) {
+    static formatInputSummary(messages, system, debug = 2) {
         const lastMessage = messages[messages.length - 1];
         let inputText = '';
 
@@ -181,38 +181,39 @@ class ModelMix {
             inputText = lastMessage.content;
         }
 
-        const systemStr = `System: ${ModelMix.truncate(system, 500)}`;
-        const inputStr = `Input: ${ModelMix.truncate(inputText, 1200)}`;
+        const noTruncate = debug >= 3;
+        const systemStr = noTruncate ? (system || '') : ModelMix.truncate(system, 500);
+        const inputStr = noTruncate ? inputText : ModelMix.truncate(inputText, 1200);
         const msgCount = `(${messages.length} msg${messages.length !== 1 ? 's' : ''})`;
 
-        return `${systemStr} \n| ${inputStr} ${msgCount}`;
+        return `| SYSTEM\n${systemStr}\n| INPUT ${msgCount}\n${inputStr}`;
     }
 
     static formatOutputSummary(result, debug) {
         const parts = [];
+        const noTruncate = debug >= 3;
         if (result.message) {
             // Try to parse as JSON for better formatting
             try {
                 const parsed = JSON.parse(result.message.trim());
                 // If it's valid JSON and debug >= 2, show it formatted
                 if (debug >= 2) {
-                    parts.push(`Output (JSON):\n${ModelMix.formatJSON(parsed)}`);
+                    parts.push(`| OUTPUT (JSON)\n${ModelMix.formatJSON(parsed)}`);
                 } else {
-                    parts.push(`Output: ${ModelMix.truncate(result.message, 1500)}`);
+                    parts.push(`| OUTPUT\n${ModelMix.truncate(result.message, 1500)}`);
                 }
             } catch (e) {
-                // Not JSON, show truncated as before
-                parts.push(`Output: ${ModelMix.truncate(result.message, 1500)}`);
+                parts.push(`| OUTPUT\n${noTruncate ? result.message : ModelMix.truncate(result.message, 1500)}`);
             }
         }
         if (result.think) {
-            parts.push(`Think: ${ModelMix.truncate(result.think, 800)}`);
+            parts.push(`| THINK\n${noTruncate ? result.think : ModelMix.truncate(result.think, 800)}`);
         }
         if (result.toolCalls && result.toolCalls.length > 0) {
             const toolNames = result.toolCalls.map(t => t.function?.name || t.name).join(', ');
-            parts.push(`Tools: ${toolNames}`);
+            parts.push(`| TOOLS\n${toolNames}`);
         }
-        return parts.join(' | ');
+        return parts.join('\n');
     }
 
     attach(key, provider) {
@@ -842,7 +843,7 @@ class ModelMix {
                     const header = `\n${prefix} [${providerName}:${currentModelKey}] #${originalIndex + 1}${suffix}`;
 
                     if (currentConfig.debug >= 2) {
-                        console.log(`${header} | ${ModelMix.formatInputSummary(this.messages, currentConfig.system)}`);
+                        console.log(`${header}\n${ModelMix.formatInputSummary(this.messages, currentConfig.system, currentConfig.debug)}`);
                     } else {
                         console.log(header);
                     }
@@ -897,11 +898,14 @@ class ModelMix {
 
                     // debug level 2: Readable summary of output
                     if (currentConfig.debug >= 2) {
-                        console.log(`✓ ${ModelMix.formatOutputSummary(result, currentConfig.debug).trim()}`);
+                        const tokenInfo = result.tokens
+                            ? ` ${result.tokens.input}→${result.tokens.output} tok` + (result.tokens.cost != null ? ` $${result.tokens.cost.toFixed(4)}` : '')
+                            : '';
+                        console.log(`✓${tokenInfo}\n${ModelMix.formatOutputSummary(result, currentConfig.debug).trim()}`);
                     }
 
-                    // debug level 3 (debug): Full response details
-                    if (currentConfig.debug >= 3) {
+                    // debug level 4 (verbose): Full response details
+                    if (currentConfig.debug >= 4) {
                         if (result.response) {
                             console.log('\n[RAW RESPONSE]');
                             console.log(ModelMix.formatJSON(result.response));
@@ -1148,8 +1152,8 @@ class MixCustom {
 
             options.messages = this.convertMessages(options.messages, config);
 
-            // debug level 3 (debug): Full request details
-            if (config.debug >= 3) {
+            // debug level 4 (verbose): Full request details
+            if (config.debug >= 4) {
                 console.log('\n[REQUEST DETAILS]');
 
                 console.log('\n[CONFIG]');
@@ -2032,8 +2036,8 @@ class MixGoogle extends MixCustom {
         };
 
         try {
-            // debug level 3 (debug): Full request details
-            if (config.debug >= 3) {
+            // debug level 4 (verbose): Full request details
+            if (config.debug >= 4) {
                 console.log('\n[REQUEST DETAILS - GOOGLE]');
 
                 console.log('\n[CONFIG]');
