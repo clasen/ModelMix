@@ -7,7 +7,7 @@ const main = async () => {
 
     const bot = ModelMix
         .new({ config: { debug: 3 } })
-        .minimaxM21()
+        .minimaxM25()
         .setSystem('You are a helpful assistant.');
 
     bot.addText('What is the capital of France?');

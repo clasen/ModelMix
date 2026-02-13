@@ -48,8 +48,10 @@ const MODEL_PRICING = {
     'accounts/fireworks/models/deepseek-v3p2': [0.56, 1.68],
     'accounts/fireworks/models/glm-4p7': [0.55, 2.19],
     'accounts/fireworks/models/kimi-k2p5': [0.50, 2.80],
+    'fireworks/glm-5': [1.00, 3.20],
     // MiniMax
     'MiniMax-M2.1': [0.30, 1.20],
+    'MiniMax-M2.5': [0.30, 1.20],
     // Perplexity
     'sonar': [1.00, 1.00],
     'sonar-pro': [3.00, 15.00],
@@ -436,6 +438,10 @@ class ModelMix {
         return this;
     }
 
+    minimaxM25({ options = {}, config = {} } = {}) {
+        return this.attach('MiniMax-M2.5', new MixMiniMax({ options, config }));
+    }
+
     minimaxM2Stable({ options = {}, config = {} } = {}) {
         return this.attach('MiniMax-M2-Stable', new MixMiniMax({ options, config }));
     }
@@ -444,6 +450,12 @@ class ModelMix {
         mix = { ...this.mix, ...mix };
         if (mix.fireworks) this.attach('accounts/fireworks/models/deepseek-v3p2', new MixFireworks({ options, config }));
         if (mix.openrouter) this.attach('deepseek/deepseek-v3.2', new MixOpenRouter({ options, config }));
+        return this;
+    }
+
+    GLM5({ options = {}, config = {}, mix = { fireworks: true } } = {}) {
+        mix = { ...this.mix, ...mix };
+        if (mix.fireworks) this.attach('fireworks/glm-5', new MixFireworks({ options, config }));
         return this;
     }
 
@@ -899,7 +911,7 @@ class ModelMix {
                     // debug level 2: Readable summary of output
                     if (currentConfig.debug >= 2) {
                         const tokenInfo = result.tokens
-                            ? ` ${result.tokens.input}→${result.tokens.output} tok` + (result.tokens.cost != null ? ` $${result.tokens.cost.toFixed(4)}` : '')
+                            ? ` ${result.tokens.input} → ${result.tokens.output} tok` + (result.tokens.cost != null ? ` $${result.tokens.cost.toFixed(4)}` : '')
                             : '';
                         console.log(`✓${tokenInfo}\n${ModelMix.formatOutputSummary(result, currentConfig.debug).trim()}`);
                     }
