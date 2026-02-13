@@ -52,6 +52,7 @@ const MODEL_PRICING = {
     // MiniMax
     'MiniMax-M2.1': [0.30, 1.20],
     'MiniMax-M2.5': [0.30, 1.20],
+    'fireworks/minimax-m2p5': [0.30, 1.20],
     // Perplexity
     'sonar': [1.00, 1.00],
     'sonar-pro': [3.00, 15.00],
@@ -279,14 +280,14 @@ class ModelMix {
     opus46think({ options = {}, config = {} } = {}) {
         options = { ...MixAnthropic.thinkingOptions, ...options };
         return this.attach('claude-opus-4-6', new MixAnthropic({ options, config }));
-    }    
+    }
     opus45think({ options = {}, config = {} } = {}) {
         options = { ...MixAnthropic.thinkingOptions, ...options };
         return this.attach('claude-opus-4-5-20251101', new MixAnthropic({ options, config }));
-    }    
+    }
     opus46({ options = {}, config = {} } = {}) {
         return this.attach('claude-opus-4-6', new MixAnthropic({ options, config }));
-    }    
+    }
     opus45({ options = {}, config = {} } = {}) {
         return this.attach('claude-opus-4-5-20251101', new MixAnthropic({ options, config }));
     }
@@ -414,7 +415,7 @@ class ModelMix {
         if (mix.fireworks) this.attach('accounts/fireworks/models/kimi-k2p5', new MixFireworks({ options, config }));
         if (mix.openrouter) this.attach('moonshotai/kimi-k2.5', new MixOpenRouter({ options, config }));
         return this;
-    }    
+    }
 
     kimiK2think({ options = {}, config = {}, mix = { together: true } } = {}) {
         mix = { ...this.mix, ...mix };
@@ -438,8 +439,11 @@ class ModelMix {
         return this;
     }
 
-    minimaxM25({ options = {}, config = {} } = {}) {
-        return this.attach('MiniMax-M2.5', new MixMiniMax({ options, config }));
+    minimaxM25({ options = {}, config = {}, mix = { minimax: true } } = {}) {
+        mix = { ...this.mix, ...mix };
+        if (mix.minimax) this.attach('MiniMax-M2.5', new MixMiniMax({ options, config }));
+        if (mix.fireworks) this.attach('fireworks/minimax-m2p5', new MixFireworks({ options, config }));
+        return this;
     }
 
     minimaxM2Stable({ options = {}, config = {} } = {}) {
@@ -2133,7 +2137,7 @@ class MixGoogle extends MixCustom {
         }
 
         const options = {};
-        
+
         // Solo incluir tools si el array no está vacío
         if (functionDeclarations.length > 0) {
             options.tools = [{
