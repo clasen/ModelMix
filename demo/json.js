@@ -11,17 +11,19 @@ const model = await ModelMix.new({ options: { max_tokens: 10000 }, config: { deb
     // .gemini25flash()
     .addText("Name and capital of 3 South American countries.")
 
-const jsonResult = await model.json({
-    countries: [{
-        name: "Argentina",
-        capital: "BUENOS AIRES"
-    }]
+const jsonResult = await model.json([{
+    name: "Argentina",
+    capital: "BUENOS AIRES"
 }, {
-    countries: [{
-        name: "name of the country",
-        capital: "capital of the country in uppercase"
-    }]
-}, { addNote: true });
+    name: "Brazil",
+    capital: "BRASILIA"
+}, {
+    name: "Colombia",
+    capital: "BOGOTA"
+}], [{
+    name: { description: "name of the country", enum: ["Perú", "Colombia", "Argentina"] },
+    capital: "capital of the country in uppercase"
+}], { addNote: true });
 
 console.log(jsonResult);
 console.log(model.lastRaw.tokens);

@@ -112,7 +112,7 @@ class ModelMix {
 
         this.config = {
             system: 'You are an assistant.',
-            max_history: 1, // Default max history
+            max_history: 0, // 0=no history (stateless), N=keep last N messages, -1=unlimited
             debug: 0, // 0=silent, 1=minimal, 2=readable summary, 3=full (no truncate), 4=verbose (raw details)
             bottleneck: defaultBottleneckConfig,
             roundRobin: false, // false=fallback mode, true=round robin rotation
@@ -640,6 +640,15 @@ class ModelMix {
 
     async json(schemaExample = null, schemaDescription = {}, { type = 'json_object', addExample = false, addSchema = true, addNote = false } = {}) {
 
+        let isArrayWrap = false;
+        if (Array.isArray(schemaExample)) {
+            isArrayWrap = true;
+            schemaExample = { out: schemaExample };
+            if (Array.isArray(schemaDescription)) {
+                schemaDescription = { out: schemaDescription };
+            }
+        }
+
         let options = {
             response_format: { type },
             stream: false,
@@ -666,7 +675,8 @@ class ModelMix {
             }
         }
         const { message } = await this.execute({ options, config });
-        return JSON.parse(this._extractBlock(message));
+        const parsed = JSON.parse(this._extractBlock(message));
+        return isArrayWrap ? parsed.out : parsed;
     }
 
     _extractBlock(response) {
@@ -760,7 +770,8 @@ class ModelMix {
         await this.processImages();
         this.applyTemplate();
 
-        // Smart message slicing to preserve tool call sequences
+        // Smart message slicing based on max_history:
+        // 0 = no history (stateless), N = keep last N messages, -1 = unlimited
         if (this.config.max_history > 0) {
             let sliceStart = Math.max(0, this.messages.length - this.config.max_history);
 
@@ -780,6 +791,8 @@ class ModelMix {
 
             this.messages = this.messages.slice(sliceStart);
         }
+        // max_history = -1: unlimited, no slicing
+        // max_history = 0: no history, messages only contain what was added since last call
 
         this.messages = this.groupByRoles(this.messages);
         this.options.messages = this.messages;
@@ -941,6 +954,29 @@ class ModelMix {
                     if (currentConfig.debug >= 1) console.log('');
 
                     this.lastRaw = result;
+
+                    // Manage conversation history based on max_history setting
+                    if (this.config.max_history === 0) {
+                        // Stateless: clear messages so next call starts fresh
+                        this.messages = [];
+                    } else if (result.message) {
+                        // Persist assistant response for multi-turn conversations
+                        if (result.signature) {
+                            this.messages.push({
+                                role: "assistant", content: [{
+                                    type: "thinking",
+                                    thinking: result.think,
+                                    signature: result.signature
+                                }, {
+                                    type: "text",
+                                    text: result.message
+                                }]
+                            });
+                        } else {
+                            this.addText(result.message, { role: "assistant" });
+                        }
+                    }
+
                     return result;
 
                 } catch (error) {
@@ -1043,7 +1079,7 @@ class ModelMix {
             return;
         }
 
-        if (this.config.max_history < 3) {
+        if (this.config.max_history >= 0 && this.config.max_history < 3) {
             log.warn(`MCP ${key} requires at least 3 max_history. Setting to 3.`);
             this.config.max_history = 3;
         }
@@ -1079,7 +1115,7 @@ class ModelMix {
 
     addTool(toolDefinition, callback) {
 
-        if (this.config.max_history < 3) {
+        if (this.config.max_history >= 0 && this.config.max_history < 3) {
             log.warn(`MCP ${toolDefinition.name} requires at least 3 max_history. Setting to 3.`);
             this.config.max_history = 3;
         }

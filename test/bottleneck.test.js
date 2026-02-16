@@ -115,6 +115,7 @@ describe('Rate Limiting with Bottleneck Tests', () => {
             model = ModelMix.new({
                 config: {
                     debug: false,
+                    max_history: -1, // concurrent calls need history to preserve queued messages
                     bottleneck: {
                         maxConcurrent: 2,
                         minTime: 50
@@ -335,6 +336,7 @@ describe('Rate Limiting with Bottleneck Tests', () => {
             const model = ModelMix.new({
                 config: {
                     debug: false,
+                    max_history: -1,
                     bottleneck: {
                         maxConcurrent: 5,
                         minTime: 100,
@@ -385,6 +387,7 @@ describe('Rate Limiting with Bottleneck Tests', () => {
             const model = ModelMix.new({
                 config: {
                     debug: false,
+                    max_history: -1,
                     bottleneck: {
                         maxConcurrent: 1,
                         minTime: 200
@@ -432,6 +435,7 @@ describe('Rate Limiting with Bottleneck Tests', () => {
             const model = ModelMix.new({
                 config: {
                     debug: false,
+                    max_history: -1,
                     bottleneck: {
                         maxConcurrent: 2,
                         minTime: 100,
