@@ -1,3 +1,29 @@
+const META_KEYS = new Set(['description', 'required', 'enum', 'default']);
+
+function isDescriptor(value) {
+    if (!value || typeof value !== 'object' || Array.isArray(value)) return false;
+    const keys = Object.keys(value);
+    return keys.length > 0 && keys.every(k => META_KEYS.has(k));
+}
+
+function makeNullable(fieldSchema) {
+    if (!fieldSchema.type) return fieldSchema;
+    if (Array.isArray(fieldSchema.type)) {
+        if (!fieldSchema.type.includes('null')) fieldSchema.type.push('null');
+    } else {
+        fieldSchema.type = [fieldSchema.type, 'null'];
+    }
+    return fieldSchema;
+}
+
+function getNestedDescriptions(desc) {
+    if (!desc) return {};
+    if (typeof desc === 'string') return {};
+    if (Array.isArray(desc)) return desc[0] || {};
+    if (isDescriptor(desc)) return {};
+    return desc;
+}
+
 function generateJsonSchema(example, descriptions = {}) {
     function detectType(key, value) {
         if (value === null) return { type: 'null' };
@@ -32,7 +58,7 @@ function generateJsonSchema(example, descriptions = {}) {
             if (typeof value[0] === 'object' && !Array.isArray(value[0])) {
                 return {
                     type: 'array',
-                    items: generateJsonSchema(value[0], descriptions[key] || {})
+                    items: generateJsonSchema(value[0], getNestedDescriptions(descriptions[key]))
                 };
             } else {
                 return {
@@ -42,7 +68,7 @@ function generateJsonSchema(example, descriptions = {}) {
             }
         }
         if (typeof value === 'object') {
-            return generateJsonSchema(value, descriptions[key] || {});
+            return generateJsonSchema(value, getNestedDescriptions(descriptions[key]));
         }
         return {};
     }
@@ -65,13 +91,28 @@ function generateJsonSchema(example, descriptions = {}) {
 
     for (const key in example) {
         const fieldSchema = detectType(key, example[key]);
+        const desc = descriptions[key];
+        let isRequired = true;
 
-        if (descriptions[key] && typeof fieldSchema === 'object') {
-            fieldSchema.description = descriptions[key];
+        if (desc) {
+            if (typeof desc === 'string') {
+                fieldSchema.description = desc;
+            } else if (typeof desc === 'object' && !Array.isArray(desc) && isDescriptor(desc)) {
+                if (desc.description) fieldSchema.description = desc.description;
+                if (desc.enum) fieldSchema.enum = desc.enum;
+                if (desc.default !== undefined) fieldSchema.default = desc.default;
+                if (desc.required === false) {
+                    isRequired = false;
+                    makeNullable(fieldSchema);
+                }
+                if (desc.enum && desc.enum.includes(null)) {
+                    makeNullable(fieldSchema);
+                }
+            }
         }
 
         schema.properties[key] = fieldSchema;
-        schema.required.push(key);
+        if (isRequired) schema.required.push(key);
     }
 
     return schema;
