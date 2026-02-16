@@ -325,19 +325,14 @@ console.log(result);
 
 ### Adding field descriptions
 
-The second argument lets you describe each field so the model understands exactly what you expect:
+The second argument lets you describe each field so the model understands exactly what you expect. Descriptions can be **strings** (simple) or **descriptor objects** (with metadata):
 
 ```javascript
-const model = ModelMix.new()
-    .gpt5mini()
-    .addText('Name and capital of 3 South American countries.');
-
 const result = await model.json(
     { countries: [{ name: "Argentina", capital: "BUENOS AIRES" }] },
     { countries: [{ name: "name of the country", capital: "capital of the country in uppercase" }] },
     { addNote: true }
 );
-console.log(result);
 // { countries: [
 //   { name: "Brazil", capital: "BRASILIA" },
 //   { name: "Colombia", capital: "BOGOTA" },
@@ -345,7 +340,40 @@ console.log(result);
 // ]}
 ```
 
-The example values (like `"Argentina"` and `"BUENOS AIRES"`) show the model the expected format, while the descriptions clarify what each field should contain.
+### Enhanced descriptors
+
+Descriptions support **descriptor objects** with `description`, `required`, `enum`, and `default`:
+
+```javascript
+const result = await model.json(
+    { name: 'martin', age: 22, sex: 'm' },
+    {
+        name: { description: 'Name of the actor', required: false },
+        age: 'Age of the actor',                                     // string still works
+        sex: { description: 'Gender', enum: ['m', 'f', null], default: 'm' }
+    }
+);
+```
+
+| Property | Type | Default | Description |
+| --- | --- | --- | --- |
+| `description` | `string` | — | Field description for the model |
+| `required` | `boolean` | `true` | If `false`, field is removed from `required` and type becomes nullable |
+| `enum` | `array` | — | Allowed values. If includes `null`, type auto-becomes nullable |
+| `default` | `any` | — | Default value for the field |
+
+You can mix strings and descriptor objects freely in the same descriptions parameter.
+
+### Array auto-wrap
+
+When you pass a top-level array as the example, ModelMix automatically wraps it for better LLM compatibility and unwraps the result transparently:
+
+```javascript
+const result = await model.json([{ name: 'martin' }]);
+// result is an array: [{ name: "Martin" }, { name: "Carlos" }, ...]
+```
+
+Internally, the array is wrapped as `{ out: [...] }` so the model receives a proper object schema, then `result.out` is returned automatically.
 
 ### Options
 
@@ -491,15 +519,16 @@ new ModelMix(args = { options: {}, config: {} })
   - `tokens`: Object with `input`, `output`, and `total` token counts
   - `response`: The raw API response
 - `stream(callback)`: Sends the message and streams the response, invoking the callback with each streamed part.
-- `json(schemaExample, descriptions = {})`: Forces the model to return a response in a specific JSON format.
-  - `schemaExample`: Optional example of the JSON structure to be returned.
-  - `descriptions`: Optional descriptions for each field in the JSON structure
+- `json(schemaExample, descriptions = {}, options = {})`: Forces the model to return a response in a specific JSON format.
+  - `schemaExample`: Example of the JSON structure to be returned. Top-level arrays are auto-wrapped for better LLM compatibility.
+  - `descriptions`: Descriptions for each field — can be strings or descriptor objects with `{ description, required, enum, default }`.
+  - `options`: `{ addSchema: true, addExample: false, addNote: false }`
   - Returns a Promise that resolves to the structured JSON response
   - Example:
     ```javascript
     const response = await handler.json(
       { time: '24:00:00', message: 'Hello' },
-      { time: 'Time in format HH:MM:SS' }
+      { time: 'Time in format HH:MM:SS', message: { description: 'Greeting', required: false } }
     );
     ```
 - `block({ addText = true })`: Forces the model to return a response in a specific block format.

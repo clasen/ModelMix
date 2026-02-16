@@ -125,6 +125,36 @@ const result = await ModelMix.new()
 
 `json()` signature: `json(schemaExample, schemaDescription?, { addSchema, addExample, addNote }?)`
 
+#### Enhanced descriptors
+
+Descriptions can be **strings** or **descriptor objects** with metadata:
+
+```javascript
+const result = await model.json(
+    { name: 'martin', age: 22, sex: 'm' },
+    {
+        name: { description: 'Name of the actor', required: false },
+        age: 'Age of the actor',                                     // string still works
+        sex: { description: 'Gender', enum: ['m', 'f', null], default: 'm' }
+    }
+);
+```
+
+Descriptor properties:
+- `description` (string) — field description
+- `required` (boolean, default `true`) — if `false`: removed from required array, type becomes nullable
+- `enum` (array) — allowed values; if includes `null`, type auto-becomes nullable
+- `default` (any) — default value
+
+#### Array auto-wrap
+
+Top-level arrays are auto-wrapped as `{ out: [...] }` for better LLM compatibility, and unwrapped on return:
+
+```javascript
+const result = await model.json([{ name: 'martin' }]);
+// result is an array: [{ name: "Martin" }, { name: "Carlos" }, ...]
+```
+
 ### Stream a response
 
 ```javascript
@@ -282,7 +312,7 @@ const reply = await chat.message();  // "Martin"
 - Store API keys in `.env` and load with `dotenv/config` or `process.loadEnvFile()`. Never hardcode keys.
 - Chain models for resilience: primary model first, fallbacks after.
 - When using MCP tools or `addTool()`, set `max_history` to at least 3.
-- Use `.json()` for structured output instead of parsing text manually.
+- Use `.json()` for structured output instead of parsing text manually. Use descriptor objects `{ description, required, enum, default }` in descriptions for richer schema control.
 - Use `.message()` for simple text, `.raw()` when you need tokens/thinking/toolCalls.
 - For thinking models, append `think` to the method name (e.g. `sonnet45think()`).
 - Template placeholders use `{key}` syntax in both system prompts and user messages.
@@ -302,7 +332,7 @@ const reply = await chat.message();  // "Martin"
 | `.replace({})` | `this` | Set placeholder replacements |
 | `.replaceKeyFromFile(key, path)` | `this` | Replace placeholder with file content |
 | `.message()` | `Promise<string>` | Get text response |
-| `.json(example, desc?, opts?)` | `Promise<object>` | Get structured JSON |
+| `.json(example, desc?, opts?)` | `Promise<object\|array>` | Get structured JSON. Descriptions support descriptor objects `{ description, required, enum, default }`. Top-level arrays auto-wrapped |
 | `.raw()` | `Promise<{message, think, toolCalls, tokens, response}>` | Full response |
 | `.lastRaw` | `object \| null` | Full response from last `message()`/`json()`/`block()`/`stream()` call |
 | `.stream(callback)` | `Promise` | Stream response |

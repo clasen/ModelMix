@@ -1,4 +1,4 @@
-const META_KEYS = new Set(['description', 'required', 'enum', 'default']);
+const META_KEYS = new Set(['description', 'required', 'enum', 'default', 'nullable']);
 
 function isDescriptor(value) {
     if (!value || typeof value !== 'object' || Array.isArray(value)) return false;
@@ -103,6 +103,9 @@ function generateJsonSchema(example, descriptions = {}) {
                 if (desc.default !== undefined) fieldSchema.default = desc.default;
                 if (desc.required === false) {
                     isRequired = false;
+                    makeNullable(fieldSchema);
+                }
+                if (desc.nullable === true) {
                     makeNullable(fieldSchema);
                 }
                 if (desc.enum && desc.enum.includes(null)) {
