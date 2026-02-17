@@ -355,7 +355,7 @@ describe('JSON Schema and Structured Output Tests', () => {
                 }]
             };
             
-            model.gpt41().addText('List 3 countries');
+            model.gpt52().addText('List 3 countries');
             
             // Mock the API response
             nock('https://api.openai.com')
@@ -406,7 +406,7 @@ describe('JSON Schema and Structured Output Tests', () => {
                 }
             };
 
-            model.sonnet4().addText('Generate user data');
+            model.sonnet46().addText('Generate user data');
             
             // Mock the API response
             nock('https://api.anthropic.com')
@@ -427,7 +427,7 @@ describe('JSON Schema and Structured Output Tests', () => {
         });
 
         it('should handle JSON parsing errors gracefully', async () => {
-            model.gpt41().addText('Generate invalid JSON');
+            model.gpt52().addText('Generate invalid JSON');
             
             // Mock invalid JSON response
             nock('https://api.openai.com')
@@ -450,7 +450,7 @@ describe('JSON Schema and Structured Output Tests', () => {
         });
 
         it('should auto-wrap top-level array and unwrap on return', async () => {
-            model.gpt41().addText('List 3 countries');
+            model.gpt52().addText('List 3 countries');
 
             nock('https://api.openai.com')
                 .post('/v1/chat/completions')

@@ -2,7 +2,7 @@ process.loadEnvFile();
 import { ModelMix } from '../index.js';
 
 const model = await ModelMix.new({ options: { max_tokens: 10000 }, config: { debug: 3 } })
-    .gemini3flash()
+    .sonnet46()
     // .gptOss()
     // .scout({ config: { temperature: 0 } })    
     // .o4mini()

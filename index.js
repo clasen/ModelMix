@@ -31,6 +31,7 @@ const MODEL_PRICING = {
     'claude-opus-4-6': [5.00, 25.00],
     'claude-opus-4-5-20251101': [5.00, 25.00],
     'claude-opus-4-1-20250805': [15.00, 75.00],
+    'claude-sonnet-4-6': [3.00, 15.00],
     'claude-sonnet-4-5-20250929': [3.00, 15.00],
     'claude-sonnet-4-20250514': [3.00, 15.00],
     'claude-3-5-haiku-20241022': [0.80, 4.00],
@@ -305,6 +306,14 @@ class ModelMix {
         options = { ...MixAnthropic.thinkingOptions, ...options };
         return this.attach('claude-sonnet-4-20250514', new MixAnthropic({ options, config }));
     }
+    sonnet46({ options = {}, config = {} } = {}) {
+        return this.attach('claude-sonnet-4-6', new MixAnthropic({ options, config }));
+    }
+    sonnet46think({ options = {}, config = {} } = {}) {
+        options = { ...MixAnthropic.thinkingOptions, ...options };
+        return this.attach('claude-sonnet-4-6', new MixAnthropic({ options, config }));
+    }
+
     sonnet45({ options = {}, config = {} } = {}) {
         return this.attach('claude-sonnet-4-5-20250929', new MixAnthropic({ options, config }));
     }
@@ -775,16 +784,13 @@ class ModelMix {
         if (this.config.max_history > 0) {
             let sliceStart = Math.max(0, this.messages.length - this.config.max_history);
 
-            // If we're slicing and there's a tool message at the start, 
-            // ensure we include the preceding assistant message with tool_calls
-            while (sliceStart > 0 &&
-                sliceStart < this.messages.length &&
-                this.messages[sliceStart].role === 'tool') {
-                sliceStart--;
-                // Also need to include the assistant message with tool_calls
-                if (sliceStart > 0 &&
-                    this.messages[sliceStart].role === 'assistant' &&
-                    this.messages[sliceStart].tool_calls) {
+            // If we're slicing into the middle of a tool interaction,
+            // backtrack to include the full sequence (user → assistant/tool_calls → tool results)
+            while (sliceStart > 0 && sliceStart < this.messages.length) {
+                const msg = this.messages[sliceStart];
+                if (msg.role === 'tool' || (msg.role === 'assistant' && msg.tool_calls)) {
+                    sliceStart--;
+                } else {
                     break;
                 }
             }
@@ -913,11 +919,12 @@ class ModelMix {
                             this.messages.push({
                                 role: 'tool',
                                 tool_call_id: toolResult.tool_call_id,
+                                name: toolResult.name,
                                 content: toolResult.content
                             });
                         }
 
-                        return this.execute();
+                        return this.execute({ options, config });
                     }
 
                     // debug level 1: Just success indicator
@@ -1567,6 +1574,18 @@ class MixAnthropic extends MixCustom {
 
         return filteredMessages.map(message => {
             if (message.role === 'tool') {
+                // Handle new format: tool_call_id directly on message
+                if (message.tool_call_id) {
+                    return {
+                        role: "user",
+                        content: [{
+                            type: "tool_result",
+                            tool_use_id: message.tool_call_id,
+                            content: message.content
+                        }]
+                    }
+                }
+                // Handle old format: content is an array
                 return {
                     role: "user",
                     content: message.content.map(content => ({
@@ -1997,13 +2016,33 @@ class MixGoogle extends MixCustom {
             if (message.role === 'assistant' && message.tool_calls) {
                 return {
                     role: 'model',
-                    parts: message.tool_calls.map(toolCall => ({
-                        functionCall: {
-                            name: toolCall.function.name,
-                            args: JSON.parse(toolCall.function.arguments)
-                        },
-                        thought_signature: toolCall.thought_signature || ""
-                    }))
+                    parts: message.tool_calls.map(toolCall => {
+                        const part = {
+                            functionCall: {
+                                name: toolCall.function.name,
+                                args: JSON.parse(toolCall.function.arguments)
+                            }
+                        };
+                        if (toolCall.thought_signature) {
+                            part.thoughtSignature = toolCall.thought_signature;
+                        }
+                        return part;
+                    })
+                }
+            }
+
+            // Handle new tool result format: tool_call_id and name directly on message
+            if (message.role === 'tool' && message.name) {
+                return {
+                    role: 'user',
+                    parts: [{
+                        functionResponse: {
+                            name: message.name,
+                            response: {
+                                output: message.content,
+                            },
+                        }
+                    }]
                 }
             }
 
@@ -2011,6 +2050,7 @@ class MixGoogle extends MixCustom {
             const role = (message.role === 'assistant' || message.role === 'tool') ? 'model' : 'user'
 
             if (message.role === 'tool') {
+                // Handle old format: content is an array of {name, content}
                 return {
                     role,
                     parts: message.content.map(content => ({
@@ -2053,6 +2093,22 @@ class MixGoogle extends MixCustom {
                 })
             }
         });
+
+        // Merge consecutive user messages containing only functionResponse parts
+        // Google requires all function responses for a turn in a single message
+        return converted.reduce((acc, msg) => {
+            if (acc.length > 0) {
+                const prev = acc[acc.length - 1];
+                if (prev.role === 'user' && msg.role === 'user' &&
+                    prev.parts.every(p => p.functionResponse) &&
+                    msg.parts.every(p => p.functionResponse)) {
+                    prev.parts.push(...msg.parts);
+                    return acc;
+                }
+            }
+            acc.push(msg);
+            return acc;
+        }, []);
     }
 
     async create({ config = {}, options = {} } = {}) {
@@ -2078,7 +2134,13 @@ class MixGoogle extends MixCustom {
             generationConfig.topP = options.top_p;
         }
 
-        generationConfig.responseMimeType = "text/plain";
+        // Gemini does not support responseMimeType when function calling is used
+        const hasTools = options.tools && options.tools.length > 0 &&
+            options.tools.some(t => t.functionDeclarations && t.functionDeclarations.length > 0);
+
+        if (!hasTools) {
+            generationConfig.responseMimeType = "text/plain";
+        }
 
         const payload = {
             generationConfig,
@@ -2160,6 +2222,21 @@ class MixGoogle extends MixCustom {
         };
     }
 
+    static stripUnsupportedSchemaProps(schema) {
+        if (!schema || typeof schema !== 'object') return schema;
+        const cleaned = { ...schema };
+        delete cleaned.default;
+        if (cleaned.properties) {
+            cleaned.properties = Object.fromEntries(
+                Object.entries(cleaned.properties).map(([key, value]) => [key, MixGoogle.stripUnsupportedSchemaProps(value)])
+            );
+        }
+        if (cleaned.items) {
+            cleaned.items = MixGoogle.stripUnsupportedSchemaProps(cleaned.items);
+        }
+        return cleaned;
+    }
+
     static getOptionsTools(tools) {
         const functionDeclarations = [];
         for (const tool in tools) {
@@ -2167,7 +2244,7 @@ class MixGoogle extends MixCustom {
                 functionDeclarations.push({
                     name: item.name,
                     description: item.description,
-                    parameters: item.inputSchema
+                    parameters: MixGoogle.stripUnsupportedSchemaProps(item.inputSchema)
                 });
             }
         }

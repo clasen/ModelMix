@@ -47,7 +47,7 @@ describe('Conversation History Tests', () => {
         });
 
         it('should add assistant response to message history after raw()', async () => {
-            model.sonnet4().addText('Hello');
+            model.sonnet46().addText('Hello');
 
             nock('https://api.anthropic.com')
                 .post('/v1/messages')
@@ -128,7 +128,7 @@ describe('Conversation History Tests', () => {
             const model = ModelMix.new({
                 config: { debug: false, max_history: 10 }
             });
-            model.sonnet4();
+            model.sonnet46();
 
             // First turn
             model.addText('Capital of France?');
@@ -426,7 +426,7 @@ describe('Conversation History Tests', () => {
             const model = ModelMix.new({
                 config: { debug: false, max_history: 10 }
             });
-            model.haiku35();
+            model.haiku45();
 
             model.addText('Hello');
             nock('https://api.anthropic.com')
@@ -460,7 +460,7 @@ describe('Conversation History Tests', () => {
             const model = ModelMix.new({
                 config: { debug: false, max_history: 10 }
             });
-            model.gemini25flash();
+            model.gemini3flash();
 
             model.addText('Hello');
             nock('https://generativelanguage.googleapis.com')

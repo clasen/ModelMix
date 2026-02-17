@@ -47,7 +47,7 @@ import { ModelMix } from 'modelmix';
 
 // Get structured JSON responses
 const model = ModelMix.new()
-    .sonnet45() // Anthropic claude-sonnet-4-20250514
+    .sonnet46() // Anthropic claude-sonnet-4-6
     .addText("Name and capital of 3 South American countries.");
 
 const outputExample = { countries: [{ name: "", capital: "" }] };
@@ -65,7 +65,7 @@ const setup = {
 };
 
 const model = await ModelMix.new(setup)
-    .sonnet45() // (main model) Anthropic claude-sonnet-4-5-20250929
+    .sonnet46() // (main model) Anthropic claude-sonnet-4-5-20250929
     .gpt5mini() // (fallback 2) OpenAI gpt-5-mini
     .gemini3flash({ config: { temperature: 0 } }) // (fallback 3) Google gemini-3-flash
     .grok3mini() // (fallback 4) Grok grok-3-mini
@@ -146,9 +146,8 @@ Here's a comprehensive list of available methods:
 | `gptOss()`         | Together   | gpt-oss-120B                   | [\$0.15 / \$0.60][7]       |
 | `opus46[think]()`  | Anthropic  | claude-opus-4-6                | [\$5.00 / \$25.00][2]      |
 | `opus45[think]()`  | Anthropic  | claude-opus-4-5-20251101       | [\$5.00 / \$25.00][2]      |
-| `opus41[think]()`  | Anthropic  | claude-opus-4-1-20250805       | [\$15.00 / \$75.00][2]     |
+| `sonnet46[think]()`| Anthropic  | claude-sonnet-4-6              | [\$3.00 / \$15.00][2]      |
 | `sonnet45[think]()`| Anthropic  | claude-sonnet-4-5-20250929     | [\$3.00 / \$15.00][2]      |
-| `sonnet4[think]()` | Anthropic  | claude-sonnet-4-20250514       | [\$3.00 / \$15.00][2]      |
 | `haiku35()`        | Anthropic  | claude-3-5-haiku-20241022      | [\$0.80 / \$4.00][2]       |
 | `haiku45[think]()` | Anthropic  | claude-haiku-4-5-20251001      | [\$1.00 / \$5.00][2]       |
 | `gemini3pro()`     | Google     | gemini-3-pro-preview           | [\$2.00 / \$12.00][3]      |
@@ -208,7 +207,7 @@ ModelMix includes a simple but powerful templating system. You can write your sy
 ### Basic example with `replace`
 
 ```javascript
-const gpt = ModelMix.new().gpt5mini();
+const gpt = ModelMix.new().gpt52();
 
 gpt.addText('Write a short story about a {animal} that lives in {place}.');
 gpt.replace({ '{animal}': 'cat', '{place}': 'a haunted castle' });

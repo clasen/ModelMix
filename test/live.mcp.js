@@ -31,8 +31,8 @@ describe('Live MCP Integration Tests', function () {
 
     describe('Basic MCP Tool Integration', function () {
 
-        it('should use custom MCP tools with GPT-4.1', async function () {
-            const model = ModelMix.new(setup).gpt41();
+        it('should use custom MCP tools with GPT-5.2', async function () {
+            const model = ModelMix.new(setup).gpt52();
 
             // Add custom calculator tool
             model.addTool({
@@ -68,8 +68,8 @@ describe('Live MCP Integration Tests', function () {
             expect(response).to.include('345');
         });
 
-        it('should use custom MCP tools with Claude Sonnet 4', async function () {
-            const model = ModelMix.new(setup).sonnet4();
+        it('should use custom MCP tools with Claude Sonnet 4.6', async function () {
+            const model = ModelMix.new(setup).sonnet46();
 
             // Add time tool
             model.addTool({
@@ -505,7 +505,7 @@ describe('Live MCP Integration Tests', function () {
             const models = [
                 { name: 'GPT-5 Mini', model: ModelMix.new(setup).gpt5mini() },
                 { name: 'GPT-5 Nano', model: ModelMix.new(setup).gpt5nano() },
-                { name: 'GPT-4.1', model: ModelMix.new(setup).gpt41() }
+                { name: 'GPT-5.2', model: ModelMix.new(setup).gpt52() }
             ];
 
             const results = [];
@@ -528,8 +528,8 @@ describe('Live MCP Integration Tests', function () {
 
         it('should work with same MCP tools across different Anthropic models', async function () {
             const models = [
-                { name: 'Sonnet 4', model: ModelMix.new(setup).sonnet4() },
-                { name: 'Sonnet 4.5', model: ModelMix.new(setup).sonnet45() },
+                { name: 'Sonnet 4', model: ModelMix.new(setup).sonnet46() },
+                { name: 'Sonnet 4.6', model: ModelMix.new(setup).sonnet46() },
                 { name: 'Haiku 4.5', model: ModelMix.new(setup).haiku45() }
             ];
 

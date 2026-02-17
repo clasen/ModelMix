@@ -41,14 +41,14 @@ describe('Live Integration Tests', function () {
 
             const response = await model.message();
 
-            console.log(`OpenAI GPT-4o response: ${response}`);
+            console.log(`OpenAI GPT-5.2 response: ${response}`);
 
             expect(response).to.be.a('string');
             expect(response.toLowerCase()).to.include('blue');
         });
 
-        it('should process images with Anthropic Claude', async function () {
-            const model = ModelMix.new(setup).sonnet45();
+        it('should process images with Anthropic Sonnet 4.6', async function () {
+            const model = ModelMix.new(setup).sonnet46();
 
             model.addImageFromUrl(blueSquareBase64)
                 .addText('What color is this image? Answer in one word only.');
@@ -61,7 +61,7 @@ describe('Live Integration Tests', function () {
         });
 
         it('should process images with Google Gemini', async function () {
-            const model = ModelMix.new(setup).gemini25flash();
+            const model = ModelMix.new(setup).gemini3flash();
 
             model.addImageFromUrl(blueSquareBase64)
                 .addText('What color is this image? Answer in one word only.');
@@ -99,8 +99,8 @@ describe('Live Integration Tests', function () {
             expect(result.skills).to.be.an('array');
         });
 
-        it('should return structured JSON with Sonnet 4.5 thinking', async function () {
-            const model = ModelMix.new(setup).sonnet45think();
+        it('should return structured JSON with Sonnet 4.6 thinking', async function () {
+            const model = ModelMix.new(setup).sonnet46think();
 
             model.addText('Generate information about a fictional city.');
 
@@ -122,7 +122,7 @@ describe('Live Integration Tests', function () {
         });
 
         it('should return structured JSON with Google Gemini', async function () {
-            const model = ModelMix.new(setup).gemini25flash();
+            const model = ModelMix.new(setup).gemini3flash();
 
             model.addText('Generate information about a fictional city.');
 
@@ -152,7 +152,7 @@ describe('Live Integration Tests', function () {
             // Create a model chain: non-existent model -> Claude
             const model = ModelMix.new(setup)
                 .attach('non-existent-model', new MixOpenAI())
-                .sonnet4();
+                .sonnet46();
 
             model.addText('Say "fallback test successful" and nothing else.');
 

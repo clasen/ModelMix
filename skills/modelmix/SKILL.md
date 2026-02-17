@@ -75,8 +75,8 @@ Chain shorthand methods to attach providers. First model is primary; others are 
 
 ```javascript
 const model = ModelMix.new()
-    .sonnet45()        // primary
-    .gpt5mini()        // fallback 1
+    .sonnet46()        // primary
+    .gpt52()        // fallback 1
     .gemini3flash()    // fallback 2
     .addText("Hello!")
 ```
@@ -86,7 +86,7 @@ If `sonnet45` fails, it automatically tries `gpt5mini`, then `gemini3flash`.
 ## Available Model Shorthands
 
 - **OpenAI**: `gpt52` `gpt51` `gpt5` `gpt5mini` `gpt5nano` `gpt41` `gpt41mini` `gpt41nano`
-- **Anthropic**: `opus46` `opus45` `sonnet45` `sonnet4` `haiku45` `haiku35` (thinking variants: add `think` suffix)
+- **Anthropic**: `opus46` `opus45` `sonnet46` `sonnet45` `haiku45` `haiku35` (thinking variants: add `think` suffix)
 - **Google**: `gemini3pro` `gemini3flash` `gemini25pro` `gemini25flash`
 - **Grok**: `grok4` `grok41` (thinking variant available)
 - **Perplexity**: `sonar` `sonarPro`
@@ -131,11 +131,11 @@ Descriptions can be **strings** or **descriptor objects** with metadata:
 
 ```javascript
 const result = await model.json(
-    { name: 'martin', age: 22, sex: 'm' },
+    { name: 'martin', age: 22, sex: 'Male' },
     {
         name: { description: 'Name of the actor', required: false },
         age: 'Age of the actor',                                     // string still works
-        sex: { description: 'Gender', enum: ['m', 'f', null], default: 'm' }
+        sex: { description: 'Gender', enum: ['Male', 'Female', null] }
     }
 );
 ```

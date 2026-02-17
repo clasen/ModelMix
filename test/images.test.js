@@ -25,7 +25,7 @@ describe('Image Processing and Multimodal Support Tests', () => {
         it('should handle base64 image data correctly', async () => {
             const base64Image = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAoAAAAKCAYAAACNMs+9AAAAFUlEQVR42mP8z8BQz0AEYBxVSF+FABJADveWkH6oAAAAAElFTkSuQmCC';
 
-            model.gpt41()
+            model.gpt52()
                 .addText('What do you see in this image?')
                 .addImageFromUrl(base64Image);
 
@@ -50,10 +50,10 @@ describe('Image Processing and Multimodal Support Tests', () => {
             expect(response).to.include('I can see a small test image');
         });
 
-        it('should support multimodal with sonnet4()', async () => {
+        it('should support multimodal with sonnet46()', async () => {
             const base64Image = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAoAAAAKCAYAAACNMs+9AAAAFUlEQVR42mP8z8BQz0AEYBxVSF+FABJADveWkH6oAAAAAElFTkSuQmCC';
 
-            model.sonnet4()
+            model.sonnet46()
                 .addText('Describe this image')
                 .addImageFromUrl(base64Image);
 

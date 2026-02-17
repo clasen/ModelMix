@@ -1,7 +1,22 @@
 import { expect } from 'chai';
 import { ModelMix } from '../index.js';
+import { createRequire } from 'module';
+
+const require = createRequire(import.meta.url);
+const nock = require('nock');
 
 describe('Token Usage Tracking', () => {
+
+    // Ensure nock doesn't interfere with live requests via MockHttpSocket
+    before(function() {
+        nock.cleanAll();
+        nock.restore();
+    });
+
+    after(function() {
+        // Re-activate nock for any subsequent test suites
+        nock.activate();
+    });
 
     it('should track tokens in OpenAI response', async function () {
         this.timeout(30000);
@@ -30,7 +45,7 @@ describe('Token Usage Tracking', () => {
         this.timeout(30000);
 
         const model = ModelMix.new()
-            .haiku35()
+            .haiku45()
             .addText('Say hi');
 
         const result = await model.raw();
@@ -49,7 +64,7 @@ describe('Token Usage Tracking', () => {
         this.timeout(30000);
 
         const model = ModelMix.new()
-            .gemini25flash()
+            .gemini3flash()
             .addText('Say hi');
 
         const result = await model.raw();
@@ -110,8 +125,8 @@ describe('Token Usage Tracking', () => {
 
         const providers = [
             { name: 'OpenAI', create: (m) => m.gpt5nano() },
-            { name: 'Anthropic', create: (m) => m.haiku35() },
-            { name: 'Google', create: (m) => m.gemini25flash() }
+            { name: 'Anthropic', create: (m) => m.haiku45() },
+            { name: 'Google', create: (m) => m.gemini3flash() }
         ];
 
         for (const provider of providers) {
