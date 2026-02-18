@@ -1,6 +1,6 @@
-process.loadEnvFile();
 import { ModelMix } from '../index.js';
 import ivm from 'isolated-vm';
+try { process.loadEnvFile(); } catch {}
 
 console.log('🧬 ModelMix - RLM (Recursive Language Model) Demo');
 console.log('📄 Basado en: https://arxiv.org/html/2512.24601v1\n');

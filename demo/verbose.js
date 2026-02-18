@@ -1,5 +1,5 @@
-process.loadEnvFile();
 import { ModelMix, MixOpenAI } from '../index.js';
+try { process.loadEnvFile(); } catch {}
 
 const prompt = "Say 'Hello World' in exactly 2 words.";
 

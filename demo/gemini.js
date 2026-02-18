@@ -1,6 +1,6 @@
-process.loadEnvFile();
-
 import { ModelMix, MixGoogle } from '../index.js';
+try { process.loadEnvFile(); } catch {}
+
 const mmix = new ModelMix({
     options: {
         max_tokens: 2000,

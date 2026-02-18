@@ -1,5 +1,5 @@
-process.loadEnvFile();
 import { ModelMix } from '../index.js';
+try { process.loadEnvFile(); } catch {}
 
 const model = ModelMix.new({ config: { max_history: 2, debug: 2 } }).maverick()
 // model.addImageFromUrl('https://pbs.twimg.com/media/F6-GsjraAAADDGy?format=jpg');

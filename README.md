@@ -42,8 +42,8 @@ For environment variables, use `dotenv` or Node's built-in `process.loadEnvFile(
 3. **Create and configure your models**:
 
 ```javascript
-process.loadEnvFile();
 import { ModelMix } from 'modelmix';
+try { process.loadEnvFile(); } catch {}
 
 // Get structured JSON responses
 const model = ModelMix.new()

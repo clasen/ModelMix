@@ -1,5 +1,5 @@
-process.loadEnvFile();
 import { ModelMix } from '../index.js';
+try { process.loadEnvFile(); } catch {}
 
 const ai = ModelMix.new({ config: { debug: 2 } })
     .gptOss()

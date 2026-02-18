@@ -1,6 +1,6 @@
-process.loadEnvFile();
 import { ModelMix } from '../index.js';
 import ivm from 'isolated-vm';
+try { process.loadEnvFile(); } catch {}
 
 console.log('🧬 ModelMix - IVM + mmix Callback Demo');
 

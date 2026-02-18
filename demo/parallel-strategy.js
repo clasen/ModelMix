@@ -23,8 +23,8 @@
  * This is GENERIC - works with any data structure, not hardcoded for specific use cases.
  */
 
-process.loadEnvFile();
 import { ModelMix } from '../index.js';
+try { process.loadEnvFile(); } catch {}
 
 console.log('🧬 ModelMix - RLM (Recursive Language Models) Demo');
 console.log('🎯 Generic parallel strategy with environment variables\n');

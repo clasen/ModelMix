@@ -1,7 +1,7 @@
-process.loadEnvFile();
 import { ModelMix } from '../index.js';
 import fs from 'fs';
 import axios from 'axios';
+try { process.loadEnvFile(); } catch {}
 
 console.log('🧬 ModelMix - MCP Tools Demo with Callbacks');
 

@@ -1,5 +1,5 @@
-process.loadEnvFile();
 import { ModelMix } from '../index.js';
+try { process.loadEnvFile(); } catch {}
 
 console.log('🧬 RLM Basic Demo - Recursive Language Model');
 console.log('📖 Inspired by: https://arxiv.org/html/2512.24601v1\n');

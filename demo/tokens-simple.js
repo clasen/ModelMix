@@ -1,5 +1,5 @@
-process.loadEnvFile();
 import { ModelMix } from '../index.js';
+try { process.loadEnvFile(); } catch {}
 
 // Ejemplo simple: obtener información de tokens
 const model = ModelMix.new()

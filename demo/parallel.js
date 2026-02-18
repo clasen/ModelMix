@@ -1,6 +1,5 @@
 import { ModelMix } from '../index.js';
-
-process.loadEnvFile();
+try { process.loadEnvFile(); } catch {}
 
 const mix = new ModelMix({
     options: {

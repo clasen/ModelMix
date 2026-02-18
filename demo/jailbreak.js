@@ -1,5 +1,5 @@
-import 'dotenv/config';
 import { ModelMix, MixLMStudio } from '../index.js';
+try { process.loadEnvFile(); } catch {}
 
 const mmix = ModelMix.new({ options: { max_tokens: 10000 }, config: { debug: true } })
     .grok41think()

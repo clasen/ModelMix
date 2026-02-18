@@ -1,5 +1,5 @@
-process.loadEnvFile();
 import { ModelMix } from '../index.js';
+try { process.loadEnvFile(); } catch {}
 
 console.log('\n🔢 Token Usage Tracking Demo\n');
 console.log('='.repeat(60));

@@ -1,7 +1,5 @@
 import { ModelMix } from '../index.js';
-process.loadEnvFile();
-
-
+try { process.loadEnvFile(); } catch {}
 
 const main = async () => {
 
