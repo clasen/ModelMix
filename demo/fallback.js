@@ -1,6 +1,7 @@
-import { ModelMix, MixOpenAI, MixAnthropic, MixGrok } from '../index.js';
-import dotenv from 'dotenv';
-dotenv.config();
+import { ModelMix } from '../index.js';
+
+process.loadEnvFile();
+
 
 const mmix = new ModelMix({
     config: {

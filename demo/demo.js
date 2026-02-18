@@ -1,6 +1,5 @@
-import 'dotenv/config';
+process.loadEnvFile();
 import { ModelMix } from '../index.js';
-
 
 const mmix = new ModelMix({
     options: {
@@ -13,7 +12,6 @@ const mmix = new ModelMix({
         debug: 3,
     }
 });
-
 
 const pplxSettings = {
     config: {

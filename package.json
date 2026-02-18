@@ -1,6 +1,6 @@
 {
   "name": "modelmix",
-  "version": "4.4.8",
+  "version": "4.4.11",
   "description": "🧬 Reliable interface with automatic fallback for AI LLMs.",
   "main": "index.js",
   "repository": {
@@ -56,21 +56,20 @@
   },
   "devDependencies": {
     "chai": "^5.2.1",
-    "dotenv": "^17.2.1",
     "mocha": "^11.3.0",
     "nock": "^14.0.9",
     "sinon": "^21.0.0"
   },
   "scripts": {
-    "test": "mocha test/**/*.js --timeout 10000 --require dotenv/config --require test/setup.js",
+    "test": "mocha test/**/*.js --timeout 10000 --require test/setup.js",
     "test:watch": "mocha test/**/*.js --watch --timeout 10000 --require test/setup.js",
     "test:json": "mocha test/json.test.js --timeout 10000 --require test/setup.js",
     "test:fallback": "mocha test/fallback.test.js --timeout 10000 --require test/setup.js",
     "test:templates": "mocha test/templates.test.js --timeout 10000 --require test/setup.js",
     "test:images": "mocha test/images.test.js --timeout 10000 --require test/setup.js",
     "test:bottleneck": "mocha test/bottleneck.test.js --timeout 10000 --require test/setup.js",
-    "test:live": "mocha test/live.test.js --timeout 10000 --require dotenv/config --require test/setup.js",
-    "test:live.mcp": "mocha test/live.mcp.js --timeout 60000 --require dotenv/config --require test/setup.js",
-    "test:tokens": "mocha test/tokens.test.js --timeout 10000 --require dotenv/config --require test/setup.js"
+    "test:live": "mocha test/live.test.js --timeout 10000 --require test/setup.js",
+    "test:live.mcp": "mocha test/live.mcp.js --timeout 60000 --require test/setup.js",
+    "test:tokens": "mocha test/tokens.test.js --timeout 10000 --require test/setup.js"
   }
 }

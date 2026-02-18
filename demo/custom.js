@@ -1,4 +1,4 @@
-import 'dotenv/config'
+process.loadEnvFile();
 
 import { ModelMix, MixCustom } from '../index.js';
 

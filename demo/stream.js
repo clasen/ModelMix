@@ -1,4 +1,4 @@
-import 'dotenv/config'
+process.loadEnvFile();
 import { ModelMix } from '../index.js';
 
 await ModelMix.new().gpt41nano()

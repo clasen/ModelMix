@@ -1,4 +1,5 @@
-import 'dotenv/config'
+process.loadEnvFile();
+
 import { ModelMix, MixTogether } from '../index.js';
 
 const setup = { config: { system: "You are ALF from Melmac." } };

@@ -1,5 +1,6 @@
-import 'dotenv/config';
-import { ModelMix, MixOpenAI } from '../index.js';
+import { ModelMix } from '../index.js';
+
+process.loadEnvFile();
 
 const mix = new ModelMix({
     options: {

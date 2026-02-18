@@ -5,6 +5,9 @@
  * It runs before each test suite and sets up the testing environment.
  */
 
+// Load .env file if present (native Node.js, no dotenv dependency required)
+try { process.loadEnvFile(); } catch {}
+
 // Set dummy environment variables for testing to prevent library errors
 
 const chai = require('chai');
