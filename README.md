@@ -148,7 +148,6 @@ Here's a comprehensive list of available methods:
 | `opus45[think]()`  | Anthropic  | claude-opus-4-5-20251101       | [\$5.00 / \$25.00][2]      |
 | `sonnet46[think]()`| Anthropic  | claude-sonnet-4-6              | [\$3.00 / \$15.00][2]      |
 | `sonnet45[think]()`| Anthropic  | claude-sonnet-4-5-20250929     | [\$3.00 / \$15.00][2]      |
-| `haiku35()`        | Anthropic  | claude-3-5-haiku-20241022      | [\$0.80 / \$4.00][2]       |
 | `haiku45[think]()` | Anthropic  | claude-haiku-4-5-20251001      | [\$1.00 / \$5.00][2]       |
 | `gemini3pro()`     | Google     | gemini-3-pro-preview           | [\$2.00 / \$12.00][3]      |
 | `gemini3flash()`    | Google     | gemini-3-flash-preview          | [\$0.50 / \$3.00][3]       |
@@ -161,8 +160,6 @@ Here's a comprehensive list of available methods:
 | `minimaxM25()`     | MiniMax    | MiniMax-M2.5                   | [\$0.30 / \$1.20][9]       |
 | `sonar()`          | Perplexity | sonar                          | [\$1.00 / \$1.00][4]       |
 | `sonarPro()`       | Perplexity | sonar-pro                      | [\$3.00 / \$15.00][4]      |
-| `scout()`          | Groq       | Llama-4-Scout-17B-16E-Instruct | [\$0.11 / \$0.34][5]       |
-| `maverick()`       | Groq       | Maverick-17B-128E-Instruct-FP8 | [\$0.20 / \$0.60][5]       |
 | `hermes3()`        | Lambda     | Hermes-3-Llama-3.1-405B-FP8    | [\$0.80 / \$0.80][8]       |
 | `qwen3()`          | Together   | Qwen3-235B-A22B-fp8-tput       | [\$0.20 / \$0.60][7]       |
 | `kimiK2()`         | Together   | Kimi-K2-Instruct               | [\$1.00 / \$3.00][7]       |
