@@ -889,11 +889,14 @@ class ModelMix {
                         providerInstance.streamCallback = this.streamCallback;
                     }
 
+                    const startTime = Date.now();
                     const result = await providerInstance.create({ options: currentOptions, config: currentConfig });
+                    const elapsedMs = Date.now() - startTime;
 
-                    // Calculate cost based on model pricing
                     if (result.tokens) {
                         result.tokens.cost = ModelMix.calculateCost(currentModelKey, result.tokens);
+                        const elapsedSec = elapsedMs / 1000;
+                        result.tokens.speed = elapsedSec > 0 ? Math.round(result.tokens.output / elapsedSec) : 0;
                     }
 
                     if (result.toolCalls && result.toolCalls.length > 0) {
@@ -935,7 +938,7 @@ class ModelMix {
                     // debug level 2: Readable summary of output
                     if (currentConfig.debug >= 2) {
                         const tokenInfo = result.tokens
-                            ? ` ${result.tokens.input} → ${result.tokens.output} tok` + (result.tokens.cost != null ? ` $${result.tokens.cost.toFixed(4)}` : '')
+                            ? ` ${result.tokens.input} → ${result.tokens.output} tok` + (result.tokens.speed ? ` ${result.tokens.speed} t/s` : '') + (result.tokens.cost != null ? ` $${result.tokens.cost.toFixed(4)}` : '')
                             : '';
                         console.log(`✓${tokenInfo}\n${ModelMix.formatOutputSummary(result, currentConfig.debug).trim()}`);
                     }

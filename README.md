@@ -406,7 +406,9 @@ Every response from `raw()` now includes a `tokens` object with the following st
   tokens: {
     input: 150,    // Number of tokens in the prompt/input
     output: 75,    // Number of tokens in the completion/output
-    total: 225     // Total tokens used (input + output)
+    total: 225,    // Total tokens used (input + output)
+    cost: 0.0012,  // Estimated cost in USD (null if model not in pricing table)
+    speed: 42      // Output tokens per second (int)
   }
 }
 ```
@@ -418,10 +420,10 @@ After calling `message()` or `json()`, use `lastRaw` to access the complete resp
 ```javascript
 const text = await model.message();
 console.log(model.lastRaw.tokens);
-// { input: 122, output: 86, total: 541, cost: 0.000319 }
+// { input: 122, output: 86, total: 541, cost: 0.000319, speed: 38 }
 ```
 
-The `cost` field is the estimated cost in USD based on the model's pricing per 1M tokens (input/output). If the model is not found in the pricing table, `cost` will be `null`.
+The `cost` field is the estimated cost in USD based on the model's pricing per 1M tokens (input/output). If the model is not found in the pricing table, `cost` will be `null`. The `speed` field is the generation speed measured in output tokens per second (integer).
 
 ## 🐛 Enabling Debug Mode
 
@@ -515,7 +517,7 @@ new ModelMix(args = { options: {}, config: {} })
   - `message`: The text response from the model
   - `think`: Reasoning/thinking content (if available)
   - `toolCalls`: Array of tool calls made by the model (if any)
-  - `tokens`: Object with `input`, `output`, and `total` token counts
+  - `tokens`: Object with `input`, `output`, `total` token counts, `cost` (USD), and `speed` (output tokens/sec)
   - `response`: The raw API response
 - `stream(callback)`: Sends the message and streams the response, invoking the callback with each streamed part.
 - `json(schemaExample, descriptions = {}, options = {})`: Forces the model to return a response in a specific JSON format.
