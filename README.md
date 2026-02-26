@@ -342,11 +342,11 @@ Descriptions support **descriptor objects** with `description`, `required`, `enu
 
 ```javascript
 const result = await model.json(
-    { name: 'martin', age: 22, sex: 'm' },
+    { name: 'Martin', age: 22, sex: 'male' },
     {
         name: { description: 'Name of the actor', required: false },
-        age: 'Age of the actor',                                     // string still works
-        sex: { description: 'Gender', enum: ['m', 'f', null], default: 'm' }
+        age: 'Age of the actor', // string still works
+        sex: { description: 'Gender', enum: ['male', 'female', null], default: null }
     }
 );
 ```
