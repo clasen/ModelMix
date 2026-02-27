@@ -1,5 +1,5 @@
 import { ModelMix, MixGoogle } from '../index.js';
-try { process.loadEnvFile(); } catch {}
+try { process.loadEnvFile(); } catch { }
 
 const mmix = new ModelMix({
     options: {
@@ -12,9 +12,9 @@ const mmix = new ModelMix({
     }
 });
 
-// Using gemini25flash (Gemini 2.5 Flash) with built-in method
+// Using gemini3flash (Gemini 3 Flash) with built-in method
 console.log("\n" + '--------| gemini25flash() |--------');
-const flash = await mmix.gemini25flash()
+const flash = await mmix.gemini3flash()
     .addText('Hi there! Do you like cats?')
     .message();
 
@@ -22,20 +22,23 @@ console.log(flash);
 
 // Using gemini3pro (Gemini 3 Pro) with custom config
 console.log("\n" + '--------| gemini3pro() with JSON response |--------');
-const pro = mmix.new().gemini3pro();
+const pro = mmix.new().gemini31pro();
 
 pro.addText('Give me a fun fact about cats');
-const jsonResponse = await pro.json({ 
+
+const jsonExampleAndSchema = {
     fact: 'A fun fact about cats',
-    category: 'animal behavior' 
-});
+    category: 'animal behavior'
+};
+
+const jsonResponse = await pro.json(jsonExampleAndSchema, jsonExampleAndSchema);
 
 console.log(jsonResponse);
 
 // Using attach method with MixGoogle for custom model
 console.log("\n" + '--------| Custom Gemini with attach() |--------');
-mmix.attach('gemini-2.5-flash', new MixGoogle());
+const customModel = mmix.new().attach('gemini-2.5-flash', new MixGoogle());
 
-const custom = await mmix.addText('Tell me a short joke about cats.').message();
+const custom = await customModel.addText('Tell me a short joke about cats.').message();
 console.log(custom);
 
