@@ -37,6 +37,7 @@ const MODEL_PRICING = {
     'claude-3-5-haiku-20241022': [0.80, 4.00],
     'claude-haiku-4-5-20251001': [1.00, 5.00],
     // Google
+    'gemini-3.1-pro-preview':[2.00, 12.00],
     'gemini-3-pro-preview': [2.00, 12.00],
     'gemini-3-flash-preview': [0.50, 3.00],
     'gemini-2.5-pro': [1.25, 10.00],
@@ -341,6 +342,9 @@ class ModelMix {
     gemini25flash({ options = {}, config = {} } = {}) {
         return this.attach('gemini-2.5-flash', new MixGoogle({ options, config }));
     }
+    gemini31pro({ options = {}, config = {} } = {}) {
+        return this.attach('gemini-3.1-pro-preview', new MixGoogle({ options, config }));
+    }    
     gemini3pro({ options = {}, config = {} } = {}) {
         return this.attach('gemini-3-pro-preview', new MixGoogle({ options, config }));
     }
