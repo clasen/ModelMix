@@ -15,6 +15,7 @@
   "dependencies": {
     "dotenv": "^17.2.3",
     "isolated-vm": "^6.0.2",
-    "lemonlog": "^1.1.4"
+    "lemonlog": "^1.1.4",
+    "pathmix": "^1.0.0"
   }
 }

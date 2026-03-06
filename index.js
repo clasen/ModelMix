@@ -5,6 +5,7 @@ const { inspect } = require('util');
 const log = require('lemonlog')('ModelMix');
 const Bottleneck = require('bottleneck');
 const path = require('path');
+const WebSocket = require('ws');
 const generateJsonSchema = require('./schema');
 const { Client } = require("@modelcontextprotocol/sdk/client/index.js");
 const { StdioClientTransport } = require("@modelcontextprotocol/sdk/client/stdio.js");
@@ -14,6 +15,11 @@ const { MCPToolsManager } = require('./mcp-tools');
 // Based on provider pricing pages linked in README
 const MODEL_PRICING = {
     // OpenAI
+    'gpt-realtime-mini': [0.60, 2.40],
+    'gpt-realtime': [4.00, 16.00],
+    'gpt-5.4': [2.50, 15.00],
+    'gpt-5.4-pro': [30, 180.00],
+    'gpt-5.3-codex': [1.75, 14.00],
     'gpt-5.2': [1.75, 14.00],
     'gpt-5.2-chat-latest': [1.75, 14.00],
     'gpt-5.1': [1.25, 10.00],
@@ -268,6 +274,21 @@ class ModelMix {
     gpt52({ options = {}, config = {} } = {}) {
         return this.attach('gpt-5.2', new MixOpenAI({ options, config }));
     }
+    gpt54({ options = {}, config = {} } = {}) {
+        return this.attach('gpt-5.4', new MixOpenAIResponses({ options, config }));
+    }
+    gpt54pro({ options = {}, config = {} } = {}) {
+        return this.attach('gpt-5.4-pro', new MixOpenAIResponses({ options, config }));
+    }          
+    gptRealtime({ options = {}, config = {} } = {}) {
+        return this.attach('gpt-realtime', new MixOpenAIWebSocket({ options, config }));
+    }
+    gptRealtimeMini({ options = {}, config = {} } = {}) {
+        return this.attach('gpt-realtime-mini', new MixOpenAIWebSocket({ options, config }));
+    }
+    gpt53codex({ options = {}, config = {} } = {}) {
+        return this.attach('gpt-5.3-codex', new MixOpenAIResponses({ options, config }));
+    }          
     gpt52chat({ options = {}, config = {} } = {}) {
         return this.attach('gpt-5.2-chat-latest', new MixOpenAI({ options, config }));
     }
@@ -1499,6 +1520,339 @@ class MixOpenAI extends MixCustom {
     }
 }
 
+class MixOpenAIResponses extends MixOpenAI {
+    async create({ config = {}, options = {} } = {}) {
+
+        // Keep GPT/o-model option normalization behavior
+        if (options.model?.startsWith('o')) {
+            delete options.max_tokens;
+            delete options.temperature;
+        }
+        if (options.model?.includes('gpt-5')) {
+            if (options.max_tokens) {
+                options.max_completion_tokens = options.max_tokens;
+                delete options.max_tokens;
+            }
+            delete options.temperature;
+        }
+
+        const responsesUrl = this.config.url.replace('/chat/completions', '/responses');
+        const request = MixOpenAIResponses.buildResponsesRequest(options);
+        const response = await axios.post(responsesUrl, request, {
+            headers: this.headers
+        });
+
+        return MixOpenAIResponses.processResponsesResponse(response);
+    }
+
+    static buildResponsesRequest(options = {}) {
+        const request = {
+            model: options.model,
+            input: MixOpenAIResponses.messagesToResponsesInput(options.messages),
+            stream: false
+        };
+
+        if (options.reasoning_effort) request.reasoning = { effort: options.reasoning_effort };
+        if (options.verbosity) request.text = { verbosity: options.verbosity };
+
+        if (typeof options.max_completion_tokens === 'number') {
+            request.max_output_tokens = options.max_completion_tokens;
+        } else if (typeof options.max_tokens === 'number') {
+            request.max_output_tokens = options.max_tokens;
+        }
+
+        if (typeof options.temperature === 'number') request.temperature = options.temperature;
+        if (typeof options.top_p === 'number') request.top_p = options.top_p;
+        if (typeof options.presence_penalty === 'number') request.presence_penalty = options.presence_penalty;
+        if (typeof options.frequency_penalty === 'number') request.frequency_penalty = options.frequency_penalty;
+        if (options.stop !== undefined) request.stop = options.stop;
+        if (typeof options.n === 'number') request.n = options.n;
+        if (options.logit_bias !== undefined) request.logit_bias = options.logit_bias;
+        if (options.user !== undefined) request.user = options.user;
+
+        return request;
+    }
+
+    static processResponsesResponse(response) {
+        const message = MixOpenAIResponses.extractResponsesMessage(response.data);
+        return {
+            message,
+            think: null,
+            toolCalls: [],
+            tokens: MixOpenAIResponses.extractResponsesTokens(response.data),
+            response: response.data
+        };
+    }
+
+    static extractResponsesTokens(data) {
+        if (data.usage) {
+            return {
+                input: data.usage.input_tokens || 0,
+                output: data.usage.output_tokens || 0,
+                total: data.usage.total_tokens || ((data.usage.input_tokens || 0) + (data.usage.output_tokens || 0))
+            };
+        }
+        return {
+            input: 0,
+            output: 0,
+            total: 0
+        };
+    }
+
+    static extractResponsesMessage(data) {
+        if (!Array.isArray(data.output)) return '';
+        return data.output
+            .filter(item => item.type === 'message')
+            .flatMap(item => Array.isArray(item.content) ? item.content : [])
+            .filter(content => content.type === 'output_text' && typeof content.text === 'string')
+            .map(content => content.text)
+            .join('\n')
+            .trim();
+    }
+
+    static messagesToResponsesInput(messages = []) {
+        const mapped = [];
+
+        for (const message of messages) {
+            if (!message || !message.role) continue;
+            if (message.tool_calls || message.role === 'tool') continue;
+
+            let text = '';
+            if (typeof message.content === 'string') {
+                text = message.content;
+            } else if (Array.isArray(message.content)) {
+                text = message.content
+                    .filter(item => item && item.type === 'text' && typeof item.text === 'string')
+                    .map(item => item.text)
+                    .join('\n');
+            }
+
+            if (!text) continue;
+            mapped.push({
+                role: message.role,
+                content: [{ type: 'input_text', text }]
+            });
+        }
+
+        return mapped;
+    }
+}
+
+class MixOpenAIWebSocket extends MixOpenAIResponses {
+    getDefaultConfig(customConfig) {
+        return super.getDefaultConfig({
+            realtimeUrl: 'wss://api.openai.com/v1/realtime',
+            websocketTimeoutMs: 120000,
+            ...customConfig
+        });
+    }
+
+    async create({ config = {}, options = {} } = {}) {
+        if (options.model?.startsWith('o')) {
+            delete options.max_tokens;
+            delete options.temperature;
+        }
+        if (options.model?.includes('gpt-5')) {
+            if (options.max_tokens) {
+                options.max_completion_tokens = options.max_tokens;
+                delete options.max_tokens;
+            }
+            delete options.temperature;
+        }
+
+        const mergedConfig = { ...this.config, ...config };
+        const realtimeUrl = `${mergedConfig.realtimeUrl}?model=${encodeURIComponent(options.model)}`;
+        const timeoutMs = mergedConfig.websocketTimeoutMs || 120000;
+
+        return await new Promise((resolve, reject) => {
+            const ws = new WebSocket(realtimeUrl, {
+                headers: {
+                    authorization: `Bearer ${mergedConfig.apiKey}`
+                }
+            });
+
+            const events = [];
+            let message = '';
+            let settled = false;
+            let finalResponse = null;
+
+            const timeout = setTimeout(() => {
+                if (settled) return;
+                settled = true;
+                ws.close();
+                reject({
+                    message: `Realtime WebSocket timed out after ${timeoutMs}ms`,
+                    statusCode: null,
+                    details: null,
+                    config: mergedConfig,
+                    options
+                });
+            }, timeoutMs);
+
+            const cleanUp = () => clearTimeout(timeout);
+
+            ws.on('open', () => {
+                const session = {
+                    type: 'realtime',
+                    output_modalities: ['text']
+                };
+
+                if (mergedConfig.system) session.instructions = mergedConfig.system;
+                if (Array.isArray(options.tools) && options.tools.length > 0) {
+                    session.tools = options.tools;
+                }
+
+                ws.send(JSON.stringify({ type: 'session.update', session }));
+
+                const items = MixOpenAIWebSocket.messagesToConversationItems(options.messages);
+                for (const item of items) {
+                    ws.send(JSON.stringify({
+                        type: 'conversation.item.create',
+                        item
+                    }));
+                }
+
+                const responseConfig = { output_modalities: ['text'] };
+                if (typeof options.max_completion_tokens === 'number') {
+                    responseConfig.max_output_tokens = Math.min(options.max_completion_tokens, 4096);
+                } else if (typeof options.max_tokens === 'number') {
+                    responseConfig.max_output_tokens = Math.min(options.max_tokens, 4096);
+                }
+                if (Array.isArray(options.tools) && options.tools.length > 0) responseConfig.tools = options.tools;
+
+                ws.send(JSON.stringify({
+                    type: 'response.create',
+                    response: responseConfig
+                }));
+            });
+
+            ws.on('message', raw => {
+                let event;
+                try {
+                    event = JSON.parse(raw.toString());
+                } catch {
+                    return;
+                }
+
+                events.push(event);
+
+                const isTextDeltaEvent = event.type === 'response.text.delta' || event.type === 'response.output_text.delta';
+                if (isTextDeltaEvent) {
+                    const delta = MixOpenAIWebSocket.extractDelta(event);
+                    if (delta) {
+                        message += delta;
+                        if (this.streamCallback) {
+                            this.streamCallback({ response: event, message, delta });
+                        }
+                    }
+                    return;
+                }
+
+                if (event.type === 'response.done') {
+                    finalResponse = event.response || null;
+                    if (!message && finalResponse) {
+                        message = MixOpenAIResponses.extractResponsesMessage(finalResponse);
+                    }
+
+                    if (!settled) {
+                        settled = true;
+                        cleanUp();
+                        ws.close();
+                        resolve({
+                            message: message.trim(),
+                            think: null,
+                            toolCalls: [],
+                            tokens: MixOpenAIResponses.extractResponsesTokens(finalResponse || {}),
+                            response: {
+                                response: finalResponse,
+                                events
+                            }
+                        });
+                    }
+                    return;
+                }
+
+                if (event.type === 'error' && !settled) {
+                    settled = true;
+                    cleanUp();
+                    ws.close();
+                    reject({
+                        message: event.error?.message || 'Realtime WebSocket error',
+                        statusCode: null,
+                        details: event.error || event,
+                        config: mergedConfig,
+                        options
+                    });
+                }
+            });
+
+            ws.on('error', error => {
+                if (settled) return;
+                settled = true;
+                cleanUp();
+                reject({
+                    message: error.message || 'Realtime WebSocket connection error',
+                    statusCode: null,
+                    details: null,
+                    stack: error.stack,
+                    config: mergedConfig,
+                    options
+                });
+            });
+
+            ws.on('close', () => {
+                if (settled) return;
+                settled = true;
+                cleanUp();
+                reject({
+                    message: 'Realtime WebSocket closed before response.done',
+                    statusCode: null,
+                    details: null,
+                    config: mergedConfig,
+                    options
+                });
+            });
+        });
+    }
+
+    static messagesToConversationItems(messages = []) {
+        const items = [];
+
+        for (const message of messages) {
+            if (!message || !message.role) continue;
+            if (message.role === 'tool' || message.tool_calls) continue;
+
+            const role = message.role === 'assistant' ? 'assistant' : (message.role === 'system' ? 'system' : 'user');
+            const content = [];
+
+            if (typeof message.content === 'string') {
+                content.push({
+                    type: role === 'assistant' ? 'text' : 'input_text',
+                    text: message.content
+                });
+            } else if (Array.isArray(message.content)) {
+                for (const item of message.content) {
+                    if (!item || item.type !== 'text' || typeof item.text !== 'string') continue;
+                    content.push({
+                        type: role === 'assistant' ? 'text' : 'input_text',
+                        text: item.text
+                    });
+                }
+            }
+
+            if (content.length === 0) continue;
+            items.push({ type: 'message', role, content });
+        }
+
+        return items;
+    }
+
+    static extractDelta(event) {
+        if (typeof event.delta === 'string') return event.delta;
+        return '';
+    }
+}
+
 class MixOpenRouter extends MixOpenAI {
     getDefaultConfig(customConfig) {
 
@@ -2273,4 +2627,4 @@ class MixGoogle extends MixCustom {
     }
 }
 
-module.exports = { MixCustom, ModelMix, MixAnthropic, MixMiniMax, MixOpenAI, MixOpenRouter, MixPerplexity, MixOllama, MixLMStudio, MixGroq, MixTogether, MixGrok, MixCerebras, MixGoogle, MixFireworks };
+module.exports = { MixCustom, ModelMix, MixAnthropic, MixMiniMax, MixOpenAI, MixOpenAIResponses, MixOpenAIWebSocket, MixOpenRouter, MixPerplexity, MixOllama, MixLMStudio, MixGroq, MixTogether, MixGrok, MixCerebras, MixGoogle, MixFireworks };

@@ -8,10 +8,10 @@ const mmix = new ModelMix({
     }
 });
 
-console.log("\n" + '--------| gpt51() |--------');
+console.log("\n" + '--------| gpt54() |--------');
 
 const gptArgs = { options: { reasoning_effort: "none", verbosity: "low" } };  
-const gpt = mmix.gpt51(gptArgs);
+const gpt = mmix.gpt54(gptArgs);
 
 gpt.addText("Explain quantum entanglement in simple terms.");
 const response = await gpt.message();
