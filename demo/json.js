@@ -6,7 +6,6 @@ const model = await ModelMix.new({ options: { max_tokens: 10000 }, config: { deb
     // .gptOss()
     // .scout({ config: { temperature: 0 } })    
     // .o4mini()
-    // .sonnet37think()
     // .gpt45()
     // .gemini25flash()
     .addText("Name and capital of 3 South American countries.")

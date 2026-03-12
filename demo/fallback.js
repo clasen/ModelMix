@@ -15,7 +15,7 @@ const mmix = new ModelMix({
     }
 });
 
-mmix.sonnet37({ config: { url: 'fail' } }).gpt41nano();
+mmix.sonnet46({ config: { url: 'fail' } }).gpt41nano();
 
 async function main() {
     mmix.addText('hola, como estas?');

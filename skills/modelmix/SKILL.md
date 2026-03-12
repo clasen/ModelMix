@@ -96,9 +96,9 @@ If `sonnet46` fails, it automatically tries `gpt52`, then `gemini3flash`.
 `gpt52()` `gpt52chat()` `gpt51()` `gpt5()` `gpt5mini()` `gpt5nano()` `gpt45()` `gpt41()` `gpt41mini()` `gpt41nano()` `o3()` `o4mini()`
 
 ### Anthropic
-`opus46()` `opus45()` `opus41()` `sonnet46()` `sonnet45()` `sonnet4()` `sonnet37()` `haiku45()` `haiku35()`
+`opus46()` `opus45()` `opus41()` `sonnet46()` `sonnet45()` `sonnet4()` `haiku45()` `haiku35()`
 
-Thinking variants: append `think` — e.g. `opus46think()` `sonnet46think()` `sonnet45think()` `sonnet4think()` `sonnet37think()` `opus45think()` `opus41think()` `haiku45think()`
+Thinking variants: append `think` — e.g. `opus46think()` `sonnet46think()` `sonnet45think()` `sonnet4think()` `opus45think()` `opus41think()` `haiku45think()`
 
 ### Google
 `gemini3pro()` `gemini3flash()` `gemini25pro()` `gemini25flash()`

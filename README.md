@@ -185,7 +185,7 @@ const result = await ModelMix.new({
         options: { temperature: 0.7 },
         config: { system: "You are a helpful assistant" }
     })
-    .sonnet37()
+    .sonnet46()
     .addText("Tell me a story about a cat");
     .message();
 ```

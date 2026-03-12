@@ -343,13 +343,6 @@ class ModelMix {
         options = { ...MixAnthropic.thinkingOptions, ...options };
         return this.attach('claude-sonnet-4-5-20250929', new MixAnthropic({ options, config }));
     }
-    sonnet37({ options = {}, config = {} } = {}) {
-        return this.attach('claude-3-7-sonnet-20250219', new MixAnthropic({ options, config }));
-    }
-    sonnet37think({ options = {}, config = {} } = {}) {
-        options = { ...MixAnthropic.thinkingOptions, ...options };
-        return this.attach('claude-3-7-sonnet-20250219', new MixAnthropic({ options, config }));
-    }
     haiku35({ options = {}, config = {} } = {}) {
         return this.attach('claude-3-5-haiku-20241022', new MixAnthropic({ options, config }));
     }
