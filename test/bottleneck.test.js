@@ -74,20 +74,13 @@ describe('Rate Limiting with Bottleneck Tests', () => {
             
             model.gpt51();
             
-            // Mock API responses
+            // Mock API responses (gpt51 uses /v1/responses)
             nock('https://api.openai.com')
-                .post('/v1/chat/completions')
+                .post('/v1/responses')
                 .times(3)
                 .reply(function() {
                     startTimes.push(Date.now());
-                    return [200, {
-                        choices: [{
-                            message: {
-                                role: 'assistant',
-                                content: `Response ${startTimes.length}`
-                            }
-                        }]
-                    }];
+                    return [200, testUtils.createMockResponse('openai-responses', `Response ${startTimes.length}`)];
                 });
 
             // Start three requests sequentially to test rate limiting
@@ -125,9 +118,9 @@ describe('Rate Limiting with Bottleneck Tests', () => {
             
             model.gpt51();
             
-            // Mock API with delay to simulate concurrent requests
+            // Mock API with delay to simulate concurrent requests (gpt51 uses /v1/responses)
             nock('https://api.openai.com')
-                .post('/v1/chat/completions')
+                .post('/v1/responses')
                 .times(5)
                 .reply(function() {
                     concurrentCount++;
@@ -136,14 +129,7 @@ describe('Rate Limiting with Bottleneck Tests', () => {
                     return new Promise(resolve => {
                         setTimeout(() => {
                             concurrentCount--;
-                            resolve([200, {
-                                choices: [{
-                                    message: {
-                                        role: 'assistant',
-                                        content: 'Concurrent response'
-                                    }
-                                }]
-                            }]);
+                            resolve([200, testUtils.createMockResponse('openai-responses', 'Concurrent response')]);
                         }, 100);
                     });
                 });
@@ -188,18 +174,11 @@ describe('Rate Limiting with Bottleneck Tests', () => {
             model.gpt51();
             
             nock('https://api.openai.com')
-                .post('/v1/chat/completions')
+                .post('/v1/responses')
                 .times(2)
                 .reply(function() {
                     requestTimes.push(Date.now());
-                    return [200, {
-                        choices: [{
-                            message: {
-                                role: 'assistant',
-                                content: 'OpenAI rate limited response'
-                            }
-                        }]
-                    }];
+                    return [200, testUtils.createMockResponse('openai-responses', 'OpenAI rate limited response')];
                 });
 
             const start = Date.now();
@@ -271,7 +250,7 @@ describe('Rate Limiting with Bottleneck Tests', () => {
             model.gpt51();
             
             nock('https://api.openai.com')
-                .post('/v1/chat/completions')
+                .post('/v1/responses')
                 .reply(429, {
                     error: {
                         message: 'Rate limit exceeded',
@@ -294,7 +273,7 @@ describe('Rate Limiting with Bottleneck Tests', () => {
             
             // First request fails
             nock('https://api.openai.com')
-                .post('/v1/chat/completions')
+                .post('/v1/responses')
                 .reply(function() {
                     requestTimes.push(Date.now());
                     return [500, { error: 'Server error' }];
@@ -302,17 +281,10 @@ describe('Rate Limiting with Bottleneck Tests', () => {
             
             // Second request succeeds
             nock('https://api.openai.com')
-                .post('/v1/chat/completions')
+                .post('/v1/responses')
                 .reply(function() {
                     requestTimes.push(Date.now());
-                    return [200, {
-                        choices: [{
-                            message: {
-                                role: 'assistant',
-                                content: 'Success after error'
-                            }
-                        }]
-                    }];
+                    return [200, testUtils.createMockResponse('openai-responses', 'Success after error')];
                 });
 
             const start = Date.now();
@@ -352,18 +324,11 @@ describe('Rate Limiting with Bottleneck Tests', () => {
             let requestCount = 0;
             
             nock('https://api.openai.com')
-                .post('/v1/chat/completions')
+                .post('/v1/responses')
                 .times(5)
                 .reply(function() {
                     requestCount++;
-                    return [200, {
-                        choices: [{
-                            message: {
-                                role: 'assistant',
-                                content: `Response ${requestCount}`
-                            }
-                        }]
-                    }];
+                    return [200, testUtils.createMockResponse('openai-responses', `Response ${requestCount}`)];
                 });
 
             const startTime = Date.now();
@@ -400,19 +365,13 @@ describe('Rate Limiting with Bottleneck Tests', () => {
             const results = [];
             
             nock('https://api.openai.com')
-                .post('/v1/chat/completions')
+                .post('/v1/responses')
                 .times(3)
                 .reply(function(uri, body) {
-                    const content = body.messages[0].content;
-                    results.push(content);
-                    return [200, {
-                        choices: [{
-                            message: {
-                                role: 'assistant',
-                                content: `Processed: ${content}`
-                            }
-                        }]
-                    }];
+                    const lastInput = body.input[body.input.length - 1];
+                    const text = lastInput?.content?.[0]?.text ?? '';
+                    results.push(text);
+                    return [200, testUtils.createMockResponse('openai-responses', `Processed: ${text}`)];
                 });
 
             // Submit requests with different priorities
@@ -447,16 +406,9 @@ describe('Rate Limiting with Bottleneck Tests', () => {
             model.gpt51();
             
             nock('https://api.openai.com')
-                .post('/v1/chat/completions')
+                .post('/v1/responses')
                 .times(3)
-                .reply(200, {
-                    choices: [{
-                        message: {
-                            role: 'assistant',
-                            content: 'Statistics tracking response'
-                        }
-                    }]
-                });
+                .reply(200, testUtils.createMockResponse('openai-responses', 'Statistics tracking response'));
 
             // Make multiple requests
             await Promise.all([
@@ -496,15 +448,8 @@ describe('Rate Limiting with Bottleneck Tests', () => {
             model.gpt51();
             
             nock('https://api.openai.com')
-                .post('/v1/chat/completions')
-                .reply(200, {
-                    choices: [{
-                        message: {
-                            role: 'assistant',
-                            content: 'Event handling response'
-                        }
-                    }]
-                });
+                .post('/v1/responses')
+                .reply(200, testUtils.createMockResponse('openai-responses', 'Event handling response'));
 
             // Make a request to trigger events
             model.addText('Event test').message();

@@ -36,19 +36,11 @@ describe('Template and File Operations Tests', () => {
                 .addText('Hello {{name}}, you are {{age}} years old and live in {{city}}.');
 
             nock('https://api.openai.com')
-                .post('/v1/chat/completions')
+                .post('/v1/responses')
                 .reply(function (uri, body) {
-
-                    expect(body.messages[1].content[0].text).to.equal('Hello Alice, you are 30 years old and live in New York.');
-
-                    return [200, {
-                        choices: [{
-                            message: {
-                                role: 'assistant',
-                                content: 'Template processed successfully'
-                            }
-                        }]
-                    }];
+                    const userMsg = body.input.find(m => m.role === 'user');
+                    expect(userMsg.content[0].text).to.equal('Hello Alice, you are 30 years old and live in New York.');
+                    return [200, testUtils.createMockResponse('openai-responses', 'Template processed successfully')];
                 });
 
             const response = await model.message();
@@ -63,18 +55,11 @@ describe('Template and File Operations Tests', () => {
                 .addText('{{greeting}} {{name}}, {{action}} to our platform!');
 
             nock('https://api.openai.com')
-                .post('/v1/chat/completions')
+                .post('/v1/responses')
                 .reply(function (uri, body) {
-                    expect(body.messages[1].content[0].text).to.equal('Hello Bob, welcome to our platform!');
-
-                    return [200, {
-                        choices: [{
-                            message: {
-                                role: 'assistant',
-                                content: 'Multiple templates replaced'
-                            }
-                        }]
-                    }];
+                    const userMsg = body.input.find(m => m.role === 'user');
+                    expect(userMsg.content[0].text).to.equal('Hello Bob, welcome to our platform!');
+                    return [200, testUtils.createMockResponse('openai-responses', 'Multiple templates replaced')];
                 });
 
             const response = await model.message();
@@ -92,18 +77,11 @@ describe('Template and File Operations Tests', () => {
                 .addText('User {{user_name}} with role {{user_role}} works at {{company_name}} ({{company_domain}})');
 
             nock('https://api.openai.com')
-                .post('/v1/chat/completions')
+                .post('/v1/responses')
                 .reply(function (uri, body) {
-                    expect(body.messages[1].content[0].text).to.equal('User Charlie with role admin works at TechCorp (techcorp.com)');
-
-                    return [200, {
-                        choices: [{
-                            message: {
-                                role: 'assistant',
-                                content: 'Nested templates working'
-                            }
-                        }]
-                    }];
+                    const userMsg = body.input.find(m => m.role === 'user');
+                    expect(userMsg.content[0].text).to.equal('User Charlie with role admin works at TechCorp (techcorp.com)');
+                    return [200, testUtils.createMockResponse('openai-responses', 'Nested templates working')];
                 });
 
             const response = await model.message();
@@ -116,18 +94,11 @@ describe('Template and File Operations Tests', () => {
                 .addText('Hello {{name}}, your ID is {{user_id}} and status is {{status}}');
 
             nock('https://api.openai.com')
-                .post('/v1/chat/completions')
+                .post('/v1/responses')
                 .reply(function (uri, body) {
-                    expect(body.messages[1].content[0].text).to.equal('Hello David, your ID is {{user_id}} and status is {{status}}');
-
-                    return [200, {
-                        choices: [{
-                            message: {
-                                role: 'assistant',
-                                content: 'Partial template replacement'
-                            }
-                        }]
-                    }];
+                    const userMsg = body.input.find(m => m.role === 'user');
+                    expect(userMsg.content[0].text).to.equal('Hello David, your ID is {{user_id}} and status is {{status}}');
+                    return [200, testUtils.createMockResponse('openai-responses', 'Partial template replacement')];
                 });
 
             const response = await model.message();
@@ -145,18 +116,11 @@ describe('Template and File Operations Tests', () => {
                 .addText('Empty: {{empty}}, Special: {{special}}, Number: {{number}}, Boolean: {{boolean}}');
 
             nock('https://api.openai.com')
-                .post('/v1/chat/completions')
+                .post('/v1/responses')
                 .reply(function (uri, body) {
-                    expect(body.messages[1].content[0].text).to.equal('Empty: , Special: Hello & "World" <test>, Number: 42, Boolean: true');
-
-                    return [200, {
-                        choices: [{
-                            message: {
-                                role: 'assistant',
-                                content: 'Special characters handled'
-                            }
-                        }]
-                    }];
+                    const userMsg = body.input.find(m => m.role === 'user');
+                    expect(userMsg.content[0].text).to.equal('Empty: , Special: Hello & "World" <test>, Number: 42, Boolean: true');
+                    return [200, testUtils.createMockResponse('openai-responses', 'Special characters handled')];
                 });
 
             const response = await model.message();
@@ -189,24 +153,16 @@ describe('Template and File Operations Tests', () => {
                 .addText('Process this template: {{template}}');
 
             nock('https://api.openai.com')
-                .post('/v1/chat/completions')
+                .post('/v1/responses')
                 .reply(function (uri, body) {
-                    const content = body.messages[1].content[0].text;
-
+                    const userMsg = body.input.find(m => m.role === 'user');
+                    const content = userMsg.content[0].text;
                     expect(content).to.include('Hello Eve, welcome to ModelMix!');
                     expect(content).to.include('Username: eve_user');
                     expect(content).to.include('Role: developer');
                     expect(content).to.include('Created: 2023-12-01');
                     expect(content).to.include('The AI Solutions Team');
-
-                    return [200, {
-                        choices: [{
-                            message: {
-                                role: 'assistant',
-                                content: 'Template file processed'
-                            }
-                        }]
-                    }];
+                    return [200, testUtils.createMockResponse('openai-responses', 'Template file processed')];
                 });
 
             const response = await model.message();
@@ -219,10 +175,10 @@ describe('Template and File Operations Tests', () => {
                 .addText('Process this data: {{data}}');
 
             nock('https://api.openai.com')
-                .post('/v1/chat/completions')
+                .post('/v1/responses')
                 .reply(function (uri, body) {
-                    const content = body.messages[1].content[0].text;
-
+                    const userMsg = body.input.find(m => m.role === 'user');
+                    const content = userMsg.content[0].text;
                     expect(content).to.include('Alice Smith');
                     expect(content).to.include('alice@example.com');
                     expect(content).to.include('admin');
@@ -230,15 +186,7 @@ describe('Template and File Operations Tests', () => {
                     expect(content).to.include('Carol Davis');
                     expect(content).to.include('"theme": "dark"');
                     expect(content).to.include('"version": "1.0.0"');
-
-                    return [200, {
-                        choices: [{
-                            message: {
-                                role: 'assistant',
-                                content: 'JSON data processed'
-                            }
-                        }]
-                    }];
+                    return [200, testUtils.createMockResponse('openai-responses', 'JSON data processed')];
                 });
 
             const response = await model.message();
@@ -251,19 +199,11 @@ describe('Template and File Operations Tests', () => {
                 .addText('This should contain: {{missing}}');
 
             nock('https://api.openai.com')
-                .post('/v1/chat/completions')
+                .post('/v1/responses')
                 .reply(function (uri, body) {
-                    // The template should remain unreplaced if file doesn't exist
-                    expect(body.messages[1].content[0].text).to.equal('This should contain: {{missing}}');
-
-                    return [200, {
-                        choices: [{
-                            message: {
-                                role: 'assistant',
-                                content: 'File not found handled'
-                            }
-                        }]
-                    }];
+                    const userMsg = body.input.find(m => m.role === 'user');
+                    expect(userMsg.content[0].text).to.equal('This should contain: {{missing}}');
+                    return [200, testUtils.createMockResponse('openai-responses', 'File not found handled')];
                 });
 
             const response = await model.message();
@@ -286,26 +226,15 @@ describe('Template and File Operations Tests', () => {
                 .addText('Template: {{template}}\n\nData: {{data}}');
 
             nock('https://api.openai.com')
-                .post('/v1/chat/completions')
+                .post('/v1/responses')
                 .reply(function (uri, body) {
-                    const content = body.messages[1].content[0].text;
-
-                    // Should contain processed template
+                    const userMsg = body.input.find(m => m.role === 'user');
+                    const content = userMsg.content[0].text;
                     expect(content).to.include('Hello Frank, welcome to TestPlatform!');
                     expect(content).to.include('Username: frank_test');
-
-                    // Should contain JSON data
                     expect(content).to.include('Alice Smith');
                     expect(content).to.include('"theme": "dark"');
-
-                    return [200, {
-                        choices: [{
-                            message: {
-                                role: 'assistant',
-                                content: 'Multiple files processed'
-                            }
-                        }]
-                    }];
+                    return [200, testUtils.createMockResponse('openai-responses', 'Multiple files processed')];
                 });
 
             const response = await model.message();
@@ -329,21 +258,13 @@ describe('Template and File Operations Tests', () => {
                 .addText('Absolute path content: {{absolute}}');
 
             nock('https://api.openai.com')
-                .post('/v1/chat/completions')
+                .post('/v1/responses')
                 .reply(function (uri, body) {
-                    const content = body.messages[1].content[0].text;
-
+                    const userMsg = body.input.find(m => m.role === 'user');
+                    const content = userMsg.content[0].text;
                     expect(content).to.include('Hello Grace, welcome to AbsolutePath!');
                     expect(content).to.include('The Absolute Corp Team');
-
-                    return [200, {
-                        choices: [{
-                            message: {
-                                role: 'assistant',
-                                content: 'Absolute path works'
-                            }
-                        }]
-                    }];
+                    return [200, testUtils.createMockResponse('openai-responses', 'Absolute path works')];
                 });
 
             const response = await model.message();
@@ -372,22 +293,14 @@ describe('Template and File Operations Tests', () => {
                 .addText('Please {{action}} the following {{target}} and generate a {{format}}:\n\n{{user_data}}');
 
             nock('https://api.openai.com')
-                .post('/v1/chat/completions')
+                .post('/v1/responses')
                 .reply(function (uri, body) {
-                    const content = body.messages[1].content[0].text;
-
+                    const userMsg = body.input.find(m => m.role === 'user');
+                    const content = userMsg.content[0].text;
                     expect(content).to.include('Please analyze the following user behavior patterns and generate a detailed report:');
                     expect(content).to.include('Alice Smith');
                     expect(content).to.include('total_users');
-
-                    return [200, {
-                        choices: [{
-                            message: {
-                                role: 'assistant',
-                                content: 'Complex template integration successful'
-                            }
-                        }]
-                    }];
+                    return [200, testUtils.createMockResponse('openai-responses', 'Complex template integration successful')];
                 });
 
             const response = await model.message();
@@ -408,23 +321,22 @@ describe('Template and File Operations Tests', () => {
                 .addText('{{instruction}} from this data: {{data}}');
 
             nock('https://api.openai.com')
-                .post('/v1/chat/completions')
+                .post('/v1/responses')
                 .reply(function (uri, body) {
-                    expect(body.messages[1].content[0].text).to.include('Count active users by role');
-                    expect(body.messages[1].content[0].text).to.include('Alice Smith');
-
+                    const userMsg = body.input.find(m => m.role === 'user');
+                    expect(userMsg.content[0].text).to.include('Count active users by role');
+                    expect(userMsg.content[0].text).to.include('Alice Smith');
                     return [200, {
-                        choices: [{
-                            message: {
-                                role: 'assistant',
-                                content: JSON.stringify({
-                                    summary: 'User analysis completed',
-                                    user_count: 3,
-                                    active_users: 2,
-                                    roles: ['admin', 'user', 'moderator']
-                                })
-                            }
-                        }]
+                        output: [{
+                            type: 'message',
+                            content: [{ type: 'output_text', text: JSON.stringify({
+                                summary: 'User analysis completed',
+                                user_count: 3,
+                                active_users: 2,
+                                roles: ['admin', 'user', 'moderator']
+                            }) }]
+                        }],
+                        usage: { input_tokens: 10, output_tokens: 5, total_tokens: 15 }
                     }];
                 });
 
@@ -461,15 +373,8 @@ describe('Template and File Operations Tests', () => {
                 .addText('Content: {{bad_file}}');
 
             nock('https://api.openai.com')
-                .post('/v1/chat/completions')
-                .reply(200, {
-                    choices: [{
-                        message: {
-                            role: 'assistant',
-                            content: 'Error handled gracefully'
-                        }
-                    }]
-                });
+                .post('/v1/responses')
+                .reply(200, testUtils.createMockResponse('openai-responses', 'Error handled gracefully'));
 
             const response = await model.message();
             expect(response).to.include('Error handled gracefully');

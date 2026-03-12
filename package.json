@@ -1,6 +1,6 @@
 {
   "name": "modelmix",
-  "version": "4.4.16",
+  "version": "4.4.18",
   "description": "🧬 Reliable interface with automatic fallback for AI LLMs.",
   "main": "index.js",
   "repository": {
@@ -50,7 +50,7 @@
     "@modelcontextprotocol/sdk": "^1.27.1",
     "axios": "^1.13.5",
     "bottleneck": "^2.19.5",
-    "file-type": "^16.5.4",
+    "file-type": "^21.3.1",
     "form-data": "^4.0.4",
     "lemonlog": "^1.2.0",
     "ws": "^8.19.0"
@@ -60,6 +60,10 @@
     "mocha": "^11.7.5",
     "nock": "^14.0.9",
     "sinon": "^21.0.0"
+  },
+  "overrides": {
+    "diff": ">=8.0.3",
+    "serialize-javascript": ">=7.0.3"
   },
   "scripts": {
     "test": "mocha test/**/*.js --timeout 10000 --require test/setup.js",
@@ -71,6 +75,7 @@
     "test:bottleneck": "mocha test/bottleneck.test.js --timeout 10000 --require test/setup.js",
     "test:live": "mocha test/live.test.js --timeout 10000 --require test/setup.js",
     "test:live.mcp": "mocha test/live.mcp.js --timeout 60000 --require test/setup.js",
-    "test:tokens": "mocha test/tokens.test.js --timeout 10000 --require test/setup.js"
+    "test:tokens": "mocha test/tokens.test.js --timeout 10000 --require test/setup.js",
+    "test:offline": "mocha test/json.test.js test/fallback.test.js test/templates.test.js test/images.test.js test/bottleneck.test.js test/tokens.test.js test/history.test.js --timeout 10000 --require test/setup.js"
   }
 }

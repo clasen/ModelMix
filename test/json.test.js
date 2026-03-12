@@ -357,23 +357,15 @@ describe('JSON Schema and Structured Output Tests', () => {
             
             model.gpt52().addText('List 3 countries');
             
-            // Mock the API response
             nock('https://api.openai.com')
-                .post('/v1/chat/completions')
-                .reply(200, {
-                    choices: [{
-                        message: {
-                            role: 'assistant',
-                            content: JSON.stringify({
-                                countries: [
-                                    { name: 'France', capital: 'Paris' },
-                                    { name: 'Germany', capital: 'Berlin' },
-                                    { name: 'Spain', capital: 'Madrid' }
-                                ]
-                            })
-                        }
-                    }]
-                });
+                .post('/v1/responses')
+                .reply(200, testUtils.createMockResponse('openai-responses', JSON.stringify({
+                    countries: [
+                        { name: 'France', capital: 'Paris' },
+                        { name: 'Germany', capital: 'Berlin' },
+                        { name: 'Spain', capital: 'Madrid' }
+                    ]
+                })));
 
             const result = await model.json(example);
             
@@ -429,17 +421,9 @@ describe('JSON Schema and Structured Output Tests', () => {
         it('should handle JSON parsing errors gracefully', async () => {
             model.gpt52().addText('Generate invalid JSON');
             
-            // Mock invalid JSON response
             nock('https://api.openai.com')
-                .post('/v1/chat/completions')
-                .reply(200, {
-                    choices: [{
-                        message: {
-                            role: 'assistant',
-                            content: 'This is not valid JSON'
-                        }
-                    }]
-                });
+                .post('/v1/responses')
+                .reply(200, testUtils.createMockResponse('openai-responses', 'This is not valid JSON'));
 
             try {
                 await model.json({ name: 'test' });
@@ -453,21 +437,14 @@ describe('JSON Schema and Structured Output Tests', () => {
             model.gpt52().addText('List 3 countries');
 
             nock('https://api.openai.com')
-                .post('/v1/chat/completions')
-                .reply(200, {
-                    choices: [{
-                        message: {
-                            role: 'assistant',
-                            content: JSON.stringify({
-                                out: [
-                                    { name: 'France' },
-                                    { name: 'Germany' },
-                                    { name: 'Spain' }
-                                ]
-                            })
-                        }
-                    }]
-                });
+                .post('/v1/responses')
+                .reply(200, testUtils.createMockResponse('openai-responses', JSON.stringify({
+                    out: [
+                        { name: 'France' },
+                        { name: 'Germany' },
+                        { name: 'Spain' }
+                    ]
+                })));
 
             const result = await model.json([{ name: 'France' }]);
 

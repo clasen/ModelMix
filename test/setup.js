@@ -104,6 +104,18 @@ global.testUtils = {
                         }
                     }]
                 };
+            case 'openai-responses':
+                return {
+                    output: [{
+                        type: 'message',
+                        content: [{ type: 'output_text', text: content }]
+                    }],
+                    usage: {
+                        input_tokens: 10,
+                        output_tokens: 5,
+                        total_tokens: 15
+                    }
+                };
                 
             case 'anthropic':
                 return {

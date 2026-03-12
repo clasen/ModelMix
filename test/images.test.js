@@ -25,7 +25,8 @@ describe('Image Processing and Multimodal Support Tests', () => {
         it('should handle base64 image data correctly', async () => {
             const base64Image = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAoAAAAKCAYAAACNMs+9AAAAFUlEQVR42mP8z8BQz0AEYBxVSF+FABJADveWkH6oAAAAAElFTkSuQmCC';
 
-            model.gpt52()
+            // Use gpt5mini (chat/completions) - gpt52 uses Responses API which has different image format
+            model.gpt5mini()
                 .addText('What do you see in this image?')
                 .addImageFromUrl(base64Image);
 
@@ -62,8 +63,6 @@ describe('Image Processing and Multimodal Support Tests', () => {
             nock('https://api.anthropic.com')
                 .post('/v1/messages')
                 .reply(function (uri, body) {
-                    console.log(body.messages);
-                    // body is already parsed as JSON by nock
                     expect(body.messages).to.be.an('array');
                     // Find the message with the image
                     const userMsg = body.messages.find(m => m.role === 'user');

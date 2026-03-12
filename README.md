@@ -136,9 +136,9 @@ Here's a comprehensive list of available methods:
 | Method             | Provider   | Model                          | Price (I/O) per 1 M tokens |
 | ------------------ | ---------- | ------------------------------ | -------------------------- |
 | `gpt54()`          | OpenAI     | gpt-5.4                        | [\$2.50 / \$15.00][1]      |
+| `gpt53codex()`     | OpenAI     | gpt-5.3-codex                  | [\$1.25 / \$14.00][1]      |
 | `gpt52()`          | OpenAI     | gpt-5.2                        | [\$1.75 / \$14.00][1]      |
 | `gpt51()`          | OpenAI     | gpt-5.1                        | [\$1.25 / \$10.00][1]      |
-| `gpt53codex()`     | OpenAI     | gpt-5.3-codex                  | [\$1.25 / \$14.00][1]      |
 | `gpt5mini()`       | OpenAI     | gpt-5-mini                     | [\$0.25 / \$2.00][1]       |
 | `gpt5nano()`       | OpenAI     | gpt-5-nano                     | [\$0.05 / \$0.40][1]       |
 | `gpt41()`          | OpenAI     | gpt-4.1                        | [\$2.00 / \$8.00][1]       |
@@ -406,6 +406,7 @@ Every response from `raw()` now includes a `tokens` object with the following st
     input: 150,    // Number of tokens in the prompt/input
     output: 75,    // Number of tokens in the completion/output
     total: 225,    // Total tokens used (input + output)
+    cached: 100,   // Cached input tokens reported by the provider (0 when absent)
     cost: 0.0012,  // Estimated cost in USD (null if model not in pricing table)
     speed: 42      // Output tokens per second (int)
   }
@@ -419,10 +420,10 @@ After calling `message()` or `json()`, use `lastRaw` to access the complete resp
 ```javascript
 const text = await model.message();
 console.log(model.lastRaw.tokens);
-// { input: 122, output: 86, total: 541, cost: 0.000319, speed: 38 }
+// { input: 122, output: 86, total: 208, cached: 41, cost: 0.000319, speed: 38 }
 ```
 
-The `cost` field is the estimated cost in USD based on the model's pricing per 1M tokens (input/output). If the model is not found in the pricing table, `cost` will be `null`. The `speed` field is the generation speed measured in output tokens per second (integer).
+The `cached` field is a single aggregated count of cached input tokens reported by the provider. The `cost` field is the estimated cost in USD based on the model's pricing per 1M tokens (input/output). If the model is not found in the pricing table, `cost` will be `null`. The `speed` field is the generation speed measured in output tokens per second (integer).
 
 ## 🐛 Enabling Debug Mode
 
@@ -516,7 +517,7 @@ new ModelMix(args = { options: {}, config: {} })
   - `message`: The text response from the model
   - `think`: Reasoning/thinking content (if available)
   - `toolCalls`: Array of tool calls made by the model (if any)
-  - `tokens`: Object with `input`, `output`, `total` token counts, `cost` (USD), and `speed` (output tokens/sec)
+  - `tokens`: Object with `input`, `output`, `total`, and `cached` token counts, plus `cost` (USD) and `speed` (output tokens/sec)
   - `response`: The raw API response
 - `stream(callback)`: Sends the message and streams the response, invoking the callback with each streamed part.
 - `json(schemaExample, descriptions = {}, options = {})`: Forces the model to return a response in a specific JSON format.

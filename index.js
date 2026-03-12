@@ -181,6 +181,15 @@ class ModelMix {
         return (tokens.input * inputPerMillion / 1_000_000) + (tokens.output * outputPerMillion / 1_000_000);
     }
 
+    static extractCacheTokens(usage = {}) {
+        return usage.input_tokens_details?.cached_tokens
+            || usage.prompt_tokens_details?.cached_tokens
+            || usage.cache_read_input_tokens
+            || usage.cachedContentTokenCount
+            || usage.cached_content_token_count
+            || 0;
+    }
+
     static formatInputSummary(messages, system, debug = 2) {
         const lastMessage = messages[messages.length - 1];
         let inputText = '';
@@ -250,15 +259,6 @@ class ModelMix {
     gpt41nano({ options = {}, config = {} } = {}) {
         return this.attach('gpt-4.1-nano', new MixOpenAI({ options, config }));
     }
-    o4mini({ options = {}, config = {} } = {}) {
-        return this.attach('o4-mini', new MixOpenAI({ options, config }));
-    }
-    o3({ options = {}, config = {} } = {}) {
-        return this.attach('o3', new MixOpenAI({ options, config }));
-    }
-    gpt45({ options = {}, config = {} } = {}) {
-        return this.attach('gpt-4.5-preview', new MixOpenAI({ options, config }));
-    }
     gpt5({ options = {}, config = {} } = {}) {
         return this.attach('gpt-5', new MixOpenAI({ options, config }));
     }
@@ -269,10 +269,10 @@ class ModelMix {
         return this.attach('gpt-5-nano', new MixOpenAI({ options, config }));
     }
     gpt51({ options = {}, config = {} } = {}) {
-        return this.attach('gpt-5.1', new MixOpenAI({ options, config }));
+        return this.attach('gpt-5.1', new MixOpenAIResponses({ options, config }));
     }
     gpt52({ options = {}, config = {} } = {}) {
-        return this.attach('gpt-5.2', new MixOpenAI({ options, config }));
+        return this.attach('gpt-5.2', new MixOpenAIResponses({ options, config }));
     }
     gpt54({ options = {}, config = {} } = {}) {
         return this.attach('gpt-5.4', new MixOpenAIResponses({ options, config }));
@@ -289,8 +289,8 @@ class ModelMix {
     gpt53codex({ options = {}, config = {} } = {}) {
         return this.attach('gpt-5.3-codex', new MixOpenAIResponses({ options, config }));
     }          
-    gpt52chat({ options = {}, config = {} } = {}) {
-        return this.attach('gpt-5.2-chat-latest', new MixOpenAI({ options, config }));
+    gpt53chat({ options = {}, config = {} } = {}) {
+        return this.attach('gpt-5.3-chat-latest', new MixOpenAIResponses({ options, config }));
     }
     gptOss({ options = {}, config = {}, mix = {} } = {}) {
         mix = { ...this.mix, ...mix };
@@ -963,7 +963,10 @@ class ModelMix {
                     // debug level 2: Readable summary of output
                     if (currentConfig.debug >= 2) {
                         const tokenInfo = result.tokens
-                            ? ` ${result.tokens.input} → ${result.tokens.output} tok` + (result.tokens.speed ? ` ${result.tokens.speed} t/s` : '') + (result.tokens.cost != null ? ` $${result.tokens.cost.toFixed(4)}` : '')
+                            ? ` ${result.tokens.input} → ${result.tokens.output} tok`
+                                + (result.tokens.cached ? ` (cached:${result.tokens.cached})` : '')
+                                + (result.tokens.speed ? `| ${result.tokens.speed} t/s` : '')
+                                + (result.tokens.cost != null ? ` $${result.tokens.cost.toFixed(4)}` : '')
                             : '';
                         console.log(`✓${tokenInfo}\n${ModelMix.formatOutputSummary(result, currentConfig.debug).trim()}`);
                     }
@@ -1327,7 +1330,7 @@ class MixCustom {
                 message: message.trim(),
                 toolCalls: [],
                 think: null,
-                tokens: raw.length > 0 ? MixCustom.extractTokens(raw[raw.length - 1]) : { input: 0, output: 0, total: 0 }
+                tokens: raw.length > 0 ? MixCustom.extractTokens(raw[raw.length - 1]) : { input: 0, output: 0, total: 0, cached: 0 }
             }));
             response.data.on('error', reject);
         });
@@ -1379,13 +1382,15 @@ class MixCustom {
             return {
                 input: data.usage.prompt_tokens || 0,
                 output: data.usage.completion_tokens || 0,
-                total: data.usage.total_tokens || 0
+                total: data.usage.total_tokens || 0,
+                cached: ModelMix.extractCacheTokens(data.usage)
             };
         }
         return {
             input: 0,
             output: 0,
-            total: 0
+            total: 0,
+            cached: 0
         };
     }
 
@@ -1569,6 +1574,8 @@ class MixOpenAIResponses extends MixOpenAI {
         if (typeof options.n === 'number') request.n = options.n;
         if (options.logit_bias !== undefined) request.logit_bias = options.logit_bias;
         if (options.user !== undefined) request.user = options.user;
+        if (options.prompt_cache_key !== undefined) request.prompt_cache_key = options.prompt_cache_key;
+        if (options.prompt_cache_retention !== undefined) request.prompt_cache_retention = options.prompt_cache_retention;
 
         return request;
     }
@@ -1589,13 +1596,15 @@ class MixOpenAIResponses extends MixOpenAI {
             return {
                 input: data.usage.input_tokens || 0,
                 output: data.usage.output_tokens || 0,
-                total: data.usage.total_tokens || ((data.usage.input_tokens || 0) + (data.usage.output_tokens || 0))
+                total: data.usage.total_tokens || ((data.usage.input_tokens || 0) + (data.usage.output_tokens || 0)),
+                cached: ModelMix.extractCacheTokens(data.usage)
             };
         }
         return {
             input: 0,
             output: 0,
-            total: 0
+            total: 0,
+            cached: 0
         };
     }
 
@@ -2038,13 +2047,15 @@ class MixAnthropic extends MixCustom {
             return {
                 input: data.usage.input_tokens || 0,
                 output: data.usage.output_tokens || 0,
-                total: (data.usage.input_tokens || 0) + (data.usage.output_tokens || 0)
+                total: (data.usage.input_tokens || 0) + (data.usage.output_tokens || 0),
+                cached: ModelMix.extractCacheTokens(data.usage)
             };
         }
         return {
             input: 0,
             output: 0,
-            total: 0
+            total: 0,
+            cached: 0
         };
     }
 
@@ -2573,13 +2584,15 @@ class MixGoogle extends MixCustom {
             return {
                 input: data.usageMetadata.promptTokenCount || 0,
                 output: data.usageMetadata.candidatesTokenCount || 0,
-                total: data.usageMetadata.totalTokenCount || 0
+                total: data.usageMetadata.totalTokenCount || 0,
+                cached: ModelMix.extractCacheTokens(data.usageMetadata)
             };
         }
         return {
             input: 0,
             output: 0,
-            total: 0
+            total: 0,
+            cached: 0
         };
     }
 

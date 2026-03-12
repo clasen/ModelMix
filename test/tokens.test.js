@@ -1,5 +1,5 @@
 import { expect } from 'chai';
-import { ModelMix } from '../index.js';
+import { ModelMix, MixAnthropic, MixCustom, MixGoogle, MixOpenAIResponses } from '../index.js';
 import { createRequire } from 'module';
 
 const require = createRequire(import.meta.url);
@@ -18,6 +18,64 @@ describe('Token Usage Tracking', () => {
         nock.activate();
     });
 
+    it('should extract cached tokens from supported provider usage formats', function () {
+        const openAIChatTokens = MixCustom.extractTokens({
+            usage: {
+                prompt_tokens: 120,
+                completion_tokens: 30,
+                total_tokens: 150,
+                prompt_tokens_details: {
+                    cached_tokens: 80
+                }
+            }
+        });
+        const openAIResponsesTokens = MixOpenAIResponses.extractResponsesTokens({
+            usage: {
+                input_tokens: 90,
+                output_tokens: 20,
+                total_tokens: 110,
+                input_tokens_details: {
+                    cached_tokens: 45
+                }
+            }
+        });
+        const anthropicTokens = MixAnthropic.extractTokens({
+            usage: {
+                input_tokens: 60,
+                output_tokens: 15,
+                cache_read_input_tokens: 25
+            }
+        });
+        const googleTokens = MixGoogle.extractTokens({
+            usageMetadata: {
+                promptTokenCount: 70,
+                candidatesTokenCount: 10,
+                totalTokenCount: 80,
+                cachedContentTokenCount: 35
+            }
+        });
+
+        expect(openAIChatTokens.cached).to.equal(80);
+        expect(openAIResponsesTokens.cached).to.equal(45);
+        expect(anthropicTokens.cached).to.equal(25);
+        expect(googleTokens.cached).to.equal(35);
+    });
+
+    it('should pass OpenAI Responses prompt cache options through the request body', function () {
+        const request = MixOpenAIResponses.buildResponsesRequest({
+            model: 'gpt-5.4',
+            messages: [{
+                role: 'user',
+                content: [{ type: 'text', text: 'Explain caching briefly.' }]
+            }],
+            prompt_cache_key: 'demo-gpt54-cache',
+            prompt_cache_retention: '24h'
+        });
+
+        expect(request.prompt_cache_key).to.equal('demo-gpt54-cache');
+        expect(request.prompt_cache_retention).to.equal('24h');
+    });
+
     it('should track tokens in OpenAI response', async function () {
         this.timeout(30000);
 
@@ -31,10 +89,12 @@ describe('Token Usage Tracking', () => {
         expect(result.tokens).to.have.property('input');
         expect(result.tokens).to.have.property('output');
         expect(result.tokens).to.have.property('total');
+        expect(result.tokens).to.have.property('cached');
         
         expect(result.tokens.input).to.be.a('number');
         expect(result.tokens.output).to.be.a('number');
         expect(result.tokens.total).to.be.a('number');
+        expect(result.tokens.cached).to.be.a('number');
         
         expect(result.tokens.input).to.be.greaterThan(0);
         expect(result.tokens.output).to.be.greaterThan(0);
@@ -54,6 +114,7 @@ describe('Token Usage Tracking', () => {
         expect(result.tokens).to.have.property('input');
         expect(result.tokens).to.have.property('output');
         expect(result.tokens).to.have.property('total');
+        expect(result.tokens).to.have.property('cached');
         
         expect(result.tokens.input).to.be.greaterThan(0);
         expect(result.tokens.output).to.be.greaterThan(0);
@@ -73,6 +134,7 @@ describe('Token Usage Tracking', () => {
         expect(result.tokens).to.have.property('input');
         expect(result.tokens).to.have.property('output');
         expect(result.tokens).to.have.property('total');
+        expect(result.tokens).to.have.property('cached');
         
         expect(result.tokens.input).to.be.greaterThan(0);
         expect(result.tokens.output).to.be.greaterThan(0);
@@ -140,6 +202,7 @@ describe('Token Usage Tracking', () => {
             expect(result.tokens.input, `${provider.name} should have input`).to.be.a('number');
             expect(result.tokens.output, `${provider.name} should have output`).to.be.a('number');
             expect(result.tokens.total, `${provider.name} should have total`).to.be.a('number');
+            expect(result.tokens.cached, `${provider.name} should have cached`).to.be.a('number');
             
             // Verify values are positive
             expect(result.tokens.input, `${provider.name} input should be > 0`).to.be.greaterThan(0);
