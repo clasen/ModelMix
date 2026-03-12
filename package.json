@@ -1,6 +1,6 @@
 {
   "name": "modelmix",
-  "version": "4.4.20",
+  "version": "4.4.22",
   "description": "🧬 Reliable interface with automatic fallback for AI LLMs.",
   "main": "index.js",
   "repository": {

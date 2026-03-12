@@ -1334,7 +1334,34 @@ class MixCustom {
     }
 
     static extractMessage(data) {
-        const message = data.choices[0].message?.content?.trim() || '';
+        const choice = data?.choices?.[0] || {};
+        const messageObj = choice.message || {};
+        const finishReason = choice.finish_reason;
+
+        if (typeof messageObj.refusal === 'string' && messageObj.refusal.trim().length > 0) {
+            throw new Error(`OpenAI model refused to process this request: ${messageObj.refusal}`);
+        }
+
+        if (finishReason === 'content_filter') {
+            throw new Error('OpenAI response was blocked by content_filter.');
+        }
+
+        let message = '';
+        if (typeof messageObj.content === 'string') {
+            message = messageObj.content.trim();
+        } else if (Array.isArray(messageObj.content)) {
+            const refusalPart = messageObj.content.find(part => part?.type === 'refusal' || (typeof part?.refusal === 'string' && part.refusal.trim().length > 0));
+            if (refusalPart) {
+                const refusalText = typeof refusalPart.refusal === 'string' ? refusalPart.refusal : 'No refusal text provided.';
+                throw new Error(`OpenAI model refused to process this request: ${refusalText}`);
+            }
+            message = messageObj.content
+                .filter(part => typeof part?.text === 'string')
+                .map(part => part.text)
+                .join('')
+                .trim();
+        }
+
         const endTagIndex = message.indexOf('</think>');
         if (message.startsWith('<think>') && endTagIndex !== -1) {
             return message.substring(endTagIndex + 8).trim();
@@ -2020,10 +2047,25 @@ class MixAnthropic extends MixCustom {
     }
 
     static extractMessage(data) {
-        if (data.content?.[1]?.text) {
-            return data.content[1].text;
+        const content = Array.isArray(data?.content) ? data.content : [];
+
+        // Anthropic can return text in different positions depending on thinking/tool blocks.
+        const textBlock = content.find(block => typeof block?.text === 'string' && block.text.trim().length > 0);
+        if (textBlock) {
+            return textBlock.text;
         }
-        return data.content[0].text;
+
+        // Empty/non-text content is often due to safety refusal or token limits.
+        const stopReason = data?.stop_reason;
+        const contentTypes = content.map(block => block?.type || 'unknown').join(', ') || 'none';
+
+        if (stopReason === 'refusal') {
+            throw new Error('Anthropic refused to process this request (content policy). Try different wording or a fallback model.');
+        }
+        if (!content.length) {
+            throw new Error(`Anthropic returned empty content (stop_reason: ${stopReason ?? 'unknown'}).`);
+        }
+        throw new Error(`Anthropic content blocks are missing .text (stop_reason: ${stopReason ?? 'unknown'}, content_types: ${contentTypes}).`);
     }
 
     static extractThink(data) {
