@@ -82,5 +82,39 @@ describe('Image Processing and Multimodal Support Tests', () => {
             expect(response).to.include('small PNG test image');
         });
 
+        it('should detect image mime type from buffer when content-type header is missing', async () => {
+            const imageUrl = 'https://assets.example.com/test-image';
+            const pngBase64 = 'iVBORw0KGgoAAAANSUhEUgAAAAoAAAAKCAYAAACNMs+9AAAAFUlEQVR42mP8z8BQz0AEYBxVSF+FABJADveWkH6oAAAAAElFTkSuQmCC';
+            const pngBuffer = Buffer.from(pngBase64, 'base64');
+
+            model.sonnet46()
+                .addText('Describe this image')
+                .addImageFromUrl(imageUrl);
+
+            // No content-type header on purpose: this forces buffer-based detection.
+            nock('https://assets.example.com')
+                .get('/test-image')
+                .reply(200, pngBuffer);
+
+            nock('https://api.anthropic.com')
+                .post('/v1/messages')
+                .reply(function (uri, body) {
+                    const userMsg = body.messages.find(m => m.role === 'user');
+                    expect(userMsg).to.exist;
+                    const imageContent = userMsg.content.find(c => c.type === 'image');
+                    expect(imageContent).to.exist;
+                    expect(imageContent.source.type).to.equal('base64');
+                    expect(imageContent.source.media_type).to.equal('image/png');
+                    expect(imageContent.source.data).to.equal(pngBase64);
+                    return [200, {
+                        content: [{ type: "text", text: "Image received." }],
+                        role: "assistant"
+                    }];
+                });
+
+            const response = await model.message();
+            expect(response).to.include('Image received.');
+        });
+
     });
 });

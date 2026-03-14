@@ -1,6 +1,7 @@
 const axios = require('axios');
 const fs = require('fs');
-const { fromBuffer } = require('file-type');
+const fileType = require('file-type');
+const detectFileTypeFromBuffer = fileType.fileTypeFromBuffer || fileType.fromBuffer;
 const { inspect } = require('util');
 const log = require('lemonlog')('ModelMix');
 const Bottleneck = require('bottleneck');
@@ -633,11 +634,14 @@ class ModelMix {
 
                     // Detect mimeType if not provided
                     if (!mimeType) {
-                        const fileType = await fromBuffer(buffer);
-                        if (!fileType || !fileType.mime.startsWith('image/')) {
+                        if (typeof detectFileTypeFromBuffer !== 'function') {
+                            throw new Error('file-type module does not expose a buffer detector');
+                        }
+                        const detectedType = await detectFileTypeFromBuffer(buffer);
+                        if (!detectedType || !detectedType.mime.startsWith('image/')) {
                             throw new Error(`Invalid image - unable to detect valid image format`);
                         }
-                        mimeType = fileType.mime;
+                        mimeType = detectedType.mime;
                     }
 
                     // Update the content with processed image
