@@ -376,6 +376,42 @@ describe('JSON Schema and Structured Output Tests', () => {
             expect(result.countries[0]).to.have.property('capital');
         });
 
+        it('should send JSON mode and system instructions in Responses API request', async () => {
+            const example = {
+                countries: [{
+                    name: 'France',
+                    capital: 'Paris'
+                }]
+            };
+
+            model.gpt51().addText('Name and capital of 3 South American countries.');
+
+            let capturedBody;
+            nock('https://api.openai.com')
+                .post('/v1/responses', (body) => {
+                    capturedBody = body;
+                    return true;
+                })
+                .reply(200, testUtils.createMockResponse('openai-responses', JSON.stringify({
+                    countries: [
+                        { name: 'Argentina', capital: 'BUENOS AIRES' },
+                        { name: 'Brazil', capital: 'BRASILIA' },
+                        { name: 'Colombia', capital: 'BOGOTA' }
+                    ]
+                })));
+
+            const result = await model.json(example);
+
+            expect(result.countries).to.be.an('array');
+            expect(result.countries).to.have.length(3);
+            expect(capturedBody).to.be.an('object');
+            expect(capturedBody.text).to.be.an('object');
+            expect(capturedBody.text.format).to.deep.equal({ type: 'json_object' });
+            expect(capturedBody.input).to.be.an('array').that.is.not.empty;
+            expect(capturedBody.input[0].role).to.equal('developer');
+            expect(capturedBody.input[0].content[0].text).to.include('JSON');
+        });
+
         it('should handle complex nested JSON schema', async () => {
             const example = {
                 user: {

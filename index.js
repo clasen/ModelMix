@@ -1566,7 +1566,7 @@ class MixOpenAIResponses extends MixOpenAI {
         }
 
         const responsesUrl = this.config.url.replace('/chat/completions', '/responses');
-        const request = MixOpenAIResponses.buildResponsesRequest(options);
+        const request = MixOpenAIResponses.buildResponsesRequest(options, config);
         const response = await axios.post(responsesUrl, request, {
             headers: this.headers
         });
@@ -1574,15 +1574,37 @@ class MixOpenAIResponses extends MixOpenAI {
         return MixOpenAIResponses.processResponsesResponse(response);
     }
 
-    static buildResponsesRequest(options = {}) {
+    static buildResponsesRequest(options = {}, config = {}) {
+        const input = MixOpenAIResponses.messagesToResponsesInput(options.messages);
+        if (config.system) {
+            input.unshift({ role: 'developer', content: [{ type: 'input_text', text: config.system }] });
+        }
         const request = {
             model: options.model,
-            input: MixOpenAIResponses.messagesToResponsesInput(options.messages),
+            input,
             stream: false
         };
 
         if (options.reasoning_effort) request.reasoning = { effort: options.reasoning_effort };
         if (options.verbosity) request.text = { verbosity: options.verbosity };
+
+        if (options.response_format) {
+            const rf = options.response_format;
+            let format;
+            if (rf.type === 'json_schema' && rf.json_schema) {
+                format = {
+                    type: 'json_schema',
+                    name: rf.json_schema.name || 'response',
+                    strict: true,
+                    schema: rf.json_schema.schema
+                };
+            } else if (rf.type) {
+                format = { type: rf.type };
+            }
+            if (format) {
+                request.text = { ...request.text, format };
+            }
+        }
 
         if (typeof options.max_completion_tokens === 'number') {
             request.max_output_tokens = options.max_completion_tokens;

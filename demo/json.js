@@ -2,7 +2,7 @@ import { ModelMix } from '../index.js';
 try { process.loadEnvFile(); } catch {}
 
 const model = await ModelMix.new({ options: { max_tokens: 10000 }, config: { debug: 3 } })
-    .sonnet46()
+    .gpt51()
     // .gptOss()
     // .scout({ config: { temperature: 0 } })    
     // .o4mini()
