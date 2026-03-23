@@ -20,6 +20,8 @@ const MODEL_PRICING = {
     'gpt-realtime': [4.00, 16.00],
     'gpt-5.4': [2.50, 15.00],
     'gpt-5.4-pro': [30, 180.00],
+    'gpt-5.4-mini': [0.75, 4.50],
+    'gpt-5.4-nano': [0.20, 1.25],
     'gpt-5.3-codex': [1.75, 14.00],
     'gpt-5.2': [1.75, 14.00],
     'gpt-5.2-chat-latest': [1.75, 14.00],
@@ -61,7 +63,9 @@ const MODEL_PRICING = {
     // MiniMax
     'MiniMax-M2.1': [0.30, 1.20],
     'MiniMax-M2.5': [0.30, 1.20],
+    'MiniMax-M2.7': [0.30, 1.20],
     'fireworks/minimax-m2p5': [0.30, 1.20],
+    'minimax/minimax-m2.7': [0.30, 1.20],
     // Perplexity
     'sonar': [1.00, 1.00],
     'sonar-pro': [3.00, 15.00],
@@ -278,6 +282,12 @@ class ModelMix {
     gpt54({ options = {}, config = {} } = {}) {
         return this.attach('gpt-5.4', new MixOpenAIResponses({ options, config }));
     }
+    gpt54mini({ options = {}, config = {} } = {}) {
+        return this.attach('gpt-5.4-mini', new MixOpenAIResponses({ options, config }));
+    }
+    gpt54nano({ options = {}, config = {} } = {}) {
+        return this.attach('gpt-5.4-nano', new MixOpenAIResponses({ options, config }));
+    }        
     gpt54pro({ options = {}, config = {} } = {}) {
         return this.attach('gpt-5.4-pro', new MixOpenAIResponses({ options, config }));
     }          
@@ -477,6 +487,12 @@ class ModelMix {
     minimaxM2Stable({ options = {}, config = {} } = {}) {
         return this.attach('MiniMax-M2-Stable', new MixMiniMax({ options, config }));
     }
+
+    minimaxM27({ options = {}, config = {}, mix = { openrouter: true, minimax: true } } = {}) {
+        if (mix.openrouter) return this.attach('minimax/minimax-m2.7', new MixOpenRouter({ options, config }));
+        if (mix.minimax) return this.attach('MiniMax-M2.7', new MixMiniMax({ options, config }));
+        return this;
+    }  
 
     deepseekV32({ options = {}, config = {}, mix = {} } = {}) {
         mix = { ...this.mix, ...mix };

@@ -136,6 +136,8 @@ Here's a comprehensive list of available methods:
 | Method             | Provider   | Model                          | Price (I/O) per 1 M tokens |
 | ------------------ | ---------- | ------------------------------ | -------------------------- |
 | `gpt54()`          | OpenAI     | gpt-5.4                        | [\$2.50 / \$15.00][1]      |
+| `gpt54mini()`      | OpenAI     | gpt-5.4-mini                   | [\$0.75 / \$4.50][1]       |
+| `gpt54nano()`      | OpenAI     | gpt-5.4-nano                   | [\$0.20 / \$1.25][1]       |
 | `gpt53codex()`     | OpenAI     | gpt-5.3-codex                  | [\$1.25 / \$14.00][1]      |
 | `gpt52()`          | OpenAI     | gpt-5.2                        | [\$1.75 / \$14.00][1]      |
 | `gpt51()`          | OpenAI     | gpt-5.1                        | [\$1.25 / \$10.00][1]      |
@@ -153,13 +155,11 @@ Here's a comprehensive list of available methods:
 | `gemini31pro()`    | Google     | gemini-3.1-pro-preview         | [\$2.00 / \$12.00][3]      |
 | `gemini3pro()`     | Google     | gemini-3-pro-preview           | [\$2.00 / \$12.00][3]      |
 | `gemini3flash()`    | Google     | gemini-3-flash-preview          | [\$0.50 / \$3.00][3]       |
-| `gemini25pro()`    | Google     | gemini-2.5-pro                 | [\$1.25 / \$10.00][3]      |
-| `gemini25flash()`   | Google     | gemini-2.5-flash                | [\$0.30 / \$2.50][3]       |
 | `grok4()`          | Grok       | grok-4-0709                    | [\$3.00 / \$15.00][6]      |
 | `grok41[think]()`  | Grok       | grok-4-1-fast                  | [\$0.20 / \$0.50][6]       |
 | `deepseekV32()`    | Fireworks  | fireworks/models/deepseek-v3p2  | [\$0.56 / \$1.68][10]      |
 | `GLM47()`          | Fireworks  | fireworks/models/glm-4p7        | [\$0.55 / \$2.19][10]      |
-| `minimaxM25()`     | MiniMax    | MiniMax-M2.5                   | [\$0.30 / \$1.20][9]       |
+| `minimaxM27()`     | MiniMax    | MiniMax-M2.7                   | [\$0.30 / \$1.20][9]       |
 | `sonar()`          | Perplexity | sonar                          | [\$1.00 / \$1.00][4]       |
 | `sonarPro()`       | Perplexity | sonar-pro                      | [\$3.00 / \$15.00][4]      |
 | `hermes3()`        | Lambda     | Hermes-3-Llama-3.1-405B-FP8    | [\$0.80 / \$0.80][8]       |
