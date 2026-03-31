@@ -1,8 +1,8 @@
-const axios = require('axios');
 const fs = require('fs');
 const fileType = require('file-type');
 const detectFileTypeFromBuffer = fileType.fileTypeFromBuffer || fileType.fromBuffer;
 const { inspect } = require('util');
+const { Readable } = require('stream');
 const log = require('lemonlog')('ModelMix');
 const Bottleneck = require('bottleneck');
 const path = require('path');
@@ -11,6 +11,89 @@ const generateJsonSchema = require('./schema');
 const { Client } = require("@modelcontextprotocol/sdk/client/index.js");
 const { StdioClientTransport } = require("@modelcontextprotocol/sdk/client/stdio.js");
 const { MCPToolsManager } = require('./mcp-tools');
+
+function headersToObject(headers) {
+    return Object.fromEntries(headers.entries());
+}
+
+async function parseResponseBody(response) {
+    try {
+        return await response.json();
+    } catch {
+        try {
+            return await response.text();
+        } catch {
+            return null;
+        }
+    }
+}
+
+async function parseJsonBody(response) {
+    const text = await response.text();
+    if (!text) return null;
+    return JSON.parse(text);
+}
+
+async function buildHttpError(url, response) {
+    const details = await parseResponseBody(response);
+    const error = new Error(`Request to ${url} failed with status code ${response.status}`);
+    error.isHttpError = true;
+    error.statusCode = response.status;
+    error.details = details;
+    error.response = { status: response.status, data: details };
+    return error;
+}
+
+async function fetchJsonResponse(url, { method = 'POST', headers = {}, body } = {}) {
+    const response = await fetch(url, { method, headers, body });
+    if (!response.ok) {
+        throw await buildHttpError(url, response);
+    }
+    const data = await parseJsonBody(response);
+    return {
+        data,
+        status: response.status,
+        headers: headersToObject(response.headers)
+    };
+}
+
+async function fetchBinaryResponse(url, { method = 'GET', headers = {}, body } = {}) {
+    const response = await fetch(url, { method, headers, body });
+    if (!response.ok) {
+        throw await buildHttpError(url, response);
+    }
+    const data = Buffer.from(await response.arrayBuffer());
+    return {
+        data,
+        status: response.status,
+        headers: headersToObject(response.headers)
+    };
+}
+
+async function fetchStreamResponse(url, { method = 'POST', headers = {}, body } = {}) {
+    const response = await fetch(url, { method, headers, body });
+    if (!response.ok) {
+        throw await buildHttpError(url, response);
+    }
+    if (!response.body) {
+        throw new Error(`Request to ${url} did not return a readable stream`);
+    }
+    return {
+        data: Readable.fromWeb(response.body),
+        status: response.status,
+        headers: headersToObject(response.headers)
+    };
+}
+
+const DEFAULT_RETRYABLE_STATUS_CODES = [408, 425, 429, 500, 502, 503, 504, 529];
+
+function getErrorStatusCode(error) {
+    return error?.statusCode ?? error?.response?.status ?? error?.response?.statusCode ?? null;
+}
+
+function sleep(ms) {
+    return new Promise(resolve => setTimeout(resolve, ms));
+}
 
 // Pricing per 1M tokens: [input, output] in USD
 // Based on provider pricing pages linked in README
@@ -128,6 +211,13 @@ class ModelMix {
             max_history: 0, // 0=no history (stateless), N=keep last N messages, -1=unlimited
             debug: 0, // 0=silent, 1=minimal, 2=readable summary, 3=full (no truncate), 4=verbose (raw details)
             bottleneck: defaultBottleneckConfig,
+            retry: {
+                enabled: false,
+                retries: 2,
+                baseDelayMs: 500,
+                maxDelayMs: 5000,
+                retryableStatusCodes: [...DEFAULT_RETRYABLE_STATUS_CODES]
+            },
             roundRobin: false, // false=fallback mode, true=round robin rotation
             ...config
         }
@@ -417,7 +507,6 @@ class ModelMix {
     }
     maverick({ options = {}, config = {}, mix = {} } = {}) {
         mix = { ...this.mix, ...mix };
-        if (mix.groq) this.attach('meta-llama/llama-4-maverick-17b-128e-instruct', new MixGroq({ options, config }));
         if (mix.together) this.attach('meta-llama/Llama-4-Maverick-17B-128E-Instruct-FP8', new MixTogether({ options, config }));
         if (mix.lambda) this.attach('llama-4-maverick-17b-128e-instruct-fp8', new MixLambda({ options, config }));
         return this;
@@ -634,8 +723,8 @@ class ModelMix {
 
                     switch (content.source.type) {
                         case 'url':
-                            const response = await axios.get(content.source.data, { responseType: 'arraybuffer' });
-                            buffer = Buffer.from(response.data);
+                            const response = await fetchBinaryResponse(content.source.data);
+                            buffer = response.data;
                             mimeType = response.headers['content-type'];
                             break;
 
@@ -869,8 +958,15 @@ class ModelMix {
                 throw new Error("No user messages have been added. Use addText(prompt), addTextFromFile(filePath), addImage(filePath), or addImageFromUrl(url) to add a prompt.");
             }
 
-            // Merge config to get final roundRobin value
-            const finalConfig = { ...this.config, ...config };
+            // Merge config to get final roundRobin value and retry settings
+            const finalConfig = {
+                ...this.config,
+                ...config,
+                retry: {
+                    ...(this.config.retry || {}),
+                    ...(config.retry || {})
+                }
+            };
 
             // Try all models in order (first is primary, rest are fallbacks)
             const modelsToTry = this.models.map((model, index) => ({ model, index }));
@@ -900,9 +996,14 @@ class ModelMix {
                 };
 
                 const currentConfig = {
-                    ...this.config,
+                    ...finalConfig,
                     ...providerInstance.config,
                     ...config,
+                    retry: {
+                        ...(finalConfig.retry || {}),
+                        ...(providerInstance.config?.retry || {}),
+                        ...(config.retry || {})
+                    }
                 };
 
                 if (currentConfig.debug >= 1) {
@@ -927,8 +1028,46 @@ class ModelMix {
                         providerInstance.streamCallback = this.streamCallback;
                     }
 
-                    const startTime = Date.now();
-                    const result = await providerInstance.create({ options: currentOptions, config: currentConfig });
+                    const retryConfig = currentConfig.retry || {};
+                    const retries = retryConfig.enabled ? Math.max(0, retryConfig.retries || 0) : 0;
+                    const baseDelayMs = Math.max(0, retryConfig.baseDelayMs || 0);
+                    const maxDelayMs = Math.max(baseDelayMs, retryConfig.maxDelayMs || baseDelayMs);
+                    const retryableStatusCodes = new Set(
+                        Array.isArray(retryConfig.retryableStatusCodes) && retryConfig.retryableStatusCodes.length > 0
+                            ? retryConfig.retryableStatusCodes
+                            : DEFAULT_RETRYABLE_STATUS_CODES
+                    );
+
+                    let attempt = 0;
+                    let result;
+                    let startTime = 0;
+
+                    while (true) {
+                        try {
+                            startTime = Date.now();
+                            result = await providerInstance.create({ options: currentOptions, config: currentConfig });
+                            break;
+                        } catch (attemptError) {
+                            const statusCode = getErrorStatusCode(attemptError);
+                            const isRetryable = retryableStatusCodes.has(statusCode);
+                            const canRetry = attempt < retries && isRetryable;
+
+                            if (!canRetry) {
+                                throw attemptError;
+                            }
+
+                            if (currentConfig.debug >= 1) {
+                                const nextAttempt = attempt + 2;
+                                const totalAttempts = retries + 1;
+                                console.log(`↺ Retrying [${currentModelKey}] due to status ${statusCode} (${nextAttempt}/${totalAttempts})`);
+                            }
+
+                            const delay = Math.min(baseDelayMs * Math.pow(2, attempt), maxDelayMs);
+                            await sleep(delay);
+                            attempt += 1;
+                        }
+                    }
+
                     const elapsedMs = Date.now() - startTime;
 
                     if (result.tokens) {
@@ -1269,13 +1408,16 @@ class MixCustom {
             }
 
             if (options.stream) {
-                return this.processStream(await axios.post(this.config.url, options, {
+                return this.processStream(await fetchStreamResponse(this.config.url, {
+                    method: 'POST',
                     headers: this.headers,
-                    responseType: 'stream'
+                    body: JSON.stringify(options)
                 }));
             } else {
-                return this.processResponse(await axios.post(this.config.url, options, {
-                    headers: this.headers
+                return this.processResponse(await fetchJsonResponse(this.config.url, {
+                    method: 'POST',
+                    headers: this.headers,
+                    body: JSON.stringify(options)
                 }));
             }
         } catch (error) {
@@ -1288,10 +1430,12 @@ class MixCustom {
         let statusCode = null;
         let errorDetails = null;
 
-        if (error.isAxiosError) {
-            statusCode = error.response ? error.response.status : null;
-            errorMessage = `Request to ${this.config.url} failed with status code ${statusCode}`;
-            errorDetails = error.response ? error.response.data : null;
+        if (error?.isHttpError || error?.response || typeof error?.statusCode === 'number') {
+            statusCode = error.statusCode ?? error.response?.status ?? null;
+            errorMessage = error.message || `Request to ${this.config.url} failed with status code ${statusCode}`;
+            errorDetails = error.details ?? error.response?.data ?? null;
+        } else if (error?.message) {
+            errorMessage = error.message;
         }
 
         const formattedError = {
@@ -1583,8 +1727,10 @@ class MixOpenAIResponses extends MixOpenAI {
 
         const responsesUrl = this.config.url.replace('/chat/completions', '/responses');
         const request = MixOpenAIResponses.buildResponsesRequest(options, config);
-        const response = await axios.post(responsesUrl, request, {
-            headers: this.headers
+        const response = await fetchJsonResponse(responsesUrl, {
+            method: 'POST',
+            headers: this.headers,
+            body: JSON.stringify(request)
         });
 
         return MixOpenAIResponses.processResponsesResponse(response);
@@ -2615,8 +2761,10 @@ class MixGoogle extends MixCustom {
             if (options.stream) {
                 throw new Error('Stream is not supported for Gemini');
             } else {
-                return this.processResponse(await axios.post(fullUrl, payload, {
-                    headers: this.headers
+                return this.processResponse(await fetchJsonResponse(fullUrl, {
+                    method: 'POST',
+                    headers: this.headers,
+                    body: JSON.stringify(payload)
                 }));
             }
         } catch (error) {

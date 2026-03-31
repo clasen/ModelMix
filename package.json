@@ -1,6 +1,6 @@
 {
   "name": "modelmix",
-  "version": "4.4.30",
+  "version": "4.5.0",
   "description": "🧬 Reliable interface with automatic fallback for AI LLMs.",
   "main": "index.js",
   "repository": {
@@ -37,7 +37,7 @@
     "minimax",
     "thinking",
     "fireworks",
-    "glm",
+    "litellm",
     "clasen"
   ],
   "author": "Martin Clasen",
@@ -48,7 +48,6 @@
   "homepage": "https://github.com/clasen/ModelMix#readme",
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.27.1",
-    "axios": "^1.13.5",
     "bottleneck": "^2.19.5",
     "file-type": "^21.3.3",
     "form-data": "^4.0.4",

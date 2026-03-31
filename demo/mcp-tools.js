@@ -1,6 +1,5 @@
 import { ModelMix } from '../index.js';
 import fs from 'fs';
-import axios from 'axios';
 try { process.loadEnvFile(); } catch {}
 
 console.log('🧬 ModelMix - MCP Tools Demo with Callbacks');
@@ -127,8 +126,22 @@ async function example3() {
         }
     }, async ({ url, method = "GET" }) => {
         try {
-            const response = await axios({ method, url, timeout: 5000 });
-            return `HTTP ${method} ${url}\nStatus: ${response.status}\nResponse: ${JSON.stringify(response.data, null, 2)}`;
+            const controller = new AbortController();
+            const timeoutId = setTimeout(() => controller.abort(), 5000);
+            const response = await fetch(url, { method, signal: controller.signal });
+            clearTimeout(timeoutId);
+            const contentType = response.headers.get('content-type') || '';
+            let data;
+            if (contentType.includes('application/json')) {
+                try {
+                    data = await response.json();
+                } catch {
+                    data = await response.text();
+                }
+            } else {
+                data = await response.text();
+            }
+            return `HTTP ${method} ${url}\nStatus: ${response.status}\nResponse: ${typeof data === 'string' ? data : JSON.stringify(data, null, 2)}`;
         } catch (error) {
             return `Error making HTTP request to ${url}: ${error.message}`;
         }

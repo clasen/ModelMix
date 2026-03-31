@@ -9,6 +9,35 @@ const setup = {
     config: { debug: false, max_history: 3 }
 };
 
+const RETRYABLE_STATUS_CODES = new Set([408, 425, 429, 500, 502, 503, 504, 529]);
+
+function getStatusCode(error) {
+    return error?.statusCode ?? error?.response?.status ?? error?.response?.statusCode ?? null;
+}
+
+function isRetryableError(error) {
+    return RETRYABLE_STATUS_CODES.has(getStatusCode(error));
+}
+
+async function withRetry(task, { retries = 2, baseDelayMs = 1000 } = {}) {
+    let attempt = 0;
+    let lastError = null;
+    while (attempt <= retries) {
+        try {
+            return await task();
+        } catch (error) {
+            lastError = error;
+            if (attempt === retries || !isRetryableError(error)) {
+                throw error;
+            }
+            const backoffMs = baseDelayMs * Math.pow(2, attempt);
+            await new Promise(resolve => setTimeout(resolve, backoffMs));
+            attempt += 1;
+        }
+    }
+    throw lastError;
+}
+
 describe('Live MCP Integration Tests', function () {
     // Increase timeout for real API calls
     this.timeout(60000);
@@ -96,7 +125,7 @@ describe('Live MCP Integration Tests', function () {
             model.addText('What time is it right now?');
 
             try {
-                const response = await model.message();
+                const response = await withRetry(() => model.message(), { retries: 2, baseDelayMs: 1500 });
                 console.log(`Claude Sonnet 4 with MCP tools: ${response}`);
 
                 expect(response).to.be.a('string');

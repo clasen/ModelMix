@@ -475,6 +475,29 @@ const setup = {
 
 This integration ensures that your application respects API rate limits while maximizing throughput, providing a robust solution for managing multiple AI model interactions.
 
+## 🔁 Retry (Opt-In)
+
+ModelMix supports optional intra-model retries for transient HTTP failures. When enabled, it retries the same provider before moving to fallback models.
+
+```javascript
+const mix = ModelMix.new({
+  config: {
+    retry: {
+      enabled: true,                 // Default: false (opt-in)
+      retries: 2,                    // Extra attempts after first try
+      baseDelayMs: 500,              // Exponential backoff base delay
+      maxDelayMs: 5000,              // Backoff cap
+      retryableStatusCodes: [408, 425, 429, 500, 502, 503, 504, 529]
+    }
+  }
+});
+```
+
+Behavior summary:
+- If retry is disabled (default), ModelMix keeps current behavior: immediate fallback to next model on failure.
+- If retry is enabled, ModelMix retries the same model only for configured transient status codes.
+- After retries are exhausted (or for non-retryable errors), ModelMix continues with normal fallback chain.
+
 ## 📚 ModelMix Class Overview
 
 ```javascript
@@ -496,6 +519,12 @@ new ModelMix(args = { options: {}, config: {} })
       - `reservoir`: Number of requests allowed in the reservoir period
       - `reservoirRefreshAmount`: How many requests are added when the reservoir refreshes
       - `reservoirRefreshInterval`: Reservoir refresh interval
+    - `retry`: Optional intra-model retry policy before fallback:
+      - `enabled`: Enables retry behavior (`false` by default)
+      - `retries`: Number of retries for retryable failures
+      - `baseDelayMs`: Initial backoff delay in milliseconds
+      - `maxDelayMs`: Maximum backoff delay in milliseconds
+      - `retryableStatusCodes`: HTTP status codes that should trigger retry
     - ...(Additional configuration parameters can be added as needed)
 
 **Methods**

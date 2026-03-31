@@ -263,6 +263,105 @@ describe('Provider Fallback Chain Tests', () => {
         });
     });
 
+    describe('Retry Opt-In Before Fallback', () => {
+        it('should keep immediate fallback when retry is disabled', async () => {
+            const model = ModelMix.new({
+                config: { debug: false, retry: { enabled: false } }
+            });
+
+            model.gpt5mini().sonnet46().addText('Hello');
+
+            nock('https://api.openai.com')
+                .post('/v1/chat/completions')
+                .reply(503, { error: 'Service unavailable' });
+
+            nock('https://api.anthropic.com')
+                .post('/v1/messages')
+                .reply(200, {
+                    content: [{
+                        type: 'text',
+                        text: 'Fallback without retry'
+                    }]
+                });
+
+            const response = await model.message();
+            expect(response).to.include('Fallback without retry');
+        });
+
+        it('should retry same provider on retryable errors when enabled', async () => {
+            const model = ModelMix.new({
+                config: { debug: false, retry: { enabled: true, retries: 2, baseDelayMs: 0, maxDelayMs: 0 } }
+            });
+
+            model.gpt5mini().addText('Hello');
+
+            nock('https://api.openai.com')
+                .post('/v1/chat/completions')
+                .reply(503, { error: 'Temporary outage' })
+                .post('/v1/chat/completions')
+                .reply(200, {
+                    choices: [{
+                        message: {
+                            role: 'assistant',
+                            content: 'Recovered after retry'
+                        }
+                    }]
+                });
+
+            const response = await model.message();
+            expect(response).to.include('Recovered after retry');
+        });
+
+        it('should skip retry and fallback immediately on non-retryable errors', async () => {
+            const model = ModelMix.new({
+                config: { debug: false, retry: { enabled: true, retries: 2, baseDelayMs: 0, maxDelayMs: 0 } }
+            });
+
+            model.gpt5mini().sonnet46().addText('Hello');
+
+            nock('https://api.openai.com')
+                .post('/v1/chat/completions')
+                .reply(401, { error: 'Unauthorized' });
+
+            nock('https://api.anthropic.com')
+                .post('/v1/messages')
+                .reply(200, {
+                    content: [{
+                        type: 'text',
+                        text: 'Immediate fallback from non-retryable error'
+                    }]
+                });
+
+            const response = await model.message();
+            expect(response).to.include('Immediate fallback from non-retryable error');
+        });
+
+        it('should fallback after retry attempts are exhausted', async () => {
+            const model = ModelMix.new({
+                config: { debug: false, retry: { enabled: true, retries: 1, baseDelayMs: 0, maxDelayMs: 0 } }
+            });
+
+            model.gpt5mini().sonnet46().addText('Hello');
+
+            nock('https://api.openai.com')
+                .post('/v1/chat/completions')
+                .times(2)
+                .reply(503, { error: 'Still unavailable' });
+
+            nock('https://api.anthropic.com')
+                .post('/v1/messages')
+                .reply(200, {
+                    content: [{
+                        type: 'text',
+                        text: 'Fallback after exhausted retries'
+                    }]
+                });
+
+            const response = await model.message();
+            expect(response).to.include('Fallback after exhausted retries');
+        });
+    });
+
     describe('Fallback Configuration', () => {
         it('should respect custom provider configurations in fallback', async () => {
             const model = ModelMix.new({

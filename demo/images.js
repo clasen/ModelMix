@@ -1,7 +1,7 @@
 import { ModelMix } from '../index.js';
 try { process.loadEnvFile(); } catch {}
 
-const model = ModelMix.new({ config: { max_history: 2, debug: 2 } }).maverick()
+const model = ModelMix.new({ config: { max_history: 2, debug: 2 } }).scout()
 // model.addImageFromUrl('https://pbs.twimg.com/media/F6-GsjraAAADDGy?format=jpg');
 model.addImage('./img.png');
 model.addText('in one word, which is the main color of the image?');
