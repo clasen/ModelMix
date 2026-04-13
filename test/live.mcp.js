@@ -60,8 +60,8 @@ describe('Live MCP Integration Tests', function () {
 
     describe('Basic MCP Tool Integration', function () {
 
-        it('should use custom MCP tools with GPT-5.2', async function () {
-            const model = ModelMix.new(setup).gpt52();
+        it('should use custom MCP tools with GPT-5.4', async function () {
+            const model = ModelMix.new(setup).gpt54();
 
             // Add custom calculator tool
             model.addTool({

@@ -2,7 +2,6 @@ const fs = require('fs');
 const fileType = require('file-type');
 const detectFileTypeFromBuffer = fileType.fileTypeFromBuffer || fileType.fromBuffer;
 const { inspect } = require('util');
-const { Readable } = require('stream');
 const log = require('lemonlog')('ModelMix');
 const Bottleneck = require('bottleneck');
 const path = require('path');
@@ -11,79 +10,16 @@ const generateJsonSchema = require('./schema');
 const { Client } = require("@modelcontextprotocol/sdk/client/index.js");
 const { StdioClientTransport } = require("@modelcontextprotocol/sdk/client/stdio.js");
 const { MCPToolsManager } = require('./mcp-tools');
-
-function headersToObject(headers) {
-    return Object.fromEntries(headers.entries());
-}
-
-async function parseResponseBody(response) {
-    try {
-        return await response.json();
-    } catch {
-        try {
-            return await response.text();
-        } catch {
-            return null;
-        }
-    }
-}
-
-async function parseJsonBody(response) {
-    const text = await response.text();
-    if (!text) return null;
-    return JSON.parse(text);
-}
-
-async function buildHttpError(url, response) {
-    const details = await parseResponseBody(response);
-    const error = new Error(`Request to ${url} failed with status code ${response.status}`);
-    error.isHttpError = true;
-    error.statusCode = response.status;
-    error.details = details;
-    error.response = { status: response.status, data: details };
-    return error;
-}
-
-async function fetchJsonResponse(url, { method = 'POST', headers = {}, body } = {}) {
-    const response = await fetch(url, { method, headers, body });
-    if (!response.ok) {
-        throw await buildHttpError(url, response);
-    }
-    const data = await parseJsonBody(response);
-    return {
-        data,
-        status: response.status,
-        headers: headersToObject(response.headers)
-    };
-}
-
-async function fetchBinaryResponse(url, { method = 'GET', headers = {}, body } = {}) {
-    const response = await fetch(url, { method, headers, body });
-    if (!response.ok) {
-        throw await buildHttpError(url, response);
-    }
-    const data = Buffer.from(await response.arrayBuffer());
-    return {
-        data,
-        status: response.status,
-        headers: headersToObject(response.headers)
-    };
-}
-
-async function fetchStreamResponse(url, { method = 'POST', headers = {}, body } = {}) {
-    const response = await fetch(url, { method, headers, body });
-    if (!response.ok) {
-        throw await buildHttpError(url, response);
-    }
-    if (!response.body) {
-        throw new Error(`Request to ${url} did not return a readable stream`);
-    }
-    return {
-        data: Readable.fromWeb(response.body),
-        status: response.status,
-        headers: headersToObject(response.headers)
-    };
-}
+const {
+    stripContentTypeHeader,
+    createMultipartFormData,
+    buildRequestBodyAndHeaders
+} = require('./multipart');
+const {
+    fetchJsonResponse,
+    fetchBinaryResponse,
+    fetchStreamResponse
+} = require('./http-client');
 
 const DEFAULT_RETRYABLE_STATUS_CODES = [408, 425, 429, 500, 502, 503, 504, 529];
 
@@ -1389,10 +1325,25 @@ class MixCustom {
         return MixOpenAI.convertMessages(messages, config);
     }
 
+    static stripContentTypeHeader(headers = {}) {
+        return stripContentTypeHeader(headers);
+    }
+
+    static createMultipartFormData({ fields = {}, files = [] } = {}) {
+        return createMultipartFormData({ fields, files });
+    }
+
+    static buildRequestBodyAndHeaders(options, headers) {
+        return buildRequestBodyAndHeaders(options, headers);
+    }
+
     async create({ config = {}, options = {} } = {}) {
         try {
+            if (Array.isArray(options.messages)) {
+                options.messages = this.convertMessages(options.messages, config);
+            }
 
-            options.messages = this.convertMessages(options.messages, config);
+            const request = buildRequestBodyAndHeaders(options, this.headers);
 
             // debug level 4 (verbose): Full request details
             if (config.debug >= 4) {
@@ -1404,20 +1355,20 @@ class MixCustom {
                 console.log(ModelMix.formatJSON(configToLog));
 
                 console.log('\n[OPTIONS]');
-                console.log(ModelMix.formatJSON(options));
+                console.log(ModelMix.formatJSON(request.options));
             }
 
             if (options.stream) {
                 return this.processStream(await fetchStreamResponse(this.config.url, {
                     method: 'POST',
-                    headers: this.headers,
-                    body: JSON.stringify(options)
+                    headers: request.headers,
+                    body: request.body
                 }));
             } else {
                 return this.processResponse(await fetchJsonResponse(this.config.url, {
                     method: 'POST',
-                    headers: this.headers,
-                    body: JSON.stringify(options)
+                    headers: request.headers,
+                    body: request.body
                 }));
             }
         } catch (error) {
@@ -2236,6 +2187,7 @@ class MixAnthropic extends MixCustom {
 
     static extractMessage(data) {
         const content = Array.isArray(data?.content) ? data.content : [];
+        const stopReason = data?.stop_reason;
 
         // Anthropic can return text in different positions depending on thinking/tool blocks.
         const textBlock = content.find(block => typeof block?.text === 'string' && block.text.trim().length > 0);
@@ -2243,8 +2195,12 @@ class MixAnthropic extends MixCustom {
             return textBlock.text;
         }
 
+        // A tool_use turn can legitimately contain no text blocks.
+        if (stopReason === 'tool_use') {
+            return '';
+        }
+
         // Empty/non-text content is often due to safety refusal or token limits.
-        const stopReason = data?.stop_reason;
         const contentTypes = content.map(block => block?.type || 'unknown').join(', ') || 'none';
 
         if (stopReason === 'refusal') {

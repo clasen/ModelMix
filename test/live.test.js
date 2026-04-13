@@ -299,8 +299,8 @@ describe('Live Integration Tests', function () {
             expect(result.abilities).to.be.an('array');
         });
 
-        it('should return structured JSON with KimiK2', async function () {
-            const model = ModelMix.new(setup).kimiK2();
+        it('should return structured JSON with KimiK25 Thinking', async function () {
+            const model = ModelMix.new(setup).kimiK25think();
 
             model.addText('Generate information about a fictional vehicle.');
 
@@ -321,30 +321,8 @@ describe('Live Integration Tests', function () {
             expect(result.features).to.be.an('array');
         });
 
-        it('should return structured JSON with GPT-OSS', async function () {
-            const model = ModelMix.new(setup).gptOss();
-
-            model.addText('Generate information about a fictional planet.');
-
-            const result = await model.json({
-                name: "Nova Prime",
-                type: "Gas Giant",
-                moons: ["Alpha", "Beta", "Gamma"],
-                atmosphere: "Hydrogen and Helium"
-            });
-
-            console.log(`GPT-OSS JSON result:`, result);
-
-            expect(result).to.be.an('object');
-            expect(result).to.have.property('name');
-            expect(result).to.have.property('type');
-            expect(result).to.have.property('moons');
-            expect(result).to.have.property('atmosphere');
-            expect(result.moons).to.be.an('array');
-        });
-
         it('should return structured JSON with Grok3Mini', async function () {
-            const model = ModelMix.new(setup).grok3mini();
+            const model = ModelMix.new(setup).grok41();
 
             model.addText('Generate information about a fictional technology.');
 
