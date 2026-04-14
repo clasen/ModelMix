@@ -87,7 +87,7 @@ console.log(ETH.price);
 ```javascript
 ModelMix.new()
   .gptOss()
-  .kimiK2()
+  .kimiK25think()
   .deepseekR1()
   .hermes3()
   .addText('What is the capital of France?');
@@ -164,7 +164,6 @@ Here's a comprehensive list of available methods:
 | `sonarPro()`       | Perplexity | sonar-pro                      | [\$3.00 / \$15.00][4]      |
 | `hermes3()`        | Lambda     | Hermes-3-Llama-3.1-405B-FP8    | [\$0.80 / \$0.80][8]       |
 | `qwen3()`          | Together   | Qwen3-235B-A22B-fp8-tput       | [\$0.20 / \$0.60][7]       |
-| `kimiK2()`         | Together   | Kimi-K2-Instruct               | [\$1.00 / \$3.00][7]       |
 | `kimiK25think()`   | Together   | Kimi-K2.5                      | [\$0.50 / \$2.80][7]       |
 
 [1]: https://platform.openai.com/docs/pricing "Pricing | OpenAI"

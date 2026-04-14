@@ -102,12 +102,6 @@ const MODEL_PRICING = {
     // Qwen3 (Together/Cerebras)
     'Qwen/Qwen3-235B-A22B-fp8-tput': [0.20, 0.60],
     'qwen-3-32b': [0.20, 0.60],
-    // Kimi K2 (Together/Groq/OpenRouter)
-    'moonshotai/Kimi-K2-Instruct-0905': [1.00, 3.00],
-    'moonshotai/kimi-k2-instruct-0905': [1.00, 3.00],
-    'moonshotai/kimi-k2:free': [0, 0],
-    'moonshotai/Kimi-K2-Thinking': [1.00, 3.00],
-    'moonshotai/kimi-k2-thinking': [1.00, 3.00],
     // Kimi K2.5 (Together/Fireworks/OpenRouter)
     'moonshotai/Kimi-K2.5': [0.50, 2.80],
     'moonshotai/kimi-k2.5': [0.50, 2.80],
@@ -464,26 +458,11 @@ class ModelMix {
         return this;
     }
 
-    kimiK2({ options = {}, config = {}, mix = {} } = {}) {
-        mix = { ...this.mix, ...mix };
-        if (mix.together) this.attach('moonshotai/Kimi-K2-Instruct-0905', new MixTogether({ options, config }));
-        if (mix.groq) this.attach('moonshotai/kimi-k2-instruct-0905', new MixGroq({ options, config }));
-        if (mix.openrouter) this.attach('moonshotai/kimi-k2:free', new MixOpenRouter({ options, config }));
-        return this;
-    }
-
     kimiK25think({ options = {}, config = {}, mix = { together: true } } = {}) {
         mix = { ...this.mix, ...mix };
         if (mix.together) this.attach('moonshotai/Kimi-K2.5', new MixTogether({ options, config }));
         if (mix.fireworks) this.attach('accounts/fireworks/models/kimi-k2p5', new MixFireworks({ options, config }));
         if (mix.openrouter) this.attach('moonshotai/kimi-k2.5', new MixOpenRouter({ options, config }));
-        return this;
-    }
-
-    kimiK2think({ options = {}, config = {}, mix = { together: true } } = {}) {
-        mix = { ...this.mix, ...mix };
-        if (mix.together) this.attach('moonshotai/Kimi-K2-Thinking', new MixTogether({ options, config }));
-        if (mix.openrouter) this.attach('moonshotai/kimi-k2-thinking', new MixOpenRouter({ options, config }));
         return this;
     }
 

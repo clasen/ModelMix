@@ -113,7 +113,7 @@ Thinking variants: append `think` — e.g. `opus46think()` `sonnet46think()` `so
 `scout()` `maverick()`
 
 ### Together
-`qwen3()` `kimiK2()` `kimiK2think()` `kimiK25think()` `gptOss()`
+`qwen3()` `kimiK25think()` `gptOss()`
 
 ### MiniMax
 `minimaxM25()` `minimaxM21()` `minimaxM2()` `minimaxM2Stable()`
@@ -128,7 +128,7 @@ Thinking variants: append `think` — e.g. `opus46think()` `sonnet46think()` `so
 `GLM45()`
 
 ### Multi-provider (auto-fallback across free/paid tiers)
-`deepseekR1()` `hermes3()` `scout()` `maverick()` `kimiK2()` `GLM47()`
+`deepseekR1()` `hermes3()` `scout()` `maverick()` `kimiK25think()` `GLM47()`
 
 ### Local
 `lmstudio()` — for LM Studio local models
@@ -356,7 +356,7 @@ For full debug output, also set: `DEBUG=ModelMix* node script.js`
 ```javascript
 const model = ModelMix.new()
     .gptOss()
-    .kimiK2()
+    .kimiK25think()
     .deepseekR1()
     .hermes3()
     .addText("What is the capital of France?");

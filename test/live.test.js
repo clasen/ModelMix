@@ -192,18 +192,6 @@ describe('Live Integration Tests', function () {
             expect(response.toLowerCase()).to.include('scout test successful');
         });
 
-        it('should work with KimiK2 model', async function () {
-            const model = ModelMix.new(setup).kimiK2();
-
-            model.addText('Say "kimik2 test successful" and nothing else.');
-
-            const response = await model.message();
-            console.log(`KimiK2 response: ${response}`);
-
-            expect(response).to.be.a('string');
-            expect(response.toLowerCase()).to.include('kimik2 test successful');
-        });
-
         it('should work with GPT-OSS model', async function () {
             const model = ModelMix.new(setup).gptOss();
 
@@ -311,7 +299,7 @@ describe('Live Integration Tests', function () {
                 manufacturer: "Future Motors"
             });
 
-            console.log(`KimiK2 JSON result:`, result);
+            console.log(`KimiK25 JSON result:`, result);
 
             expect(result).to.be.an('object');
             expect(result).to.have.property('name');
