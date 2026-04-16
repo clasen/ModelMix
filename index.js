@@ -70,6 +70,7 @@ const MODEL_PRICING = {
     'gemini-3-flash-preview': [0.50, 3.00],
     'gemini-2.5-pro': [1.25, 10.00],
     'gemini-2.5-flash': [0.30, 2.50],
+    'gemini-3.1-flash-lite-preview': [0.25, 1.50],
     // Grok
     'grok-4-0709': [3.00, 15.00],
     'grok-4-1-fast-reasoning': [0.20, 0.50],
@@ -395,6 +396,9 @@ class ModelMix {
     }
     gemini3flash({ options = {}, config = {} } = {}) {
         return this.attach('gemini-3-flash-preview', new MixGoogle({ options, config }));
+    }
+    gemini31flashLite({ options = {}, config = {} } = {}) {
+        return this.attach('gemini-3.1-flash-lite-preview', new MixGoogle({ options, config }));
     }
     gemini25pro({ options = {}, config = {} } = {}) {
         return this.attach('gemini-2.5-pro', new MixGoogle({ options, config }));

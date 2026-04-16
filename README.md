@@ -133,38 +133,39 @@ The Model Context Protocol makes it easy to add any capability to your models, f
 ModelMix provides convenient shorthand methods for quickly accessing different AI models.
 Here's a comprehensive list of available methods:
 
-| Method             | Provider   | Model                          | Price (I/O) per 1 M tokens |
-| ------------------ | ---------- | ------------------------------ | -------------------------- |
-| `gpt54()`          | OpenAI     | gpt-5.4                        | [\$2.50 / \$15.00][1]      |
-| `gpt54mini()`      | OpenAI     | gpt-5.4-mini                   | [\$0.75 / \$4.50][1]       |
-| `gpt54nano()`      | OpenAI     | gpt-5.4-nano                   | [\$0.20 / \$1.25][1]       |
-| `gpt53codex()`     | OpenAI     | gpt-5.3-codex                  | [\$1.25 / \$14.00][1]      |
-| `gpt52()`          | OpenAI     | gpt-5.2                        | [\$1.75 / \$14.00][1]      |
-| `gpt51()`          | OpenAI     | gpt-5.1                        | [\$1.25 / \$10.00][1]      |
-| `gpt5mini()`       | OpenAI     | gpt-5-mini                     | [\$0.25 / \$2.00][1]       |
-| `gpt5nano()`       | OpenAI     | gpt-5-nano                     | [\$0.05 / \$0.40][1]       |
-| `gpt41()`          | OpenAI     | gpt-4.1                        | [\$2.00 / \$8.00][1]       |
-| `gpt41mini()`      | OpenAI     | gpt-4.1-mini                   | [\$0.40 / \$1.60][1]       |
-| `gpt41nano()`      | OpenAI     | gpt-4.1-nano                   | [\$0.10 / \$0.40][1]       |
-| `gptOss()`         | Together   | gpt-oss-120B                   | [\$0.15 / \$0.60][7]       |
-| `opus46[think]()`  | Anthropic  | claude-opus-4-6                | [\$5.00 / \$25.00][2]      |
-| `opus45[think]()`  | Anthropic  | claude-opus-4-5-20251101       | [\$5.00 / \$25.00][2]      |
-| `sonnet46[think]()`| Anthropic  | claude-sonnet-4-6              | [\$3.00 / \$15.00][2]      |
-| `sonnet45[think]()`| Anthropic  | claude-sonnet-4-5-20250929     | [\$3.00 / \$15.00][2]      |
-| `haiku45[think]()` | Anthropic  | claude-haiku-4-5-20251001      | [\$1.00 / \$5.00][2]       |
-| `gemini31pro()`    | Google     | gemini-3.1-pro-preview         | [\$2.00 / \$12.00][3]      |
-| `gemini3pro()`     | Google     | gemini-3-pro-preview           | [\$2.00 / \$12.00][3]      |
-| `gemini3flash()`    | Google     | gemini-3-flash-preview          | [\$0.50 / \$3.00][3]       |
-| `grok4()`          | Grok       | grok-4-0709                    | [\$3.00 / \$15.00][6]      |
-| `grok41[think]()`  | Grok       | grok-4-1-fast                  | [\$0.20 / \$0.50][6]       |
-| `deepseekV32()`    | Fireworks  | fireworks/models/deepseek-v3p2  | [\$0.56 / \$1.68][10]      |
-| `GLM47()`          | Fireworks  | fireworks/models/glm-4p7        | [\$0.55 / \$2.19][10]      |
-| `minimaxM27()`     | MiniMax    | MiniMax-M2.7                   | [\$0.30 / \$1.20][9]       |
-| `sonar()`          | Perplexity | sonar                          | [\$1.00 / \$1.00][4]       |
-| `sonarPro()`       | Perplexity | sonar-pro                      | [\$3.00 / \$15.00][4]      |
-| `hermes3()`        | Lambda     | Hermes-3-Llama-3.1-405B-FP8    | [\$0.80 / \$0.80][8]       |
-| `qwen3()`          | Together   | Qwen3-235B-A22B-fp8-tput       | [\$0.20 / \$0.60][7]       |
-| `kimiK25think()`   | Together   | Kimi-K2.5                      | [\$0.50 / \$2.80][7]       |
+| Method              | Provider   | Model                        | Price (I/O) per 1 M tokens |
+| ------------------- | ---------- | ---------------------------- | -------------------------- |
+| `gpt54()`           | OpenAI     | gpt-5.4                      | [\$2.50 / \$15.00][1]      |
+| `gpt54mini()`       | OpenAI     | gpt-5.4-mini                 | [\$0.75 / \$4.50][1]       |
+| `gpt54nano()`       | OpenAI     | gpt-5.4-nano                 | [\$0.20 / \$1.25][1]       |
+| `gpt53codex()`      | OpenAI     | gpt-5.3-codex                | [\$1.25 / \$14.00][1]      |
+| `gpt52()`           | OpenAI     | gpt-5.2                      | [\$1.75 / \$14.00][1]      |
+| `gpt51()`           | OpenAI     | gpt-5.1                      | [\$1.25 / \$10.00][1]      |
+| `gpt5mini()`        | OpenAI     | gpt-5-mini                   | [\$0.25 / \$2.00][1]       |
+| `gpt5nano()`        | OpenAI     | gpt-5-nano                   | [\$0.05 / \$0.40][1]       |
+| `gpt41()`           | OpenAI     | gpt-4.1                      | [\$2.00 / \$8.00][1]       |
+| `gpt41mini()`       | OpenAI     | gpt-4.1-mini                 | [\$0.40 / \$1.60][1]       |
+| `gpt41nano()`       | OpenAI     | gpt-4.1-nano                 | [\$0.10 / \$0.40][1]       |
+| `gptOss()`          | Together   | gpt-oss-120B                 | [\$0.15 / \$0.60][7]       |
+| `opus46[think]()`   | Anthropic  | claude-opus-4-6              | [\$5.00 / \$25.00][2]      |
+| `opus45[think]()`   | Anthropic  | claude-opus-4-5-20251101     | [\$5.00 / \$25.00][2]      |
+| `sonnet46[think]()` | Anthropic  | claude-sonnet-4-6            | [\$3.00 / \$15.00][2]      |
+| `sonnet45[think]()` | Anthropic  | claude-sonnet-4-5-20250929   | [\$3.00 / \$15.00][2]      |
+| `haiku45[think]()`  | Anthropic  | claude-haiku-4-5-20251001    | [\$1.00 / \$5.00][2]       |
+| `gemini31pro()`     | Google     | gemini-3.1-pro-preview       | [\$2.00 / \$12.00][3]      |
+| `gemini3pro()`      | Google     | gemini-3-pro-preview         | [\$2.00 / \$12.00][3]      |
+| `gemini3flash()`     | Google     | gemini-3-flash-preview        | [\$0.50 / \$3.00][3]       |
+| `gemini31flashLite()`| Google     | gemini-3.1-flash-lite-preview | [\$0.25 / \$1.50][3]       |
+| `grok4()`           | Grok       | grok-4-0709                  | [\$3.00 / \$15.00][6]      |
+| `grok41[think]()`   | Grok       | grok-4-1-fast                | [\$0.20 / \$0.50][6]       |
+| `deepseekV32()`     | Fireworks  | fireworks/models/deepseek-v3p2| [\$0.56 / \$1.68][10]      |
+| `GLM47()`           | Fireworks  | fireworks/models/glm-4p7      | [\$0.55 / \$2.19][10]      |
+| `minimaxM27()`      | MiniMax    | MiniMax-M2.7                 | [\$0.30 / \$1.20][9]       |
+| `sonar()`           | Perplexity | sonar                        | [\$1.00 / \$1.00][4]       |
+| `sonarPro()`        | Perplexity | sonar-pro                    | [\$3.00 / \$15.00][4]      |
+| `hermes3()`         | Lambda     | Hermes-3-Llama-3.1-405B-FP8  | [\$0.80 / \$0.80][8]       |
+| `qwen3()`           | Together   | Qwen3-235B-A22B-fp8-tput     | [\$0.20 / \$0.60][7]       |
+| `kimiK25think()`    | Together   | Kimi-K2.5                    | [\$0.50 / \$2.80][7]       |
 
 [1]: https://platform.openai.com/docs/pricing "Pricing | OpenAI"
 [2]: https://docs.anthropic.com/en/docs/about-claude/pricing "Pricing - Anthropic"
