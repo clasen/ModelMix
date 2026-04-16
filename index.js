@@ -1032,7 +1032,7 @@ class ModelMix {
                         const tokenInfo = result.tokens
                             ? ` ${result.tokens.input} → ${result.tokens.output} tok`
                                 + (result.tokens.cached ? ` (cached:${result.tokens.cached})` : '')
-                                + (result.tokens.speed ? `| ${result.tokens.speed} t/s` : '')
+                                + (result.tokens.speed ? ` | ${result.tokens.speed} t/s` : '')
                                 + (result.tokens.cost != null ? ` $${result.tokens.cost.toFixed(4)}` : '')
                             : '';
                         console.log(`✓${tokenInfo}\n${ModelMix.formatOutputSummary(result, currentConfig.debug).trim()}`);
