@@ -147,8 +147,8 @@ Here's a comprehensive list of available methods:
 | `gpt41mini()`       | OpenAI     | gpt-4.1-mini                 | [\$0.40 / \$1.60][1]       |
 | `gpt41nano()`       | OpenAI     | gpt-4.1-nano                 | [\$0.10 / \$0.40][1]       |
 | `gptOss()`          | Together   | gpt-oss-120B                 | [\$0.15 / \$0.60][7]       |
+| `opus47[think]()`   | Anthropic  | claude-opus-4-7              | [\$5.00 / \$25.00][2]      |
 | `opus46[think]()`   | Anthropic  | claude-opus-4-6              | [\$5.00 / \$25.00][2]      |
-| `opus45[think]()`   | Anthropic  | claude-opus-4-5-20251101     | [\$5.00 / \$25.00][2]      |
 | `sonnet46[think]()` | Anthropic  | claude-sonnet-4-6            | [\$3.00 / \$15.00][2]      |
 | `sonnet45[think]()` | Anthropic  | claude-sonnet-4-5-20250929   | [\$3.00 / \$15.00][2]      |
 | `haiku45[think]()`  | Anthropic  | claude-haiku-4-5-20251001    | [\$1.00 / \$5.00][2]       |
@@ -166,6 +166,7 @@ Here's a comprehensive list of available methods:
 | `hermes3()`         | Lambda     | Hermes-3-Llama-3.1-405B-FP8  | [\$0.80 / \$0.80][8]       |
 | `qwen3()`           | Together   | Qwen3-235B-A22B-fp8-tput     | [\$0.20 / \$0.60][7]       |
 | `kimiK25think()`    | Together   | Kimi-K2.5                    | [\$0.50 / \$2.80][7]       |
+| `kimiK26think()`    | Fireworks  | fireworks/models/kimi-k2p6    | [\$0.95 / \$4.00][10]       |
 
 [1]: https://platform.openai.com/docs/pricing "Pricing | OpenAI"
 [2]: https://docs.anthropic.com/en/docs/about-claude/pricing "Pricing - Anthropic"

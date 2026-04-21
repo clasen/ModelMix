@@ -56,6 +56,7 @@ const MODEL_PRICING = {
     'gpt-oss-120b': [0.15, 0.60],
     'openai/gpt-oss-120b:free': [0, 0],
     // Anthropic
+    'claude-opus-4-7': [5.00, 25.00],
     'claude-opus-4-6': [5.00, 25.00],
     'claude-opus-4-5-20251101': [5.00, 25.00],
     'claude-opus-4-1-20250805': [15.00, 75.00],
@@ -332,6 +333,10 @@ class ModelMix {
         if (mix.openrouter) this.attach('openai/gpt-oss-120b:free', new MixOpenRouter({ options, config }));
         return this;
     }
+    opus47think({ options = {}, config = {} } = {}) {
+        options = { ...MixAnthropic.thinkingOptions, ...options };
+        return this.attach('claude-opus-4-7', new MixAnthropic({ options, config }));
+    }    
     opus46think({ options = {}, config = {} } = {}) {
         options = { ...MixAnthropic.thinkingOptions, ...options };
         return this.attach('claude-opus-4-6', new MixAnthropic({ options, config }));
@@ -340,6 +345,9 @@ class ModelMix {
         options = { ...MixAnthropic.thinkingOptions, ...options };
         return this.attach('claude-opus-4-5-20251101', new MixAnthropic({ options, config }));
     }
+    opus47({ options = {}, config = {} } = {}) {
+        return this.attach('claude-opus-4-7', new MixAnthropic({ options, config }));
+    }    
     opus46({ options = {}, config = {} } = {}) {
         return this.attach('claude-opus-4-6', new MixAnthropic({ options, config }));
     }
@@ -461,6 +469,13 @@ class ModelMix {
         if (mix.openrouter) this.attach('nousresearch/hermes-3-llama-3.1-405b:free', new MixOpenRouter({ options, config }));
         return this;
     }
+
+    kimiK26think({ options = {}, config = {}, mix = { fireworks: true } } = {}) {
+        mix = { ...this.mix, ...mix };
+        if (mix.fireworks) this.attach('accounts/fireworks/models/kimi-k2p6', new MixFireworks({ options, config }));
+        if (mix.openrouter) this.attach('moonshotai/kimi-k2.6', new MixOpenRouter({ options, config }));
+        return this;
+    }    
 
     kimiK25think({ options = {}, config = {}, mix = { together: true } } = {}) {
         mix = { ...this.mix, ...mix };
