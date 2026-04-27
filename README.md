@@ -158,15 +158,15 @@ Here's a comprehensive list of available methods:
 | `gemini31flashLite()`| Google     | gemini-3.1-flash-lite-preview | [\$0.25 / \$1.50][3]       |
 | `grok4()`           | Grok       | grok-4-0709                  | [\$3.00 / \$15.00][6]      |
 | `grok41[think]()`   | Grok       | grok-4-1-fast                | [\$0.20 / \$0.50][6]       |
-| `deepseekV32()`     | Fireworks  | fireworks/models/deepseek-v3p2| [\$0.56 / \$1.68][10]      |
-| `GLM47()`           | Fireworks  | fireworks/models/glm-4p7      | [\$0.55 / \$2.19][10]      |
+| `deepseekV4Pro()`   | Fireworks  | models/deepseek-v4-pro       | [\$1.74 / \$3.48][10]      |
+| `GLM51()`           | Fireworks  | models/glm-5p1               | [\$1.05 / \$3.50][10]      |
 | `minimaxM27()`      | MiniMax    | MiniMax-M2.7                 | [\$0.30 / \$1.20][9]       |
 | `sonar()`           | Perplexity | sonar                        | [\$1.00 / \$1.00][4]       |
 | `sonarPro()`        | Perplexity | sonar-pro                    | [\$3.00 / \$15.00][4]      |
 | `hermes3()`         | Lambda     | Hermes-3-Llama-3.1-405B-FP8  | [\$0.80 / \$0.80][8]       |
 | `qwen3()`           | Together   | Qwen3-235B-A22B-fp8-tput     | [\$0.20 / \$0.60][7]       |
 | `kimiK25think()`    | Together   | Kimi-K2.5                    | [\$0.50 / \$2.80][7]       |
-| `kimiK26think()`    | Fireworks  | fireworks/models/kimi-k2p6    | [\$0.95 / \$4.00][10]       |
+| `kimiK26think()`    | Fireworks  | models/kimi-k2p6             | [\$0.95 / \$4.00][10]       |
 
 [1]: https://platform.openai.com/docs/pricing "Pricing | OpenAI"
 [2]: https://docs.anthropic.com/en/docs/about-claude/pricing "Pricing - Anthropic"
