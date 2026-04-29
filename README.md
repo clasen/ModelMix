@@ -33,6 +33,7 @@ ANTHROPIC_API_KEY="sk-ant-..."
 OPENAI_API_KEY="sk-proj-..."
 OPENROUTER_API_KEY="sk-or-..."
 MINIMAX_API_KEY="your-minimax-key..."
+NVIDIA_API_KEY="nvapi-..."
 ...
 GEMINI_API_KEY="AIza..."
 ```
@@ -166,7 +167,7 @@ Here's a comprehensive list of available methods:
 | `hermes3()`         | Lambda     | Hermes-3-Llama-3.1-405B-FP8  | [\$0.80 / \$0.80][8]       |
 | `qwen3()`           | Together   | Qwen3-235B-A22B-fp8-tput     | [\$0.20 / \$0.60][7]       |
 | `kimiK25think()`    | Together   | Kimi-K2.5                    | [\$0.50 / \$2.80][7]       |
-| `kimiK26think()`    | Fireworks  | models/kimi-k2p6             | [\$0.95 / \$4.00][10]       |
+| `kimiK26think()`    | Fireworks  | models/kimi-k2p6             | [\$0.95 / \$4.00][10]      |
 
 [1]: https://platform.openai.com/docs/pricing "Pricing | OpenAI"
 [2]: https://docs.anthropic.com/en/docs/about-claude/pricing "Pricing - Anthropic"
@@ -179,7 +180,8 @@ Here's a comprehensive list of available methods:
 [9]: https://platform.minimax.io/docs/api-reference/anthropic-api-compatible-cache#supported-models-and-pricing "MiniMax Pricing"
 [10]: https://fireworks.ai/pricing#serverless-pricing "Fireworks Pricing"
 
-Each method accepts optional `options` and `config` parameters to customize the model's behavior. For example:
+Each method accepts optional `options`, `config`, and (for multi-provider methods) `mix` parameters to customize behavior.  
+For NVIDIA on DeepSeek V4 Pro, use `deepseekV4Pro({ mix: { nvidia: true } })`.
 
 ```javascript
 const result = await ModelMix.new({ 

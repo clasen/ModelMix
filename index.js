@@ -520,6 +520,8 @@ class ModelMix {
     }
 
     minimaxM27({ options = {}, config = {}, mix = { openrouter: true, minimax: true } } = {}) {
+        mix = { ...this.mix, ...mix };
+        if (mix.nvidia) this.attach('minimaxai/minimax-m2.7', new MixNVIDIA({ options, config }));
         if (mix.openrouter) return this.attach('minimax/minimax-m2.7', new MixOpenRouter({ options, config }));
         if (mix.minimax) return this.attach('MiniMax-M2.7', new MixMiniMax({ options, config }));
         if (mix.together) return this.attach('MiniMaxAI/MiniMax-M2.7', new MixTogether({ options, config }));
@@ -528,14 +530,22 @@ class ModelMix {
 
     deepseekV4Pro({ options = {}, config = {}, mix = { fireworks: true } } = {}) {
         mix = { ...this.mix, ...mix };
+        if (mix.nvidia) this.attach('deepseek-ai/deepseek-v4-pro', new MixNVIDIA({ options, config }));
         if (mix.fireworks) this.attach('accounts/fireworks/models/deepseek-v4-pro', new MixFireworks({ options, config }));
         if (mix.openrouter) this.attach('deepseek/deepseek-v4-pro', new MixOpenRouter({ options, config }));
         if (mix.together) this.attach('deepseek-ai/DeepSeek-V4-Pro', new MixTogether({ options, config }));
         return this;
     }
 
+    deepseekV4Flash({ options = {}, config = {}, mix = { nvidia: true } } = {}) {
+        mix = { ...this.mix, ...mix };
+        if (mix.nvidia) this.attach('deepseek-ai/deepseek-v4-flash', new MixNVIDIA({ options, config }));
+        return this;
+    }    
+
     GLM51({ options = {}, config = {}, mix = { fireworks: true } } = {}) {
         mix = { ...this.mix, ...mix };
+        if (mix.nvidia) this.attach('z-ai/glm-5.1', new MixNVIDIA({ options, config }));
         if (mix.fireworks) this.attach('accounts/fireworks/models/glm-5p1', new MixFireworks({ options, config }));
         if (mix.openrouter) this.attach('z-ai/glm-5.1', new MixOpenRouter({ options, config }));
         if (mix.together) this.attach('zai-org/GLM-5.1', new MixTogether({ options, config }));
@@ -2549,6 +2559,21 @@ class MixFireworks extends MixCustom {
     }
 }
 
+class MixNVIDIA extends MixCustom {
+    getDefaultConfig(customConfig) {
+
+        if (!process.env.NVIDIA_API_KEY) {
+            throw new Error('NVIDIA API key not found. Please provide it in config or set NVIDIA_API_KEY environment variable.');
+        }
+
+        return super.getDefaultConfig({
+            url: 'https://integrate.api.nvidia.com/v1/chat/completions',
+            apiKey: process.env.NVIDIA_API_KEY,
+            ...customConfig
+        });
+    }
+}
+
 class MixGoogle extends MixCustom {
     getDefaultConfig(customConfig) {
         return super.getDefaultConfig({
@@ -2825,4 +2850,4 @@ class MixGoogle extends MixCustom {
     }
 }
 
-module.exports = { MixCustom, ModelMix, MixAnthropic, MixMiniMax, MixOpenAI, MixOpenAIResponses, MixOpenAIWebSocket, MixOpenRouter, MixPerplexity, MixOllama, MixLMStudio, MixGroq, MixTogether, MixGrok, MixCerebras, MixGoogle, MixFireworks };
+module.exports = { MixCustom, ModelMix, MixAnthropic, MixMiniMax, MixOpenAI, MixOpenAIResponses, MixOpenAIWebSocket, MixOpenRouter, MixPerplexity, MixOllama, MixLMStudio, MixGroq, MixTogether, MixGrok, MixCerebras, MixGoogle, MixFireworks, MixNVIDIA };
