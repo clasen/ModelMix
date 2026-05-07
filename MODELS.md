@@ -352,4 +352,4 @@ All providers inherit from `MixCustom` base class which provides common function
   - Uses OpenAI-compatible API interface
   - Requires `MINIMAX_API_KEY` environment variable
   - Inherits all OpenAI functionality including tool calling
-  - Available models: `MiniMax-M2` 
+  - Available models: `MiniMax-M2.5`, `MiniMax-M2.7`

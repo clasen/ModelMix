@@ -73,19 +73,23 @@ const MODEL_PRICING = {
     'gemini-2.5-flash': [0.30, 2.50],
     'gemini-3.1-flash-lite-preview': [0.25, 1.50],
     // Grok
-    'grok-4-0709': [3.00, 15.00],
+    'grok-4.3': [1.25, 2.50],
+    'grok-4.20-multi-agent-0309': [1.25, 2.50],
+    'grok-4.20-0309-reasoning': [1.25, 2.50],
+    'grok-4.20-0309-non-reasoning': [1.25, 2.50],
     'grok-4-1-fast-reasoning': [0.20, 0.50],
     'grok-4-1-fast-non-reasoning': [0.20, 0.50],
     // Fireworks
     'accounts/fireworks/models/deepseek-v3p2': [0.56, 1.68],
     'accounts/fireworks/models/deepseek-v4-pro': [1.74, 3.48],
+    'deepseek-ai/DeepSeek-V4-Pro': [2.10, 4.40],
     'accounts/fireworks/models/glm-4p7': [0.55, 2.19],
     'accounts/fireworks/models/glm-5p1': [1.05, 3.50],
     'accounts/fireworks/models/kimi-k2p5': [0.50, 2.80],
     'accounts/fireworks/models/qwen3p6-plus': [0.50, 3.00],
+    'Qwen/Qwen3.6-Plus': [0.50, 3.00],
     'fireworks/glm-5': [1.00, 3.20],
     // MiniMax
-    'MiniMax-M2.1': [0.30, 1.20],
     'MiniMax-M2.5': [0.30, 1.20],
     'MiniMax-M2.7': [0.30, 1.20],
     'fireworks/minimax-m2p5': [0.30, 1.20],
@@ -421,14 +425,17 @@ class ModelMix {
         return this.attach('sonar', new MixPerplexity({ options, config }));
     }
 
-    grok3({ options = {}, config = {} } = {}) {
-        return this.attach('grok-3', new MixGrok({ options, config }));
+    grok43({ options = {}, config = {} } = {}) {
+        return this.attach('grok-4.3', new MixGrok({ options, config }));
     }
-    grok3mini({ options = {}, config = {} } = {}) {
-        return this.attach('grok-3-mini', new MixGrok({ options, config }));
+    grok420multiAgent({ options = {}, config = {} } = {}) {
+        return this.attach('grok-4.20-multi-agent-0309', new MixGrok({ options, config }));
     }
-    grok4({ options = {}, config = {} } = {}) {
-        return this.attach('grok-4-0709', new MixGrok({ options, config }));
+    grok420think({ options = {}, config = {} } = {}) {
+        return this.attach('grok-4.20-0309-reasoning', new MixGrok({ options, config }));
+    }
+    grok420({ options = {}, config = {} } = {}) {
+        return this.attach('grok-4.20-0309-non-reasoning', new MixGrok({ options, config }));
     }
     grok41think({ options = {}, config = {} } = {}) {
         return this.attach('grok-4-1-fast-reasoning', new MixGrok({ options, config }));
@@ -443,8 +450,11 @@ class ModelMix {
         return this;
     }
 
-    qwen36plus({ options = {}, config = {}, mix = { } } = {}) {
-        return this.attach('accounts/fireworks/models/qwen3p6-plus', new MixFireworks({ options, config }));
+    qwen36plus({ options = {}, config = {}, mix = { fireworks: true } } = {}) {
+        mix = { ...this.mix, ...mix };
+        if (mix.fireworks) this.attach('accounts/fireworks/models/qwen3p6-plus', new MixFireworks({ options, config }));
+        if (mix.together) this.attach('Qwen/Qwen3.6-Plus', new MixTogether({ options, config }));
+        return this;
     } 
 
     scout({ options = {}, config = {}, mix = {} } = {}) {
@@ -497,26 +507,12 @@ class ModelMix {
         return this.attach(model, new MixLMStudio({ options, config }));
     }
 
-    minimaxM2({ options = {}, config = {} } = {}) {
-        return this.attach('MiniMax-M2', new MixMiniMax({ options, config }));
-    }
-
-    minimaxM21({ options = {}, config = {}, mix = { minimax: true } } = {}) {
-        mix = { ...this.mix, ...mix };
-        if (mix.minimax) this.attach('MiniMax-M2.1', new MixMiniMax({ options, config }));
-        if (mix.cerebras) this.attach('MiniMax-M2.1', new MixCerebras({ options, config }));
-        return this;
-    }
 
     minimaxM25({ options = {}, config = {}, mix = { minimax: true } } = {}) {
         mix = { ...this.mix, ...mix };
         if (mix.minimax) this.attach('MiniMax-M2.5', new MixMiniMax({ options, config }));
         if (mix.fireworks) this.attach('fireworks/minimax-m2p5', new MixFireworks({ options, config }));
         return this;
-    }
-
-    minimaxM2Stable({ options = {}, config = {} } = {}) {
-        return this.attach('MiniMax-M2-Stable', new MixMiniMax({ options, config }));
     }
 
     minimaxM27({ options = {}, config = {}, mix = { openrouter: true, minimax: true } } = {}) {

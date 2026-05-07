@@ -69,7 +69,7 @@ const model = await ModelMix.new(setup)
     .sonnet46() // (main model) Anthropic claude-sonnet-4-5-20250929
     .gpt5mini() // (fallback 2) OpenAI gpt-5-mini
     .gemini3flash({ config: { temperature: 0 } }) // (fallback 3) Google gemini-3-flash
-    .grok3mini() // (fallback 4) Grok grok-3-mini
+    .grok43() // (fallback 4) Grok grok-4.3
     .addText("What's your name?");
 
 console.log(await model.message());
@@ -151,21 +151,20 @@ Here's a comprehensive list of available methods:
 | `opus47[think]()`   | Anthropic  | claude-opus-4-7              | [\$5.00 / \$25.00][2]      |
 | `opus46[think]()`   | Anthropic  | claude-opus-4-6              | [\$5.00 / \$25.00][2]      |
 | `sonnet46[think]()` | Anthropic  | claude-sonnet-4-6            | [\$3.00 / \$15.00][2]      |
-| `sonnet45[think]()` | Anthropic  | claude-sonnet-4-5-20250929   | [\$3.00 / \$15.00][2]      |
 | `haiku45[think]()`  | Anthropic  | claude-haiku-4-5-20251001    | [\$1.00 / \$5.00][2]       |
 | `gemini31pro()`     | Google     | gemini-3.1-pro-preview       | [\$2.00 / \$12.00][3]      |
-| `gemini3pro()`      | Google     | gemini-3-pro-preview         | [\$2.00 / \$12.00][3]      |
-| `gemini3flash()`     | Google     | gemini-3-flash-preview        | [\$0.50 / \$3.00][3]       |
 | `gemini31flashLite()`| Google     | gemini-3.1-flash-lite-preview | [\$0.25 / \$1.50][3]       |
-| `grok4()`           | Grok       | grok-4-0709                  | [\$3.00 / \$15.00][6]      |
+| `grok43()`          | Grok       | grok-4.3                     | [\$1.25 / \$2.50][6]       |
+| `grok420multiAgent()`| Grok      | grok-4.20-multi-agent-0309   | [\$1.25 / \$2.50][6]       |
+| `grok420[think]()`  | Grok       | grok-4.20-0309               | [\$1.25 / \$2.50][6]       |
 | `grok41[think]()`   | Grok       | grok-4-1-fast                | [\$0.20 / \$0.50][6]       |
+| `qwen36plus()`      | Fireworks/Together | qwen3p6-plus / Qwen3.6-Plus | [\$0.50 / \$3.00][10] |
 | `deepseekV4Pro()`   | Fireworks  | models/deepseek-v4-pro       | [\$1.74 / \$3.48][10]      |
 | `GLM51()`           | Fireworks  | models/glm-5p1               | [\$1.05 / \$3.50][10]      |
 | `minimaxM27()`      | MiniMax    | MiniMax-M2.7                 | [\$0.30 / \$1.20][9]       |
 | `sonar()`           | Perplexity | sonar                        | [\$1.00 / \$1.00][4]       |
 | `sonarPro()`        | Perplexity | sonar-pro                    | [\$3.00 / \$15.00][4]      |
 | `hermes3()`         | Lambda     | Hermes-3-Llama-3.1-405B-FP8  | [\$0.80 / \$0.80][8]       |
-| `qwen3()`           | Together   | Qwen3-235B-A22B-fp8-tput     | [\$0.20 / \$0.60][7]       |
 | `kimiK25think()`    | Together   | Kimi-K2.5                    | [\$0.50 / \$2.80][7]       |
 | `kimiK26think()`    | Fireworks  | models/kimi-k2p6             | [\$0.95 / \$4.00][10]      |
 
@@ -182,6 +181,7 @@ Here's a comprehensive list of available methods:
 
 Each method accepts optional `options`, `config`, and (for multi-provider methods) `mix` parameters to customize behavior.  
 For NVIDIA on DeepSeek V4 Pro, use `deepseekV4Pro({ mix: { nvidia: true } })`.
+For Together on Qwen 3.6 Plus, use `qwen36plus({ mix: { fireworks: false, together: true } })`.
 
 ```javascript
 const result = await ModelMix.new({ 

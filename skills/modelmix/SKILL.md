@@ -104,7 +104,7 @@ Thinking variants: append `think` — e.g. `opus46think()` `sonnet46think()` `so
 `gemini3pro()` `gemini3flash()` `gemini25pro()` `gemini25flash()`
 
 ### Grok
-`grok4()` `grok41()` `grok41think()` `grok3()` `grok3mini()`
+`grok43()` `grok420multiAgent()` `grok420()` `grok420think()` `grok41()` `grok41think()`
 
 ### Perplexity
 `sonar()` `sonarPro()`
@@ -113,10 +113,10 @@ Thinking variants: append `think` — e.g. `opus46think()` `sonnet46think()` `so
 `scout()` `maverick()`
 
 ### Together
-`qwen3()` `kimiK25think()` `gptOss()`
+`qwen36plus()` `kimiK25think()` `gptOss()`
 
 ### MiniMax
-`minimaxM25()` `minimaxM21()` `minimaxM2()` `minimaxM2Stable()`
+`minimaxM25()` `minimaxM27()`
 
 ### Fireworks
 `deepseekV32()` `GLM5()` `GLM47()`

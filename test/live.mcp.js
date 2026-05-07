@@ -191,8 +191,8 @@ describe('Live MCP Integration Tests', function () {
 
     describe('Advanced MCP Tool Integration', function () {
 
-        it('should use multiple MCP tools with Grok 3 Mini', async function () {
-            const model = ModelMix.new(setup).grok3mini();
+        it('should use multiple MCP tools with Grok 4.3', async function () {
+            const model = ModelMix.new(setup).grok43();
 
             // Add multiple tools
             model.addTools([

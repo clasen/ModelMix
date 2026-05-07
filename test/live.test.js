@@ -204,17 +204,37 @@ describe('Live Integration Tests', function () {
             expect(response.toLowerCase()).to.include('gptoss test successful');
         });
 
-        it('should work with Grok3Mini model', async function () {
-            const model = ModelMix.new(setup).grok3mini();
+        it('should work with Grok 4.1 model', async function () {
+            const model = ModelMix.new(setup).grok41();
 
-            model.addText('Say "grok3mini test successful" and nothing else.');
+            model.addText('Say "grok41 test successful" and nothing else.');
 
             const response = await model.message();
-            console.log(`Grok3Mini response: ${response}`);
+            console.log(`Grok 4.1 response: ${response}`);
 
             expect(response).to.be.a('string');
-            expect(response.toLowerCase()).to.include('grok3mini test successful');
+            expect(response.toLowerCase()).to.include('grok41 test successful');
         });
+
+        const grokSeriesTests = [
+            { name: 'Grok 4.3', factory: (m) => m.grok43(), token: 'grok43' },
+            { name: 'Grok 4.20 reasoning', factory: (m) => m.grok420think(), token: 'grok420think' },
+            { name: 'Grok 4.20 non-reasoning', factory: (m) => m.grok420(), token: 'grok420' }
+        ];
+
+        for (const grokModel of grokSeriesTests) {
+            it(`should work with ${grokModel.name} model`, async function () {
+                const model = grokModel.factory(ModelMix.new(setup));
+
+                model.addText(`Say "${grokModel.token} test successful" and nothing else.`);
+
+                const response = await model.message();
+                console.log(`${grokModel.name} response: ${response}`);
+
+                expect(response).to.be.a('string');
+                expect(response.toLowerCase()).to.include(`${grokModel.token} test successful`);
+            });
+        }
 
     });
 
@@ -240,8 +260,8 @@ describe('Live Integration Tests', function () {
             expect(result.color).to.be.a('string').and.not.empty;
         });
 
-        it('should process images and return JSON with Grok 4', async function () {
-            const model = ModelMix.new(setup).grok4();
+        it('should process images and return JSON with Grok 4.3', async function () {
+            const model = ModelMix.new(setup).grok43();
 
             model.addImageFromUrl(blueSquareBase64)
                 .addText('Analyze this image and provide details in JSON format.');
@@ -252,7 +272,7 @@ describe('Live Integration Tests', function () {
                 description: "string"
             });
 
-            console.log(`Grok3Mini image JSON result:`, result);
+            console.log(`Grok 4.3 image JSON result:`, result);
 
             expect(result).to.be.an('object');
             expect(result).to.have.property('color');
