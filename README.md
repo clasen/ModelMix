@@ -343,7 +343,7 @@ const result = await model.json(
 
 ### Enhanced descriptors
 
-Descriptions support **descriptor objects** with `description`, `required`, `enum`, and `default`:
+Descriptions support **descriptor objects** with `description`, `required`, `enum`, `default`, and `nullable`:
 
 ```javascript
 const result = await model.json(
@@ -359,11 +359,97 @@ const result = await model.json(
 | Property | Type | Default | Description |
 | --- | --- | --- | --- |
 | `description` | `string` | — | Field description for the model |
-| `required` | `boolean` | `true` | If `false`, field is removed from `required` and type becomes nullable |
-| `enum` | `array` | — | Allowed values. If includes `null`, type auto-becomes nullable |
-| `default` | `any` | — | Default value for the field |
+| `required` | `boolean` | `true` | If `false`, field is removed from `required` and its type becomes nullable |
+| `enum` | `array` | — | Restricts the field to specific values. Including `null` in the array auto-makes the type nullable |
+| `default` | `any` | — | Default value hint for the model |
+| `nullable` | `boolean` | `false` | If `true`, makes the type nullable without removing from `required` |
 
-You can mix strings and descriptor objects freely in the same descriptions parameter.
+You can mix plain strings and descriptor objects freely in the same descriptions parameter:
+
+```javascript
+const result = await model.json(
+    { name: 'Martin', age: 22, status: 'active' },
+    {
+        name: 'Full name',                                            // plain string
+        age: { description: 'Age in years', required: false },        // optional field
+        status: { description: 'Account status', enum: ['active', 'inactive', 'banned'], default: 'active' }
+    }
+);
+```
+
+### Nested object descriptions
+
+Pass a nested object as the description value to describe fields inside a nested object:
+
+```javascript
+const result = await model.json(
+    { user: { name: 'Alice', age: 30 } },
+    {
+        user: { name: 'Full name of the user', age: 'Age in years' }
+    }
+);
+```
+
+To describe the object field itself (e.g. mark it optional) **and** its nested fields, use the `description` / `required` descriptor for the parent key, which applies only to the parent, while still passing nested descriptions as its own separate key:
+
+```javascript
+// Mark the parent optional but don't describe its children
+const result = await model.json(
+    { user: { name: 'Alice', age: 30 } },
+    { user: { description: 'User details', required: false } }
+);
+```
+
+### Array item descriptions
+
+Pass descriptions for the items of an array by wrapping the descriptions in an array:
+
+```javascript
+const result = await model.json(
+    { countries: [{ name: 'France', capital: 'Paris' }] },
+    { countries: [{ name: 'Country name', capital: 'Capital city in uppercase' }] }
+);
+```
+
+To mark the array field itself optional while keeping item descriptions, use a descriptor on the key:
+
+```javascript
+const result = await model.json(
+    { tags: ['admin'] },
+    { tags: { description: 'List of user roles', required: false } }
+);
+```
+
+### Automatic type and format detection
+
+`generateJsonSchema` infers types and formats automatically from the example values:
+
+| Example value | Inferred schema |
+| --- | --- |
+| `42` | `{ type: 'integer' }` |
+| `19.99` | `{ type: 'number' }` |
+| `true` / `false` | `{ type: 'boolean' }` |
+| `null` | `{ type: 'null' }` |
+| `'hello'` | `{ type: 'string' }` |
+| `'user@example.com'` | `{ type: 'string', format: 'email' }` |
+| `'1990-01-01'` | `{ type: 'string', format: 'date', description: 'Date in format YYYY-MM-DD' }` |
+| `'14:30'` | `{ type: 'string', format: 'time', description: 'Time in format HH:MM' }` |
+| `'09:15:45'` | `{ type: 'string', format: 'time', description: 'Time in format HH:MM:SS' }` |
+| `[{ … }]` | `{ type: 'array', items: { … } }` — schema inferred from the first element |
+| `{ … }` | `{ type: 'object', properties: { … }, required: […] }` |
+
+When a field carries an `enum` that includes `null`, or has `required: false` or `nullable: true`, its type is widened to `[type, 'null']`. For example:
+
+```javascript
+// enum with null → type becomes ['string', 'null']
+{ description: 'Gender', enum: ['m', 'f', null] }
+
+// required: false → removes from required[] and type becomes ['string', 'null']
+{ description: 'Nickname', required: false }
+
+// nullable: true → type becomes ['string', 'null'] but stays in required[]
+{ description: 'Middle name', nullable: true }
+```
 
 ### Array auto-wrap
 

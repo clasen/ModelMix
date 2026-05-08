@@ -76,6 +76,18 @@ describe('Token Usage Tracking', () => {
         expect(request.prompt_cache_retention).to.equal('24h');
     });
 
+    it('should register GPT-5.5 shortcuts with OpenAI Responses provider', function () {
+        const model = ModelMix.new()
+            .gpt55()
+            .gpt55pro();
+
+        expect(model.models).to.have.length(2);
+        expect(model.models[0].key).to.equal('gpt-5.5');
+        expect(model.models[1].key).to.equal('gpt-5.5-pro');
+        expect(model.models[0].provider).to.be.instanceOf(MixOpenAIResponses);
+        expect(model.models[1].provider).to.be.instanceOf(MixOpenAIResponses);
+    });
+
     it('should track tokens in OpenAI response', async function () {
         this.timeout(30000);
 

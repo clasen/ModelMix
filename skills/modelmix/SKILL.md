@@ -176,7 +176,53 @@ const result = await model.json(
 );
 ```
 
-Descriptor properties: `description` (string), `required` (boolean, default true — if false, field becomes nullable), `enum` (array — if includes null, type auto-becomes nullable), `default` (any).
+Descriptor properties:
+
+| Property | Type | Notes |
+| --- | --- | --- |
+| `description` | string | Field description for the model |
+| `required` | boolean (default `true`) | `false` → removes from `required[]` **and** makes type nullable |
+| `enum` | array | Restricts allowed values. Including `null` auto-makes the type nullable |
+| `default` | any | Default value hint |
+| `nullable` | boolean (default `false`) | `true` → makes type nullable but keeps field in `required[]` |
+
+#### Nested object descriptions
+
+Pass a plain object as the description value to annotate fields inside a nested object:
+
+```javascript
+model.json(
+    { user: { name: 'Alice', age: 30 } },
+    { user: { name: 'Full name', age: 'Age in years' } }
+);
+```
+
+To mark the object itself as optional, use a descriptor (only `description`/`required`/`nullable` keys) — it applies to the parent, not the children:
+
+```javascript
+model.json(
+    { user: { name: 'Alice', age: 30 } },
+    { user: { description: 'User details', required: false } }
+);
+```
+
+#### Array item descriptions
+
+Wrap descriptions in an array to annotate items of an array field:
+
+```javascript
+model.json(
+    { countries: [{ name: 'France', capital: 'Paris' }] },
+    { countries: [{ name: 'Country name', capital: 'Capital in uppercase' }] }
+);
+```
+
+#### Automatic type and format detection
+
+Schema types are inferred from example values: `integer` (whole numbers), `number` (floats), `boolean`, `null`, `string`, and special formats:
+- `'user@example.com'` → `{ type: 'string', format: 'email' }`
+- `'1990-01-01'` → `{ type: 'string', format: 'date' }`
+- `'14:30'` / `'09:15:45'` → `{ type: 'string', format: 'time' }`
 
 #### Array auto-wrap
 
@@ -390,7 +436,7 @@ const model = ModelMix.new({
 - Store API keys in `.env` and load with `dotenv/config` or `process.loadEnvFile()`. Never hardcode keys.
 - Chain models for resilience: primary model first, fallbacks after.
 - When using MCP tools or `addTool()`, set `max_history` to at least 3 — tool call/response pairs consume history slots.
-- Use `.json()` for structured output instead of parsing text manually. Use descriptor objects `{ description, required, enum, default }` for richer schema control.
+- Use `.json()` for structured output instead of parsing text manually. Use descriptor objects `{ description, required, enum, default, nullable }` for richer schema control.
 - Use `.message()` for simple text, `.raw()` when you need tokens/thinking/toolCalls.
 - For thinking models, append `think` to the method name (e.g. `sonnet45think()`).
 - Template placeholders use `{key}` syntax in both system prompts and user messages.
