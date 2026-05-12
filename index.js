@@ -530,7 +530,21 @@ class ModelMix {
         if (mix.minimax) return this.attach('MiniMax-M2.7', new MixMiniMax({ options, config }));
         if (mix.together) return this.attach('MiniMaxAI/MiniMax-M2.7', new MixTogether({ options, config }));
         return this;
-    }  
+    }
+
+    mimo25({ options = {}, config = {}, mix = { openrouter: true } } = {}) {
+        mix = { ...this.mix, ...mix };
+        if (mix.openrouter) this.attach('xiaomi/mimo-v2.5', new MixOpenRouter({ options, config }));
+        if (mix.mimo) this.attach('mimo-v2.5', new MixMiMo({ options, config }));
+        return this;
+    }
+
+    mimo25pro({ options = {}, config = {}, mix = { openrouter: true } } = {}) {
+        mix = { ...this.mix, ...mix };
+        if (mix.openrouter) this.attach('xiaomi/mimo-v2.5-pro', new MixOpenRouter({ options, config }));
+        if (mix.mimo) this.attach('mimo-v2.5-pro', new MixMiMo({ options, config }));
+        return this;
+    }
 
     deepseekV4Pro({ options = {}, config = {}, mix = { fireworks: true } } = {}) {
         mix = { ...this.mix, ...mix };
@@ -2316,6 +2330,29 @@ class MixMiniMax extends MixOpenAI {
     }
 }
 
+class MixMiMo extends MixOpenAI {
+    getDefaultConfig(customConfig) {
+        if (!process.env.MIMO_API_KEY) {
+            throw new Error('MiMo API key not found. Please provide it in config or set MIMO_API_KEY environment variable.');
+        }
+
+        return MixCustom.prototype.getDefaultConfig.call(this, {
+            url: 'https://api.xiaomimimo.com/v1/chat/completions',
+            apiKey: process.env.MIMO_API_KEY,
+            ...customConfig
+        });
+    }
+
+    getDefaultHeaders(customHeaders) {
+        return {
+            'accept': 'application/json',
+            'content-type': 'application/json',
+            'api-key': this.config.apiKey,
+            ...customHeaders
+        };
+    }
+}
+
 class MixPerplexity extends MixCustom {
     getDefaultConfig(customConfig) {
 
@@ -2854,4 +2891,4 @@ class MixGoogle extends MixCustom {
     }
 }
 
-module.exports = { MixCustom, ModelMix, MixAnthropic, MixMiniMax, MixOpenAI, MixOpenAIResponses, MixOpenAIWebSocket, MixOpenRouter, MixPerplexity, MixOllama, MixLMStudio, MixGroq, MixTogether, MixGrok, MixCerebras, MixGoogle, MixFireworks, MixNVIDIA };
+module.exports = { MixCustom, ModelMix, MixAnthropic, MixMiniMax, MixMiMo, MixOpenAI, MixOpenAIResponses, MixOpenAIWebSocket, MixOpenRouter, MixPerplexity, MixOllama, MixLMStudio, MixGroq, MixTogether, MixGrok, MixCerebras, MixGoogle, MixFireworks, MixNVIDIA };

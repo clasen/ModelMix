@@ -1,5 +1,5 @@
 import { expect } from 'chai';
-import { ModelMix, MixAnthropic, MixCustom, MixGoogle, MixOpenAIResponses } from '../index.js';
+import { ModelMix, MixAnthropic, MixCustom, MixGoogle, MixMiMo, MixOpenAIResponses, MixOpenRouter } from '../index.js';
 import { createRequire } from 'module';
 
 const require = createRequire(import.meta.url);
@@ -86,6 +86,62 @@ describe('Token Usage Tracking', () => {
         expect(model.models[1].key).to.equal('gpt-5.5-pro');
         expect(model.models[0].provider).to.be.instanceOf(MixOpenAIResponses);
         expect(model.models[1].provider).to.be.instanceOf(MixOpenAIResponses);
+    });
+
+    it('should register MiMo shortcuts with native and OpenRouter providers', function () {
+        const originalMimoApiKey = process.env.MIMO_API_KEY;
+        const originalOpenRouterApiKey = process.env.OPENROUTER_API_KEY;
+
+        process.env.MIMO_API_KEY = 'test-mimo-key';
+        process.env.OPENROUTER_API_KEY = 'test-openrouter-key';
+
+        try {
+            const model = ModelMix.new()
+                .mimo25()
+                .mimo25pro({ mix: { mimo: true, openrouter: true } });
+
+            expect(model.models).to.have.length(3);
+            expect(model.models[0].key).to.equal('xiaomi/mimo-v2.5');
+            expect(model.models[1].key).to.equal('mimo-v2.5-pro');
+            expect(model.models[2].key).to.equal('xiaomi/mimo-v2.5-pro');
+
+            expect(model.models[0].provider).to.be.instanceOf(MixOpenRouter);
+            expect(model.models[1].provider).to.be.instanceOf(MixMiMo);
+            expect(model.models[2].provider).to.be.instanceOf(MixOpenRouter);
+        } finally {
+            if (originalMimoApiKey === undefined) delete process.env.MIMO_API_KEY;
+            else process.env.MIMO_API_KEY = originalMimoApiKey;
+
+            if (originalOpenRouterApiKey === undefined) delete process.env.OPENROUTER_API_KEY;
+            else process.env.OPENROUTER_API_KEY = originalOpenRouterApiKey;
+        }
+    });
+
+    it('should use api-key header for MiMo provider', function () {
+        const originalMimoApiKey = process.env.MIMO_API_KEY;
+        process.env.MIMO_API_KEY = 'test-mimo-key';
+
+        try {
+            const provider = new MixMiMo();
+            expect(provider.headers['api-key']).to.equal('test-mimo-key');
+            expect(provider.headers.authorization).to.equal(undefined);
+            expect(provider.config.url).to.equal('https://api.xiaomimimo.com/v1/chat/completions');
+        } finally {
+            if (originalMimoApiKey === undefined) delete process.env.MIMO_API_KEY;
+            else process.env.MIMO_API_KEY = originalMimoApiKey;
+        }
+    });
+
+    it('should throw a clear error when MIMO_API_KEY is missing', function () {
+        const originalMimoApiKey = process.env.MIMO_API_KEY;
+        delete process.env.MIMO_API_KEY;
+
+        try {
+            expect(() => new MixMiMo()).to.throw('MIMO_API_KEY');
+        } finally {
+            if (originalMimoApiKey === undefined) delete process.env.MIMO_API_KEY;
+            else process.env.MIMO_API_KEY = originalMimoApiKey;
+        }
     });
 
     it('should track tokens in OpenAI response', async function () {
