@@ -1,6 +1,6 @@
 {
   "name": "modelmix",
-  "version": "4.5.20",
+  "version": "4.5.22",
   "description": "🧬 Reliable interface with automatic fallback for AI LLMs.",
   "main": "index.js",
   "repository": {
@@ -51,17 +51,13 @@
     "bottleneck": "^2.19.5",
     "file-type": "^21.3.3",
     "lemonlog": "^1.2.0",
-    "ws": "^8.19.0"
+    "ws": "^8.20.1"
   },
   "devDependencies": {
     "chai": "^5.2.1",
-    "nock": "^14.0.9",
     "mocha": "^11.7.5",
-    "sinon": "^21.0.0"
-  },
-  "overrides": {
-    "diff": ">=8.0.3",
-    "serialize-javascript": ">=7.0.3"
+    "nock": "^14.0.9",
+    "sinon": "^21.0.1"
   },
   "scripts": {
     "test": "mocha test/**/*.js --timeout 10000 --require test/setup.js",
@@ -75,5 +71,6 @@
     "test:live.mcp": "mocha test/live.mcp.js --timeout 60000 --require test/setup.js",
     "test:tokens": "mocha test/tokens.test.js --timeout 10000 --require test/setup.js",
     "test:offline": "mocha test/json.test.js test/fallback.test.js test/templates.test.js test/images.test.js test/bottleneck.test.js test/tokens.test.js test/history.test.js --timeout 10000 --require test/setup.js"
-  }
+  },
+  "packageManager": "pnpm@11.1.2"
 }
