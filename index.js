@@ -537,15 +537,15 @@ class ModelMix {
 
     mimo25({ options = {}, config = {}, mix = { openrouter: true } } = {}) {
         mix = { ...this.mix, ...mix };
-        if (mix.openrouter) this.attach('xiaomi/mimo-v2.5', new MixOpenRouter({ options, config }));
         if (mix.mimo) this.attach('mimo-v2.5', new MixMiMo({ options, config }));
+        if (mix.openrouter) this.attach('xiaomi/mimo-v2.5', new MixOpenRouter({ options, config }));
         return this;
     }
 
     mimo25pro({ options = {}, config = {}, mix = { openrouter: true } } = {}) {
         mix = { ...this.mix, ...mix };
-        if (mix.openrouter) this.attach('xiaomi/mimo-v2.5-pro', new MixOpenRouter({ options, config }));
         if (mix.mimo) this.attach('mimo-v2.5-pro', new MixMiMo({ options, config }));
+        if (mix.openrouter) this.attach('xiaomi/mimo-v2.5-pro', new MixOpenRouter({ options, config }));
         return this;
     }
 
