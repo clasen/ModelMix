@@ -101,7 +101,7 @@ If `sonnet46` fails, it automatically tries `gpt52`, then `gemini3flash`.
 Thinking variants: append `think` — e.g. `opus46think()` `sonnet46think()` `sonnet45think()` `sonnet4think()` `opus45think()` `opus41think()` `haiku45think()`
 
 ### Google
-`gemini3pro()` `gemini3flash()` `gemini25pro()` `gemini25flash()`
+`gemini3pro()` `gemini3flash()` `gemini35flash()` `gemini25pro()` `gemini25flash()`
 
 ### Grok
 `grok43()` `grok420multiAgent()` `grok420()` `grok420think()` `grok41()` `grok41think()`

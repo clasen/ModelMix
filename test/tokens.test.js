@@ -88,6 +88,15 @@ describe('Token Usage Tracking', () => {
         expect(model.models[1].provider).to.be.instanceOf(MixOpenAIResponses);
     });
 
+    it('should register Gemini 3.5 Flash shortcut with Google provider', function () {
+        const model = ModelMix.new()
+            .gemini35flash();
+
+        expect(model.models).to.have.length(1);
+        expect(model.models[0].key).to.equal('gemini-3.5-flash');
+        expect(model.models[0].provider).to.be.instanceOf(MixGoogle);
+    });
+
     it('should register MiMo shortcuts with native and OpenRouter providers', function () {
         const originalMimoApiKey = process.env.MIMO_API_KEY;
         const originalOpenRouterApiKey = process.env.OPENROUTER_API_KEY;

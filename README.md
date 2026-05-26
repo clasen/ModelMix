@@ -153,6 +153,7 @@ Here's a comprehensive list of available methods:
 | `sonnet46[think]()` | Anthropic  | claude-sonnet-4-6            | [\$3.00 / \$15.00][2]      |
 | `haiku45[think]()`  | Anthropic  | claude-haiku-4-5-20251001    | [\$1.00 / \$5.00][2]       |
 | `gemini31pro()`     | Google     | gemini-3.1-pro-preview       | [\$2.00 / \$12.00][3]      |
+| `gemini35flash()`   | Google     | gemini-3.5-flash             | N/A                        |
 | `gemini31flashLite()`| Google     | gemini-3.1-flash-lite-preview | [\$0.25 / \$1.50][3]       |
 | `grok43()`          | Grok       | grok-4.3                     | [\$1.25 / \$2.50][6]       |
 | `grok420multiAgent()`| Grok      | grok-4.20-multi-agent-0309   | [\$1.25 / \$2.50][6]       |

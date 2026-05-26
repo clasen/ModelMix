@@ -420,6 +420,9 @@ class ModelMix {
     gemini3flash({ options = {}, config = {} } = {}) {
         return this.attach('gemini-3-flash-preview', new MixGoogle({ options, config }));
     }
+    gemini35flash({ options = {}, config = {} } = {}) {
+        return this.attach('gemini-3.5-flash', new MixGoogle({ options, config }));
+    }
     gemini31flashLite({ options = {}, config = {} } = {}) {
         return this.attach('gemini-3.1-flash-lite-preview', new MixGoogle({ options, config }));
     }
