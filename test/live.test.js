@@ -31,7 +31,7 @@ describe('Live Integration Tests', function () {
 
     describe('Image Processing', function () {
 
-        it('should process images with OpenAI GPT-5nano', async function () {
+        it('should process images with OpenAI GPT-5 Nano', async function () {
             const model = ModelMix.new(setup).gpt5nano();
 
             model.addImageFromUrl(blueSquareBase64)
