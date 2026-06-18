@@ -87,6 +87,7 @@ const MODEL_PRICING = {
     'deepseek-ai/DeepSeek-V4-Pro': [2.10, 4.40],
     'accounts/fireworks/models/glm-4p7': [0.55, 2.19],
     'accounts/fireworks/models/glm-5p1': [1.05, 3.50],
+    'zai-org/GLM-5.2': [1.40, 4.40],
     'accounts/fireworks/models/kimi-k2p5': [0.50, 2.80],
     'accounts/fireworks/models/qwen3p6-plus': [0.50, 3.00],
     'Qwen/Qwen3.6-Plus': [0.50, 3.00],
@@ -94,19 +95,14 @@ const MODEL_PRICING = {
     // MiniMax
     'MiniMax-M2.5': [0.30, 1.20],
     'MiniMax-M2.7': [0.30, 1.20],
+    'MiniMax-M3': [0.30, 1.20],
     'fireworks/minimax-m2p5': [0.30, 1.20],
     'minimax/minimax-m2.7': [0.30, 1.20],
+    'minimax/minimax-m3': [0.30, 1.20],
+    'MiniMaxAI/MiniMax-M3': [0.30, 1.20],
     // Perplexity
     'sonar': [1.00, 1.00],
     'sonar-pro': [3.00, 15.00],
-    // Scout (Groq/Together/Cerebras)
-    'meta-llama/llama-4-scout-17b-16e-instruct': [0.11, 0.34],
-    'meta-llama/Llama-4-Scout-17B-16E-Instruct': [0.11, 0.34],
-    'llama-4-scout-17b-16e-instruct': [0.11, 0.34],
-    // Maverick (Groq/Together/Lambda)
-    'meta-llama/llama-4-maverick-17b-128e-instruct': [0.20, 0.60],
-    'meta-llama/Llama-4-Maverick-17B-128E-Instruct-FP8': [0.20, 0.60],
-    'llama-4-maverick-17b-128e-instruct-fp8': [0.20, 0.60],
     // Hermes3 (Lambda/OpenRouter)
     'Hermes-3-Llama-3.1-405B-FP8': [0.80, 0.80],
     'nousresearch/hermes-3-llama-3.1-405b:free': [0, 0],
@@ -468,20 +464,6 @@ class ModelMix {
         return this;
     } 
 
-    scout({ options = {}, config = {}, mix = {} } = {}) {
-        mix = { ...this.mix, ...mix };
-        if (mix.groq) this.attach('meta-llama/llama-4-scout-17b-16e-instruct', new MixGroq({ options, config }));
-        if (mix.together) this.attach('meta-llama/Llama-4-Scout-17B-16E-Instruct', new MixTogether({ options, config }));
-        if (mix.cerebras) this.attach('llama-4-scout-17b-16e-instruct', new MixCerebras({ options, config }));
-        return this;
-    }
-    maverick({ options = {}, config = {}, mix = {} } = {}) {
-        mix = { ...this.mix, ...mix };
-        if (mix.together) this.attach('meta-llama/Llama-4-Maverick-17B-128E-Instruct-FP8', new MixTogether({ options, config }));
-        if (mix.lambda) this.attach('llama-4-maverick-17b-128e-instruct-fp8', new MixLambda({ options, config }));
-        return this;
-    }
-
     deepseekR1({ options = {}, config = {}, mix = {} } = {}) {
         mix = { ...this.mix, ...mix };
         if (mix.groq) this.attach('deepseek-r1-distill-llama-70b', new MixGroq({ options, config }));
@@ -505,6 +487,12 @@ class ModelMix {
         if (mix.together) this.attach('moonshotai/Kimi-K2.6', new MixTogether({ options, config }));
         return this;
     }    
+
+    kimiK27Code({ options = {}, config = {}, mix = { together: true } } = {}) {
+        mix = { ...this.mix, ...mix };
+        if (mix.together) this.attach('moonshotai/Kimi-K2.7-Code', new MixTogether({ options, config }));
+        return this;
+    }
 
     kimiK25think({ options = {}, config = {}, mix = { together: true } } = {}) {
         mix = { ...this.mix, ...mix };
@@ -532,6 +520,14 @@ class ModelMix {
         if (mix.openrouter) return this.attach('minimax/minimax-m2.7', new MixOpenRouter({ options, config }));
         if (mix.minimax) return this.attach('MiniMax-M2.7', new MixMiniMax({ options, config }));
         if (mix.together) return this.attach('MiniMaxAI/MiniMax-M2.7', new MixTogether({ options, config }));
+        return this;
+    }
+
+    minimaxM3({ options = {}, config = {}, mix = { minimax: true, openrouter: false } } = {}) {
+        mix = { ...this.mix, ...mix };
+        if (mix.minimax) this.attach('MiniMax-M3', new MixMiniMax({ options, config }));
+        if (mix.openrouter) this.attach('minimax/minimax-m3', new MixOpenRouter({ options, config }));
+        if (mix.together) this.attach('MiniMaxAI/MiniMax-M3', new MixTogether({ options, config }));
         return this;
     }
 
@@ -570,6 +566,12 @@ class ModelMix {
         if (mix.fireworks) this.attach('accounts/fireworks/models/glm-5p1', new MixFireworks({ options, config }));
         if (mix.openrouter) this.attach('z-ai/glm-5.1', new MixOpenRouter({ options, config }));
         if (mix.together) this.attach('zai-org/GLM-5.1', new MixTogether({ options, config }));
+        return this;
+    }
+
+    GLM52({ options = {}, config = {}, mix = { together: true } } = {}) {
+        mix = { ...this.mix, ...mix };
+        if (mix.together) this.attach('zai-org/GLM-5.2', new MixTogether({ options, config }));
         return this;
     }
 

@@ -161,7 +161,9 @@ Here's a comprehensive list of available methods:
 | `grok41[think]()`   | Grok       | grok-4-1-fast                | [\$0.20 / \$0.50][6]       |
 | `qwen36plus()`      | Fireworks/Together | qwen3p6-plus / Qwen3.6-Plus | [\$0.50 / \$3.00][10] |
 | `deepseekV4Pro()`   | Fireworks  | models/deepseek-v4-pro       | [\$1.74 / \$3.48][10]      |
+| `GLM52()`           | Together   | zai-org/GLM-5.2              | [\$1.40 / \$4.40][7]       |
 | `GLM51()`           | Fireworks  | models/glm-5p1               | [\$1.05 / \$3.50][10]      |
+| `minimaxM3()`       | MiniMax    | MiniMax-M3                   | [\$0.30 / \$1.20][9]       |
 | `minimaxM27()`      | MiniMax    | MiniMax-M2.7                 | [\$0.30 / \$1.20][9]       |
 | `sonar()`           | Perplexity | sonar                        | [\$1.00 / \$1.00][4]       |
 | `sonarPro()`        | Perplexity | sonar-pro                    | [\$3.00 / \$15.00][4]      |

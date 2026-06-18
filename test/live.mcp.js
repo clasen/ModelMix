@@ -254,46 +254,6 @@ describe('Live MCP Integration Tests', function () {
             expect(response).to.match(/[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}/i);
         });
 
-        it('should use MCP tools with Scout model', async function () {
-            const model = ModelMix.new(setup).scout();
-
-            // Add text processing tool
-            model.addTool({
-                name: "text_analysis",
-                description: "Analyze text and provide statistics",
-                inputSchema: {
-                    type: "object",
-                    properties: {
-                        text: {
-                            type: "string",
-                            description: "Text to analyze"
-                        }
-                    },
-                    required: ["text"]
-                }
-            }, async ({ text }) => {
-                const words = text.split(/\s+/).filter(word => word.length > 0);
-                const chars = text.length;
-                const sentences = text.split(/[.!?]+/).filter(s => s.trim().length > 0).length;
-                
-                return `Text Analysis:
-- Characters: ${chars}
-- Words: ${words.length}
-- Sentences: ${sentences}
-- Average word length: ${(chars / words.length).toFixed(1)} characters`;
-            });
-
-            model.setSystem('You are a text analysis assistant. Use the text_analysis tool to analyze text.');
-            model.addText('Analyze this text: "Hello world! This is a test sentence for analysis. How many words are there?"');
-
-            const response = await model.message();
-            console.log(`Scout with MCP tools: ${response}`);
-
-            expect(response).to.be.a('string');
-            expect(response).to.include('Characters:');
-            expect(response).to.include('Words:');
-        });
-
         it('should use MCP tools with GPT-5 Mini', async function () {
             const model = ModelMix.new(setup).gpt5mini();
 

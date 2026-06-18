@@ -180,18 +180,6 @@ describe('Live Integration Tests', function () {
 
     describe('Additional Model Tests', function () {
 
-        it('should work with Scout model', async function () {
-            const model = ModelMix.new(setup).scout();
-
-            model.addText('Say "scout test successful" and nothing else.');
-
-            const response = await model.message();
-            console.log(`Scout response: ${response}`);
-
-            expect(response).to.be.a('string');
-            expect(response.toLowerCase()).to.include('scout test successful');
-        });
-
         it('should work with GPT-OSS model', async function () {
             const model = ModelMix.new(setup).gptOss();
 
@@ -240,26 +228,6 @@ describe('Live Integration Tests', function () {
 
     describe('Image Processing with JSON Output', function () {
 
-        it('should process images and return JSON with Scout', async function () {
-            const model = ModelMix.new(setup).scout();
-            model.addImageFromUrl(blueSquareBase64)
-                .addText('Analyze this image and provide details in JSON format.');
-
-            const result = await model.json({
-                color: "string",
-                shape: "string",
-                description: "string"
-            });
-
-            console.log(`Scout image JSON result:`, result);
-
-            expect(result).to.be.an('object');
-            expect(result).to.have.property('color');
-            expect(result).to.have.property('shape');
-            expect(result).to.have.property('description');
-            expect(result.color).to.be.a('string').and.not.empty;
-        });
-
         it('should process images and return JSON with Grok 4.3', async function () {
             const model = ModelMix.new(setup).grok43();
 
@@ -284,28 +252,6 @@ describe('Live Integration Tests', function () {
     });
 
     describe('JSON Structured Output for New Models', function () {
-
-        it('should return structured JSON with Scout', async function () {
-            const model = ModelMix.new(setup).scout();
-
-            model.addText('Generate information about a fictional animal.');
-
-            const result = await model.json({
-                name: "Dragon",
-                type: "Mythical",
-                abilities: ["Fire breathing", "Flight"],
-                habitat: "Mountains"
-            });
-
-            console.log(`Scout JSON result:`, result);
-
-            expect(result).to.be.an('object');
-            expect(result).to.have.property('name');
-            expect(result).to.have.property('type');
-            expect(result).to.have.property('abilities');
-            expect(result).to.have.property('habitat');
-            expect(result.abilities).to.be.an('array');
-        });
 
         it('should return structured JSON with KimiK25 Thinking', async function () {
             const model = ModelMix.new(setup).kimiK25think();

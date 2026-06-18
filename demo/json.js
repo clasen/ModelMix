@@ -4,7 +4,6 @@ try { process.loadEnvFile(); } catch {}
 const model = await ModelMix.new({ options: { max_tokens: 10000 }, config: { debug: 3 } })
     .gpt54nano()
     // .gptOss()
-    // .scout({ config: { temperature: 0 } })    
     // .o4mini()
     // .gpt45()
     // .gemini25flash()

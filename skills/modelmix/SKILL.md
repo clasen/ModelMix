@@ -109,14 +109,11 @@ Thinking variants: append `think` — e.g. `opus46think()` `sonnet46think()` `so
 ### Perplexity
 `sonar()` `sonarPro()`
 
-### Groq
-`scout()` `maverick()`
-
 ### Together
-`qwen36plus()` `kimiK25think()` `gptOss()`
+`qwen36plus()` `GLM52()` `kimiK25think()` `gptOss()`
 
 ### MiniMax
-`minimaxM25()` `minimaxM27()`
+`minimaxM25()` `minimaxM27()` `minimaxM3()`
 
 ### Fireworks
 `deepseekV32()` `GLM5()` `GLM47()`
@@ -128,7 +125,7 @@ Thinking variants: append `think` — e.g. `opus46think()` `sonnet46think()` `so
 `GLM45()`
 
 ### Multi-provider (auto-fallback across free/paid tiers)
-`deepseekR1()` `hermes3()` `scout()` `maverick()` `kimiK25think()` `GLM47()`
+`deepseekR1()` `hermes3()` `kimiK25think()` `GLM47()`
 
 ### Local
 `lmstudio()` — for LM Studio local models
