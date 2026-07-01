@@ -136,6 +136,7 @@ Here's a comprehensive list of available methods:
 
 | Method              | Provider   | Model                        | Price (I/O) per 1 M tokens |
 | ------------------- | ---------- | ---------------------------- | -------------------------- |
+| `gpt55()`           | OpenAI     | gpt-5.5                      | [\$5.00 / \$30.00][1]      |
 | `gpt54()`           | OpenAI     | gpt-5.4                      | [\$2.50 / \$15.00][1]      |
 | `gpt54mini()`       | OpenAI     | gpt-5.4-mini                 | [\$0.75 / \$4.50][1]       |
 | `gpt54nano()`       | OpenAI     | gpt-5.4-nano                 | [\$0.20 / \$1.25][1]       |
@@ -148,8 +149,10 @@ Here's a comprehensive list of available methods:
 | `gpt41mini()`       | OpenAI     | gpt-4.1-mini                 | [\$0.40 / \$1.60][1]       |
 | `gpt41nano()`       | OpenAI     | gpt-4.1-nano                 | [\$0.10 / \$0.40][1]       |
 | `gptOss()`          | Together   | gpt-oss-120B                 | [\$0.15 / \$0.60][7]       |
+| `opus48[think]()`   | Anthropic  | claude-opus-4-8              | [\$5.00 / \$25.00][2]      |
 | `opus47[think]()`   | Anthropic  | claude-opus-4-7              | [\$5.00 / \$25.00][2]      |
 | `opus46[think]()`   | Anthropic  | claude-opus-4-6              | [\$5.00 / \$25.00][2]      |
+| `sonnet5[think]()`  | Anthropic  | claude-sonnet-5              | [\$3.00 / \$15.00][2]      |
 | `sonnet46[think]()` | Anthropic  | claude-sonnet-4-6            | [\$3.00 / \$15.00][2]      |
 | `haiku45[think]()`  | Anthropic  | claude-haiku-4-5-20251001    | [\$1.00 / \$5.00][2]       |
 | `gemini31pro()`     | Google     | gemini-3.1-pro-preview       | [\$2.00 / \$12.00][3]      |

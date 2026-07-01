@@ -58,9 +58,10 @@ const MODEL_PRICING = {
     'gpt-oss-120b': [0.15, 0.60],
     'openai/gpt-oss-120b:free': [0, 0],
     // Anthropic
+    'claude-sonnet-5': [3.00, 15.00],
+    'claude-opus-4-8': [5.00, 25.00],
     'claude-opus-4-7': [5.00, 25.00],
     'claude-opus-4-6': [5.00, 25.00],
-    'claude-opus-4-5-20251101': [5.00, 25.00],
     'claude-opus-4-1-20250805': [15.00, 75.00],
     'claude-sonnet-4-6': [3.00, 15.00],
     'claude-sonnet-4-5-20250929': [3.00, 15.00],
@@ -344,6 +345,10 @@ class ModelMix {
         if (mix.openrouter) this.attach('openai/gpt-oss-120b:free', new MixOpenRouter({ options, config }));
         return this;
     }
+    opus48think({ options = {}, config = {} } = {}) {
+        options = { ...MixAnthropic.thinkingOptions, ...options };
+        return this.attach('claude-opus-4-8', new MixAnthropic({ options, config }));
+    }
     opus47think({ options = {}, config = {} } = {}) {
         options = { ...MixAnthropic.thinkingOptions, ...options };
         return this.attach('claude-opus-4-7', new MixAnthropic({ options, config }));
@@ -352,9 +357,8 @@ class ModelMix {
         options = { ...MixAnthropic.thinkingOptions, ...options };
         return this.attach('claude-opus-4-6', new MixAnthropic({ options, config }));
     }
-    opus45think({ options = {}, config = {} } = {}) {
-        options = { ...MixAnthropic.thinkingOptions, ...options };
-        return this.attach('claude-opus-4-5-20251101', new MixAnthropic({ options, config }));
+    opus48({ options = {}, config = {} } = {}) {
+        return this.attach('claude-opus-4-8', new MixAnthropic({ options, config }));
     }
     opus47({ options = {}, config = {} } = {}) {
         return this.attach('claude-opus-4-7', new MixAnthropic({ options, config }));
@@ -362,15 +366,19 @@ class ModelMix {
     opus46({ options = {}, config = {} } = {}) {
         return this.attach('claude-opus-4-6', new MixAnthropic({ options, config }));
     }
-    opus45({ options = {}, config = {} } = {}) {
-        return this.attach('claude-opus-4-5-20251101', new MixAnthropic({ options, config }));
-    }
     opus41({ options = {}, config = {} } = {}) {
         return this.attach('claude-opus-4-1-20250805', new MixAnthropic({ options, config }));
     }
     opus41think({ options = {}, config = {} } = {}) {
         options = { ...MixAnthropic.thinkingOptions, ...options };
         return this.attach('claude-opus-4-1-20250805', new MixAnthropic({ options, config }));
+    }
+    sonnet5({ options = {}, config = {} } = {}) {
+        return this.attach('claude-sonnet-5', new MixAnthropic({ options, config }));
+    }
+    sonnet5think({ options = {}, config = {} } = {}) {
+        options = { ...MixAnthropic.thinkingOptions, ...options };
+        return this.attach('claude-sonnet-5', new MixAnthropic({ options, config }));
     }
     sonnet4({ options = {}, config = {} } = {}) {
         return this.attach('claude-sonnet-4-20250514', new MixAnthropic({ options, config }));
