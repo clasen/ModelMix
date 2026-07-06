@@ -2,6 +2,25 @@ const { expect } = require('chai');
 const { ModelMix, MixAnthropic } = require('../index.js');
 
 describe('Anthropic Model Registration Tests', () => {
+    it('should register Claude Fable 5', () => {
+        const model = ModelMix.new();
+        model.fable5();
+
+        expect(model.models).to.have.length(1);
+        expect(model.models[0].key).to.equal('claude-fable-5');
+        expect(model.models[0].provider).to.be.instanceOf(MixAnthropic);
+    });
+
+    it('should register Claude Fable 5 with max effort thinking', () => {
+        const model = ModelMix.new();
+        model.fable5think();
+
+        expect(model.models).to.have.length(1);
+        expect(model.models[0].key).to.equal('claude-fable-5');
+        expect(model.models[0].provider.options.output_config).to.deep.equal({ effort: 'max' });
+        expect(model.models[0].provider.options.thinking).to.deep.equal({ display: 'summarized' });
+    });
+
     it('should register Claude Opus 4.8', () => {
         const model = ModelMix.new();
         model.opus48();

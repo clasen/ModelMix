@@ -58,6 +58,7 @@ const MODEL_PRICING = {
     'gpt-oss-120b': [0.15, 0.60],
     'openai/gpt-oss-120b:free': [0, 0],
     // Anthropic
+    'claude-fable-5': [10.00, 50.00],
     'claude-sonnet-5': [3.00, 15.00],
     'claude-opus-4-8': [5.00, 25.00],
     'claude-opus-4-7': [5.00, 25.00],
@@ -344,6 +345,13 @@ class ModelMix {
         if (mix.groq) this.attach('openai/gpt-oss-120b', new MixGroq({ options, config }));
         if (mix.openrouter) this.attach('openai/gpt-oss-120b:free', new MixOpenRouter({ options, config }));
         return this;
+    }
+    fable5({ options = {}, config = {} } = {}) {
+        return this.attach('claude-fable-5', new MixAnthropic({ options, config }));
+    }
+    fable5think({ options = {}, config = {} } = {}) {
+        options = { ...MixAnthropic.fableThinkingOptions, ...options };
+        return this.attach('claude-fable-5', new MixAnthropic({ options, config }));
     }
     opus48think({ options = {}, config = {} } = {}) {
         options = { ...MixAnthropic.thinkingOptions, ...options };
@@ -2088,6 +2096,12 @@ class MixAnthropic extends MixCustom {
             "type": "enabled",
             "budget_tokens": 1638
         },
+        temperature: 1
+    };
+
+    static fableThinkingOptions = {
+        output_config: { effort: 'max' },
+        thinking: { display: 'summarized' },
         temperature: 1
     };
 
