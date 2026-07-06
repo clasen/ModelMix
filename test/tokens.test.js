@@ -95,6 +95,7 @@ describe('Token Usage Tracking', () => {
         expect(model.models).to.have.length(1);
         expect(model.models[0].key).to.equal('gemini-3.5-flash');
         expect(model.models[0].provider).to.be.instanceOf(MixGoogle);
+        expect(ModelMix.calculateCost('gemini-3.5-flash', { input: 1_000_000, output: 1_000_000 })).to.equal(5.25);
     });
 
     it('should register MiMo shortcuts with native and OpenRouter providers', function () {
