@@ -88,6 +88,23 @@ describe('Token Usage Tracking', () => {
         expect(model.models[1].provider).to.be.instanceOf(MixOpenAIResponses);
     });
 
+    it('should register GPT-5.6 shortcuts with OpenAI Responses provider', function () {
+        const model = ModelMix.new()
+            .gpt56sol()
+            .gpt56terra()
+            .gpt56luna();
+
+        expect(model.models.map(({ key }) => key)).to.deep.equal([
+            'gpt-5.6-sol',
+            'gpt-5.6-terra',
+            'gpt-5.6-luna'
+        ]);
+        expect(model.models.every(({ provider }) => provider instanceof MixOpenAIResponses)).to.equal(true);
+        expect(ModelMix.calculateCost('gpt-5.6-sol', { input: 1_000_000, output: 1_000_000 })).to.equal(35);
+        expect(ModelMix.calculateCost('gpt-5.6-terra', { input: 1_000_000, output: 1_000_000 })).to.equal(17.5);
+        expect(ModelMix.calculateCost('gpt-5.6-luna', { input: 1_000_000, output: 1_000_000 })).to.equal(7);
+    });
+
     it('should register Gemini 3.5 Flash shortcut with Google provider', function () {
         const model = ModelMix.new()
             .gemini35flash();

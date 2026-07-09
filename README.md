@@ -136,6 +136,9 @@ Here's a comprehensive list of available methods:
 
 | Method              | Provider   | Model                        | Price (I/O) per 1 M tokens |
 | ------------------- | ---------- | ---------------------------- | -------------------------- |
+| `gpt56sol()`        | OpenAI     | gpt-5.6-sol                  | [\$5.00 / \$30.00][1]      |
+| `gpt56terra()`      | OpenAI     | gpt-5.6-terra                | [\$2.50 / \$15.00][1]      |
+| `gpt56luna()`       | OpenAI     | gpt-5.6-luna                 | [\$1.00 / \$6.00][1]       |
 | `gpt55()`           | OpenAI     | gpt-5.5                      | [\$5.00 / \$30.00][1]      |
 | `gpt54()`           | OpenAI     | gpt-5.4                      | [\$2.50 / \$15.00][1]      |
 | `gpt54mini()`       | OpenAI     | gpt-5.4-mini                 | [\$0.75 / \$4.50][1]       |

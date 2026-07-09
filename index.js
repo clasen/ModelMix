@@ -37,6 +37,9 @@ const MODEL_PRICING = {
     // OpenAI
     'gpt-realtime-mini': [0.60, 2.40],
     'gpt-realtime': [4.00, 16.00],
+    'gpt-5.6-sol': [5.00, 30.00],
+    'gpt-5.6-terra': [2.50, 15.00],
+    'gpt-5.6-luna': [1.00, 6.00],
     'gpt-5.5-pro': [30.00, 180.00],
     'gpt-5.5': [5.00, 30.00],
     'gpt-5.4': [2.50, 15.00],
@@ -326,6 +329,15 @@ class ModelMix {
     }
     gpt55pro({ options = {}, config = {} } = {}) {
         return this.attach('gpt-5.5-pro', new MixOpenAIResponses({ options, config }));
+    }
+    gpt56sol({ options = {}, config = {} } = {}) {
+        return this.attach('gpt-5.6-sol', new MixOpenAIResponses({ options, config }));
+    }
+    gpt56terra({ options = {}, config = {} } = {}) {
+        return this.attach('gpt-5.6-terra', new MixOpenAIResponses({ options, config }));
+    }
+    gpt56luna({ options = {}, config = {} } = {}) {
+        return this.attach('gpt-5.6-luna', new MixOpenAIResponses({ options, config }));
     }
     gptRealtime({ options = {}, config = {} } = {}) {
         return this.attach('gpt-realtime', new MixOpenAIWebSocket({ options, config }));
