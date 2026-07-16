@@ -344,6 +344,15 @@ All providers inherit from `MixCustom` base class which provides common function
 - **Output Format**: Same as OpenAI
 - **Special Notes**: Uses OpenAI-compatible format
 
+### Moonshot (MixKimi)
+- **Base URL**: `https://api.moonshot.ai/v1/chat/completions`
+- **Input Format**: Same as OpenAI
+- **Output Format**: Same as OpenAI
+- **Special Notes**:
+  - Requires `MOONSHOT_API_KEY` environment variable
+  - Available model: `kimi-k3`
+  - K3 always uses thinking and requires fixed sampling parameters to be omitted
+
 ### MiniMax (MixMiniMax)
 - **Base URL**: `https://api.minimax.io/v1/chat/completions`
 - **Input Format**: Same as OpenAI

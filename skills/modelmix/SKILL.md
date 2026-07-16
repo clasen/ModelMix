@@ -1,6 +1,6 @@
 ---
 name: modelmix
-description: Instructions for using the ModelMix Node.js library to interact with multiple AI LLM providers through a unified interface. Use when writing code that calls AI models (OpenAI, Anthropic, Google, Groq, Perplexity, Grok, MiniMax, Fireworks, Together, Lambda, Cerebras, OpenRouter, Ollama, LM Studio), chaining models with fallback, getting structured JSON from LLMs, adding MCP tools, streaming responses, managing multi-provider AI workflows, round-robin load balancing, or rate limiting API requests in Node.js. Also use when the user mentions "modelmix", "ModelMix", asks to "call an LLM", "query a model", "add AI to my app", or wants to integrate any supported provider.
+description: Instructions for using the ModelMix Node.js library to interact with multiple AI LLM providers through a unified interface. Use when writing code that calls AI models (OpenAI, Anthropic, Google, Groq, Perplexity, Grok, Moonshot, MiniMax, Fireworks, Together, Lambda, Cerebras, OpenRouter, Ollama, LM Studio), chaining models with fallback, getting structured JSON from LLMs, adding MCP tools, streaming responses, managing multi-provider AI workflows, round-robin load balancing, or rate limiting API requests in Node.js. Also use when the user mentions "modelmix", "ModelMix", asks to "call an LLM", "query a model", "add AI to my app", or wants to integrate any supported provider.
 metadata:
   tags: [llm, ai, openai, anthropic, google, groq, perplexity, grok, mcp, streaming, json-output]
 ---
@@ -111,6 +111,9 @@ Thinking variants: append `think` — e.g. `fable5think()` `opus48think()` `opus
 
 ### Together
 `qwen36plus()` `GLM52()` `kimiK25think()` `gptOss()`
+
+### Moonshot
+`kimiK3()` — requires `MOONSHOT_API_KEY`; use `{ mix: { moonshot: false, openrouter: true } }` for OpenRouter.
 
 ### MiniMax
 `minimaxM25()` `minimaxM27()` `minimaxM3()`
@@ -471,7 +474,7 @@ const model = ModelMix.new({
 
 ## Available Provider Classes
 
-`MixOpenAI` `MixAnthropic` `MixGoogle` `MixPerplexity` `MixGroq` `MixTogether` `MixGrok` `MixOpenRouter` `MixOllama` `MixLMStudio` `MixCustom` `MixCerebras` `MixFireworks` `MixMiniMax` `MixLambda`
+`MixOpenAI` `MixAnthropic` `MixGoogle` `MixPerplexity` `MixGroq` `MixTogether` `MixGrok` `MixOpenRouter` `MixOllama` `MixLMStudio` `MixCustom` `MixCerebras` `MixFireworks` `MixKimi` `MixMiniMax` `MixLambda`
 
 ## Troubleshooting
 

@@ -118,6 +118,9 @@ const MODEL_PRICING = {
     // Kimi K2.5 (Together/Fireworks/OpenRouter)
     'moonshotai/Kimi-K2.5': [0.50, 2.80],
     'moonshotai/kimi-k2.5': [0.50, 2.80],
+    // Kimi K3
+    'kimi-k3': [3.00, 15.00],
+    'moonshotai/kimi-k3': [3.00, 15.00],
     // DeepSeek V3.2 (OpenRouter)
     'deepseek/deepseek-v3.2': [0.56, 1.68],
     // GLM 4.7 (OpenRouter/Cerebras)
@@ -520,6 +523,13 @@ class ModelMix {
     kimiK27Code({ options = {}, config = {}, mix = { together: true } } = {}) {
         mix = { ...this.mix, ...mix };
         if (mix.together) this.attach('moonshotai/Kimi-K2.7-Code', new MixTogether({ options, config }));
+        return this;
+    }
+
+    kimiK3({ options = {}, config = {}, mix = { moonshot: true, openrouter: false } } = {}) {
+        mix = { ...this.mix, ...mix };
+        if (mix.moonshot) this.attach('kimi-k3', new MixKimi({ options, config }));
+        if (mix.openrouter) this.attach('moonshotai/kimi-k3', new MixOpenRouter({ options, config }));
         return this;
     }
 
@@ -1079,8 +1089,9 @@ class ModelMix {
                     }
 
                     if (result.toolCalls && result.toolCalls.length > 0) {
-
-                        if (result.message) {
+                        if (result.assistantMessage) {
+                            this.messages.push(result.assistantMessage);
+                        } else if (result.message) {
                             if (result.signature) {
                                 this.messages.push({
                                     role: "assistant", content: [{
@@ -1094,7 +1105,9 @@ class ModelMix {
                             }
                         }
 
-                        this.messages.push({ role: "assistant", content: null, tool_calls: result.toolCalls });
+                        if (!result.assistantMessage) {
+                            this.messages.push({ role: "assistant", content: null, tool_calls: result.toolCalls });
+                        }
 
                         const toolResults = await this.processToolCalls(result.toolCalls);
                         for (const toolResult of toolResults) {
@@ -1153,7 +1166,9 @@ class ModelMix {
                         this.messages = [];
                     } else if (result.message) {
                         // Persist assistant response for multi-turn conversations
-                        if (result.signature) {
+                        if (result.assistantMessage) {
+                            this.messages.push(result.assistantMessage);
+                        } else if (result.signature) {
                             this.messages.push({
                                 role: "assistant", content: [{
                                     type: "thinking",
@@ -1653,7 +1668,12 @@ class MixOpenAI extends MixCustom {
         for (const message of messages) {
 
             if (message.tool_calls) {
-                results.push({ role: 'assistant', tool_calls: message.tool_calls })
+                results.push({
+                    role: 'assistant',
+                    content: message.content ?? null,
+                    ...(message.reasoning_content && { reasoning_content: message.reasoning_content }),
+                    tool_calls: message.tool_calls
+                })
                 continue;
             }
 
@@ -2099,6 +2119,46 @@ class MixOpenRouter extends MixOpenAI {
             apiKey: process.env.OPENROUTER_API_KEY,
             ...customConfig
         });
+    }
+}
+
+class MixKimi extends MixOpenAI {
+    getDefaultConfig(customConfig) {
+        if (!process.env.MOONSHOT_API_KEY) {
+            throw new Error('Moonshot API key not found. Please provide it in config or set MOONSHOT_API_KEY environment variable.');
+        }
+
+        return MixCustom.prototype.getDefaultConfig.call(this, {
+            url: 'https://api.moonshot.ai/v1/chat/completions',
+            apiKey: process.env.MOONSHOT_API_KEY,
+            ...customConfig
+        });
+    }
+
+    async create({ config = {}, options = {} } = {}) {
+        if (Object.hasOwn(options, 'max_tokens')) {
+            options.max_completion_tokens = options.max_tokens;
+            delete options.max_tokens;
+        }
+
+        delete options.temperature;
+        delete options.top_p;
+        delete options.n;
+        delete options.presence_penalty;
+        delete options.frequency_penalty;
+
+        return super.create({ config, options });
+    }
+
+    extractDelta(data) {
+        return data?.choices?.[0]?.delta?.content || '';
+    }
+
+    processResponse(response) {
+        return {
+            ...super.processResponse(response),
+            assistantMessage: response.data?.choices?.[0]?.message
+        };
     }
 }
 
@@ -2931,4 +2991,4 @@ class MixGoogle extends MixCustom {
     }
 }
 
-module.exports = { MixCustom, ModelMix, MixAnthropic, MixMiniMax, MixMiMo, MixOpenAI, MixOpenAIResponses, MixOpenAIWebSocket, MixOpenRouter, MixPerplexity, MixOllama, MixLMStudio, MixGroq, MixTogether, MixGrok, MixCerebras, MixGoogle, MixFireworks, MixNVIDIA };
+module.exports = { MixCustom, ModelMix, MixAnthropic, MixKimi, MixMiniMax, MixMiMo, MixOpenAI, MixOpenAIResponses, MixOpenAIWebSocket, MixOpenRouter, MixPerplexity, MixOllama, MixLMStudio, MixGroq, MixTogether, MixGrok, MixCerebras, MixGoogle, MixFireworks, MixNVIDIA };

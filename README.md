@@ -32,6 +32,7 @@ Only the API keys you plan to use are required.
 ANTHROPIC_API_KEY="sk-ant-..."
 OPENAI_API_KEY="sk-proj-..."
 OPENROUTER_API_KEY="sk-or-..."
+MOONSHOT_API_KEY="your-moonshot-key..."
 MINIMAX_API_KEY="your-minimax-key..."
 NVIDIA_API_KEY="nvapi-..."
 ...
@@ -175,6 +176,7 @@ Here's a comprehensive list of available methods:
 | `sonar()`           | Perplexity | sonar                        | [\$1.00 / \$1.00][4]       |
 | `sonarPro()`        | Perplexity | sonar-pro                    | [\$3.00 / \$15.00][4]      |
 | `hermes3()`         | Lambda     | Hermes-3-Llama-3.1-405B-FP8  | [\$0.80 / \$0.80][8]       |
+| `kimiK3()`          | Moonshot   | kimi-k3                      | [\$3.00 / \$15.00][11]     |
 | `kimiK25think()`    | Together   | Kimi-K2.5                    | [\$0.50 / \$2.80][7]       |
 | `kimiK26think()`    | Fireworks  | models/kimi-k2p6             | [\$0.95 / \$4.00][10]      |
 
@@ -188,10 +190,12 @@ Here's a comprehensive list of available methods:
 [8]: https://lambda.ai/inference "Lambda Pricing"
 [9]: https://platform.minimax.io/docs/api-reference/anthropic-api-compatible-cache#supported-models-and-pricing "MiniMax Pricing"
 [10]: https://fireworks.ai/pricing#serverless-pricing "Fireworks Pricing"
+[11]: https://platform.kimi.ai/docs/guide/kimi-k3-pricing "Kimi K3 Pricing"
 
 Each method accepts optional `options`, `config`, and (for multi-provider methods) `mix` parameters to customize behavior.  
 For NVIDIA on DeepSeek V4 Pro, use `deepseekV4Pro({ mix: { nvidia: true } })`.
 For Together on Qwen 3.6 Plus, use `qwen36plus({ mix: { fireworks: false, together: true } })`.
+For OpenRouter instead of Moonshot's native API, use `kimiK3({ mix: { moonshot: false, openrouter: true } })`.
 
 ```javascript
 const result = await ModelMix.new({ 
