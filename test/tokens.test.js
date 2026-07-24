@@ -105,13 +105,17 @@ describe('Token Usage Tracking', () => {
         expect(ModelMix.calculateCost('gpt-5.6-luna', { input: 1_000_000, output: 1_000_000 })).to.equal(7);
     });
 
-    it('should register Gemini 3.5 Flash shortcut with Google provider', function () {
+    it('should register Gemini Flash shortcuts with Google provider', function () {
         const model = ModelMix.new()
+            .gemini36flash()
             .gemini35flash();
 
-        expect(model.models).to.have.length(1);
-        expect(model.models[0].key).to.equal('gemini-3.5-flash');
-        expect(model.models[0].provider).to.be.instanceOf(MixGoogle);
+        expect(model.models.map(({ key }) => key)).to.deep.equal([
+            'gemini-3.6-flash',
+            'gemini-3.5-flash'
+        ]);
+        expect(model.models.every(({ provider }) => provider instanceof MixGoogle)).to.equal(true);
+        expect(ModelMix.calculateCost('gemini-3.6-flash', { input: 1_000_000, output: 1_000_000 })).to.equal(9);
         expect(ModelMix.calculateCost('gemini-3.5-flash', { input: 1_000_000, output: 1_000_000 })).to.equal(5.25);
     });
 

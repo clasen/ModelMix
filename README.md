@@ -49,7 +49,7 @@ try { process.loadEnvFile(); } catch {}
 
 // Get structured JSON responses
 const model = ModelMix.new()
-    .sonnet46() // Anthropic claude-sonnet-4-6
+    .opus48() // Anthropic claude-opus-4-8
     .addText("Name and capital of 3 South American countries.");
 
 const outputExample = { countries: [{ name: "", capital: "" }] };
@@ -67,9 +67,9 @@ const setup = {
 };
 
 const model = await ModelMix.new(setup)
-    .sonnet46() // (main model) Anthropic claude-sonnet-4-5-20250929
-    .gpt5mini() // (fallback 2) OpenAI gpt-5-mini
-    .gemini3flash({ config: { temperature: 0 } }) // (fallback 3) Google gemini-3-flash
+    .sonnet5() // (main model) Anthropic claude-sonnet-5
+    .gpt56luna() // (fallback 2) OpenAI gpt-5.6-luna
+    .gemini36flash({ config: { temperature: 0 } }) // (fallback 3) Google gemini-36-flash
     .grok43() // (fallback 4) Grok grok-4.3
     .addText("What's your name?");
 
@@ -114,7 +114,7 @@ BRAVE_API_KEY="BSA0..._fm"
 ```
 
 ```javascript
-const mmix = ModelMix.new({ config: { max_history: 10 } }).gpt5nano();
+const mmix = ModelMix.new({ config: { max_history: 10 } }).gpt56sol();
 mmix.setSystem('You are an assistant and today is ' + new Date().toISOString());
 
 // Add web search capability through MCP
@@ -161,7 +161,8 @@ Here's a comprehensive list of available methods:
 | `sonnet46[think]()` | Anthropic  | claude-sonnet-4-6            | [\$3.00 / \$15.00][2]      |
 | `haiku45[think]()`  | Anthropic  | claude-haiku-4-5-20251001    | [\$1.00 / \$5.00][2]       |
 | `gemini31pro()`     | Google     | gemini-3.1-pro-preview       | [\$2.00 / \$12.00][3]      |
-| `gemini35flash()`   | Google     | gemini-3.5-flash             | N/A                        |
+| `gemini36flash()`   | Google     | gemini-3.6-flash             | [\$1.50 / \$7.50][3]       |
+| `gemini35flash()`   | Google     | gemini-3.5-flash             | [\$0.75 / \$4.50][3]       |
 | `gemini31flashLite()`| Google     | gemini-3.1-flash-lite-preview | [\$0.25 / \$1.50][3]       |
 | `grok43()`          | Grok       | grok-4.3                     | [\$1.25 / \$2.50][6]       |
 | `grok420multiAgent()`| Grok      | grok-4.20-multi-agent-0309   | [\$1.25 / \$2.50][6]       |
@@ -250,7 +251,7 @@ Analyze the following and provide 3 key insights:
 
 **`app.js`**
 ```javascript
-const gpt = ModelMix.new().gpt5mini();
+const gpt = ModelMix.new().gpt56luna();
 
 gpt.setSystemFromFile('./prompts/system.md');
 gpt.addTextFromFile('./prompts/task.md');
@@ -330,7 +331,7 @@ await model.json(schemaExample, schemaDescription, options)
 
 ```javascript
 const model = ModelMix.new()
-    .gpt5mini()
+    .gpt56luna()
     .addText('Name and capital of 3 South American countries.');
 
 const result = await model.json({ countries: [{ name: "", capital: "" }] });
