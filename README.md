@@ -49,7 +49,7 @@ try { process.loadEnvFile(); } catch {}
 
 // Get structured JSON responses
 const model = ModelMix.new()
-    .opus48() // Anthropic claude-opus-4-8
+    .opus5() // Anthropic claude-opus-5
     .addText("Name and capital of 3 South American countries.");
 
 const outputExample = { countries: [{ name: "", capital: "" }] };
@@ -154,6 +154,7 @@ Here's a comprehensive list of available methods:
 | `gpt41nano()`       | OpenAI     | gpt-4.1-nano                 | [\$0.10 / \$0.40][1]       |
 | `gptOss()`          | Together   | gpt-oss-120B                 | [\$0.15 / \$0.60][7]       |
 | `fable5[think]()`   | Anthropic  | claude-fable-5               | [\$10.00 / \$50.00][2]     |
+| `opus5[think]()`    | Anthropic  | claude-opus-5                | [\$5.00 / \$25.00][2]      |
 | `opus48[think]()`   | Anthropic  | claude-opus-4-8              | [\$5.00 / \$25.00][2]      |
 | `opus47[think]()`   | Anthropic  | claude-opus-4-7              | [\$5.00 / \$25.00][2]      |
 | `opus46[think]()`   | Anthropic  | claude-opus-4-6              | [\$5.00 / \$25.00][2]      |

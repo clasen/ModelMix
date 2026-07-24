@@ -1,6 +1,6 @@
 {
   "name": "modelmix",
-  "version": "4.6.4",
+  "version": "4.6.5",
   "description": "🧬 Reliable interface with automatic fallback for AI LLMs.",
   "main": "index.js",
   "repository": {
@@ -24,6 +24,7 @@
     "kimi",
     "mythos",
     "gpt5",
+    "opus5",
     "fable",
     "sonnet",
     "openrouter",
