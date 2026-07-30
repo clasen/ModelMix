@@ -139,6 +139,48 @@ describe('Live MCP Integration Tests', function () {
             }
         });
 
+        it('should use custom MCP tools with Claude Opus 5', async function () {
+            // Opus 5 rejects temperature (deprecated); omit it from options.
+            const model = ModelMix.new({ config: setup.config }).opus5();
+
+            model.addTool({
+                name: "get_current_time",
+                description: "Get the current date and time",
+                inputSchema: {
+                    type: "object",
+                    properties: {
+                        timezone: {
+                            type: "string",
+                            description: "Timezone (optional, defaults to UTC)"
+                        }
+                    }
+                }
+            }, async ({ timezone = 'UTC' }) => {
+                const now = new Date();
+                if (timezone === 'UTC') {
+                    return `Current time (UTC): ${now.toISOString()}`;
+                }
+                return `Current time (${timezone}): ${now.toLocaleString('en-US', { timeZone: timezone })}`;
+            });
+
+            model.setSystem('You are a helpful assistant that can tell time. Use the get_current_time tool when asked about time.');
+            model.addText('What time is it right now?');
+
+            try {
+                const response = await withRetry(() => model.message(), { retries: 2, baseDelayMs: 1500 });
+                console.log(`Claude Opus 5 with MCP tools: ${response}`);
+
+                expect(response).to.be.a('string');
+                expect(response.toLowerCase()).to.match(/(time|clock|hour|minute|second|am|pm|utc|\d{4})/);
+            } catch (error) {
+                console.error('Full error:', error);
+                if (error.response && error.response.data) {
+                    console.error('Response data:', JSON.stringify(error.response.data, null, 2));
+                }
+                throw error;
+            }
+        });
+
         it('should use custom MCP tools with Gemini 3 Flash', async function () {
             const model = ModelMix.new(setup).gemini3flash();
 
@@ -517,7 +559,7 @@ describe('Live MCP Integration Tests', function () {
 
         it('should work with same MCP tools across different Anthropic models', async function () {
             const models = [
-                { name: 'Sonnet 4', model: ModelMix.new(setup).sonnet46() },
+                { name: 'Opus 5', model: ModelMix.new({ config: setup.config }).opus5() },
                 { name: 'Sonnet 4.6', model: ModelMix.new(setup).sonnet46() },
                 { name: 'Haiku 4.5', model: ModelMix.new(setup).haiku45() }
             ];

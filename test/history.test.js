@@ -456,6 +456,116 @@ describe('Conversation History Tests', () => {
             expect(capturedBody.messages[2].role).to.equal('user');
         });
 
+        it('should replay omitted thinking blocks with empty string (not null) on Anthropic', async () => {
+            // Opus 5 / Sonnet 5 / Fable 5 default to display "omitted":
+            // thinking blocks arrive as thinking: "" + signature.
+            // Replaying thinking: null causes Anthropic 400 invalid_request_error.
+            const model = ModelMix.new({
+                config: { debug: false, max_history: 10 }
+            });
+            model.opus5();
+
+            model.addText('Capital of France?');
+            nock('https://api.anthropic.com')
+                .post('/v1/messages')
+                .reply(200, {
+                    content: [{
+                        type: 'thinking',
+                        thinking: '',
+                        signature: 'sig-omitted-turn1'
+                    }, {
+                        type: 'text',
+                        text: 'Paris.'
+                    }]
+                });
+            await model.message();
+
+            expect(model.messages[1].content[0]).to.deep.equal({
+                type: 'thinking',
+                thinking: '',
+                signature: 'sig-omitted-turn1'
+            });
+            expect(model.messages[1].content[0].thinking).to.be.a('string');
+            expect(model.messages[1].content[0].thinking).to.not.equal(null);
+
+            let capturedBody;
+            model.addText('Capital of Germany?');
+            nock('https://api.anthropic.com')
+                .post('/v1/messages', (body) => {
+                    capturedBody = body;
+                    return true;
+                })
+                .reply(200, {
+                    content: [{
+                        type: 'thinking',
+                        thinking: '',
+                        signature: 'sig-omitted-turn2'
+                    }, {
+                        type: 'text',
+                        text: 'Berlin.'
+                    }]
+                });
+            await model.message();
+
+            const assistantMsg = capturedBody.messages.find(m => m.role === 'assistant');
+            expect(assistantMsg).to.exist;
+            expect(assistantMsg.content[0]).to.deep.equal({
+                type: 'thinking',
+                thinking: '',
+                signature: 'sig-omitted-turn1'
+            });
+            expect(assistantMsg.content[0].thinking).to.equal('');
+            expect(assistantMsg.content[1].text).to.equal('Paris.');
+        });
+
+        it('should replay summarized thinking blocks unchanged on Anthropic', async () => {
+            const model = ModelMix.new({
+                config: { debug: false, max_history: 10 }
+            });
+            model.opus5think();
+
+            model.addText('2+2?');
+            nock('https://api.anthropic.com')
+                .post('/v1/messages')
+                .reply(200, {
+                    content: [{
+                        type: 'thinking',
+                        thinking: 'Simple arithmetic.',
+                        signature: 'sig-summarized-turn1'
+                    }, {
+                        type: 'text',
+                        text: '4'
+                    }]
+                });
+            await model.message();
+
+            let capturedBody;
+            model.addText('3+3?');
+            nock('https://api.anthropic.com')
+                .post('/v1/messages', (body) => {
+                    capturedBody = body;
+                    return true;
+                })
+                .reply(200, {
+                    content: [{
+                        type: 'thinking',
+                        thinking: 'Also simple.',
+                        signature: 'sig-summarized-turn2'
+                    }, {
+                        type: 'text',
+                        text: '6'
+                    }]
+                });
+            await model.message();
+
+            const assistantMsg = capturedBody.messages.find(m => m.role === 'assistant');
+            expect(assistantMsg.content[0]).to.deep.equal({
+                type: 'thinking',
+                thinking: 'Simple arithmetic.',
+                signature: 'sig-summarized-turn1'
+            });
+        });
+
         it('should maintain history when using Google provider', async () => {
             const model = ModelMix.new({
                 config: { debug: false, max_history: 10 }

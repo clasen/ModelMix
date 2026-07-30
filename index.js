@@ -887,13 +887,21 @@ class ModelMix {
         return input;
     }
 
+    static hasToolInteraction(message) {
+        if (!message) return false;
+        if (message.role === 'tool' || message.tool_calls || message.tool_call_id) return true;
+        // Anthropic-native assistant turns store tool_use blocks in content (no tool_calls).
+        if (message.role === 'assistant' && Array.isArray(message.content)) {
+            return message.content.some(block => block?.type === 'tool_use');
+        }
+        return false;
+    }
+
     groupByRoles(messages) {
         return messages.reduce((acc, currentMessage, index) => {
             // Don't group tool messages or assistant messages with tool_calls
             // Each tool response must be separate with its own tool_call_id
-            const shouldNotGroup = currentMessage.role === 'tool' ||
-                currentMessage.tool_calls ||
-                currentMessage.tool_call_id;
+            const shouldNotGroup = ModelMix.hasToolInteraction(currentMessage);
 
             if (index === 0 || currentMessage.role !== messages[index - 1].role || shouldNotGroup) {
                 // acc.push({
@@ -939,7 +947,7 @@ class ModelMix {
             // backtrack to include the full sequence (user → assistant/tool_calls → tool results)
             while (sliceStart > 0 && sliceStart < this.messages.length) {
                 const msg = this.messages[sliceStart];
-                if (msg.role === 'tool' || (msg.role === 'assistant' && msg.tool_calls)) {
+                if (ModelMix.hasToolInteraction(msg)) {
                     sliceStart--;
                 } else {
                     break;
@@ -1108,7 +1116,8 @@ class ModelMix {
                                 this.messages.push({
                                     role: "assistant", content: [{
                                         type: "thinking",
-                                        thinking: result.think,
+                                        // Empty string is valid (Anthropic display: "omitted").
+                                        thinking: result.think ?? '',
                                         signature: result.signature
                                     }]
                                 });
@@ -1184,7 +1193,8 @@ class ModelMix {
                             this.messages.push({
                                 role: "assistant", content: [{
                                     type: "thinking",
-                                    thinking: result.think,
+                                    // Empty string is valid (Anthropic display: "omitted").
+                                    thinking: result.think ?? '',
                                     signature: result.signature
                                 }, {
                                     type: "text",
@@ -2229,10 +2239,10 @@ class MixAnthropic extends MixCustom {
         const filteredMessages = [];
         for (let i = 0; i < messages.length; i++) {
             if (messages[i].role === 'tool') {
-                // Check if there's a preceding assistant message with tool_calls
+                // Preceding assistant may use OpenAI tool_calls or Anthropic tool_use blocks.
                 let foundToolCall = false;
                 for (let j = i - 1; j >= 0; j--) {
-                    if (messages[j].role === 'assistant' && messages[j].tool_calls) {
+                    if (ModelMix.hasToolInteraction(messages[j]) && messages[j].role === 'assistant') {
                         foundToolCall = true;
                         break;
                     }
@@ -2356,12 +2366,22 @@ class MixAnthropic extends MixCustom {
         throw new Error(`Anthropic content blocks are missing .text (stop_reason: ${stopReason ?? 'unknown'}, content_types: ${contentTypes}).`);
     }
 
+    static extractThinkingBlock(data) {
+        const content = Array.isArray(data?.content) ? data.content : [];
+        return content.find(block => block?.type === 'thinking') || null;
+    }
+
     static extractThink(data) {
-        return data.content[0]?.thinking || null;
+        const block = MixAnthropic.extractThinkingBlock(data);
+        // Preserve empty string: display "omitted" returns thinking: "" with a signature.
+        return typeof block?.thinking === 'string' ? block.thinking : null;
     }
 
     static extractSignature(data) {
-        return data.content[0]?.signature || null;
+        const block = MixAnthropic.extractThinkingBlock(data);
+        return typeof block?.signature === 'string' && block.signature
+            ? block.signature
+            : null;
     }
 
     static extractTokens(data) {
@@ -2383,13 +2403,18 @@ class MixAnthropic extends MixCustom {
     }
 
     processResponse(response) {
+        const data = response.data;
         return {
-            message: MixAnthropic.extractMessage(response.data),
-            think: MixAnthropic.extractThink(response.data),
-            toolCalls: MixAnthropic.extractToolCalls(response.data),
-            tokens: MixAnthropic.extractTokens(response.data),
-            response: response.data,
-            signature: MixAnthropic.extractSignature(response.data)
+            message: MixAnthropic.extractMessage(data),
+            think: MixAnthropic.extractThink(data),
+            toolCalls: MixAnthropic.extractToolCalls(data),
+            tokens: MixAnthropic.extractTokens(data),
+            response: data,
+            signature: MixAnthropic.extractSignature(data),
+            // Replay Anthropic content blocks verbatim (including empty thinking).
+            assistantMessage: Array.isArray(data?.content)
+                ? { role: 'assistant', content: data.content }
+                : undefined
         }
     }
 
