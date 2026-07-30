@@ -1,6 +1,6 @@
 {
   "name": "modelmix",
-  "version": "4.6.5",
+  "version": "4.6.6",
   "description": "🧬 Reliable interface with automatic fallback for AI LLMs.",
   "main": "index.js",
   "repository": {
@@ -48,16 +48,16 @@
   },
   "homepage": "https://github.com/clasen/ModelMix#readme",
   "dependencies": {
-    "@modelcontextprotocol/sdk": "^1.29.0",
+    "@modelcontextprotocol/sdk": "^1.30.0",
     "bottleneck": "^2.19.5",
     "file-type": "^21.3.4",
     "lemonlog": "^1.2.2",
-    "ws": "^8.21.0"
+    "ws": "^8.21.1"
   },
   "devDependencies": {
     "chai": "^5.3.3",
-    "mocha": "^11.7.5",
-    "nock": "^14.0.15",
+    "mocha": "^11.7.6",
+    "nock": "^14.0.16",
     "sinon": "^21.1.2"
   },
   "scripts": {
