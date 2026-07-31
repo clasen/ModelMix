@@ -20,6 +20,11 @@ const {
     fetchBinaryResponse,
     fetchStreamResponse
 } = require('./http-client');
+const {
+    normalizeEffort,
+    applyUnifiedEffort,
+    resolveProviderFamily
+} = require('./effort');
 
 const DEFAULT_RETRYABLE_STATUS_CODES = [408, 425, 429, 500, 502, 503, 504, 529];
 
@@ -90,9 +95,11 @@ const MODEL_PRICING = {
     'grok-4-1-fast-reasoning': [0.20, 0.50],
     'grok-4-1-fast-non-reasoning': [0.20, 0.50],
     // Fireworks
-    'accounts/fireworks/models/deepseek-v3p2': [0.56, 1.68],
+    'accounts/fireworks/models/deepseek-v4-flash': [0.14, 0.28],
     'accounts/fireworks/models/deepseek-v4-pro': [1.74, 3.48],
+    'deepseek-ai/DeepSeek-V4-Flash': [0.14, 0.28],
     'deepseek-ai/DeepSeek-V4-Pro': [2.10, 4.40],
+    'deepseek/deepseek-v4-flash': [0.09, 0.18],
     'accounts/fireworks/models/glm-4p7': [0.55, 2.19],
     'accounts/fireworks/models/glm-5p1': [1.05, 3.50],
     'zai-org/GLM-5.2': [1.40, 4.40],
@@ -123,13 +130,9 @@ const MODEL_PRICING = {
     // Kimi K3
     'kimi-k3': [3.00, 15.00],
     'moonshotai/kimi-k3': [3.00, 15.00],
-    // DeepSeek V3.2 (OpenRouter)
-    'deepseek/deepseek-v3.2': [0.56, 1.68],
     // GLM 4.7 (OpenRouter/Cerebras)
     'z-ai/glm-4.7': [0.55, 2.19],
     'zai-glm-4.7': [0.55, 2.19],
-    // DeepSeek R1 (OpenRouter free)
-    'deepseek/deepseek-r1-0528:free': [0, 0],
 };
 
 class ModelMix {
@@ -168,6 +171,10 @@ class ModelMix {
             },
             roundRobin: false, // false=fallback mode, true=round robin rotation
             ...config
+        };
+        // Unified effort is ModelMix policy (config.effort / .effort()), not a native option.
+        if (this.config.effort !== undefined && this.config.effort !== null) {
+            this.config.effort = normalizeEffort(this.config.effort);
         }
         const freeMix = { openrouter: true, cerebras: true, groq: true, together: false, lambda: false };
         this.mix = { ...freeMix, ...mix };
@@ -181,12 +188,26 @@ class ModelMix {
         return this;
     }
 
+    /**
+     * Set unified reasoning effort: -1 (adaptive) or 0..100.
+     * Stored in config.effort; mapped to provider-native fields at request time
+     * unless a native effort control is already set (native wins).
+     */
+    effort(value) {
+        this.config.effort = normalizeEffort(value);
+        return this;
+    }
+
     static new({ options = {}, config = {}, mix = {} } = {}) {
         return new ModelMix({ options, config, mix });
     }
 
     new({ options = {}, config = {}, mix = {} } = {}) {
-        const instance = new ModelMix({ options: { ...this.options, ...options }, config: { ...this.config, ...config }, mix: { ...this.mix, ...mix } });
+        const instance = new ModelMix({
+            options: { ...this.options, ...options },
+            config: { ...this.config, ...config },
+            mix: { ...this.mix, ...mix }
+        });
         instance.models = this.models; // Share models array for round-robin rotation
         return instance;
     }
@@ -508,15 +529,6 @@ class ModelMix {
         return this;
     } 
 
-    deepseekR1({ options = {}, config = {}, mix = {} } = {}) {
-        mix = { ...this.mix, ...mix };
-        if (mix.groq) this.attach('deepseek-r1-distill-llama-70b', new MixGroq({ options, config }));
-        if (mix.together) this.attach('deepseek-ai/DeepSeek-R1', new MixTogether({ options, config }));
-        if (mix.cerebras) this.attach('deepseek-r1-distill-llama-70b', new MixCerebras({ options, config }));
-        if (mix.openrouter) this.attach('deepseek/deepseek-r1-0528:free', new MixOpenRouter({ options, config }));
-        return this;
-    }
-
     hermes3({ options = {}, config = {}, mix = {} } = {}) {
         mix = { ...this.mix, ...mix };
         if (mix.lambda) this.attach('Hermes-3-Llama-3.1-405B-FP8', new MixLambda({ options, config }));
@@ -576,8 +588,8 @@ class ModelMix {
 
     minimaxM3({ options = {}, config = {}, mix = { minimax: true, openrouter: false } } = {}) {
         mix = { ...this.mix, ...mix };
-        if (mix.minimax) this.attach('MiniMax-M3', new MixMiniMax({ options, config }));
         if (mix.openrouter) this.attach('minimax/minimax-m3', new MixOpenRouter({ options, config }));
+        if (mix.minimax) this.attach('MiniMax-M3', new MixMiniMax({ options, config }));
         if (mix.together) this.attach('MiniMaxAI/MiniMax-M3', new MixTogether({ options, config }));
         return this;
     }
@@ -605,11 +617,14 @@ class ModelMix {
         return this;
     }
 
-    deepseekV4Flash({ options = {}, config = {}, mix = { nvidia: true } } = {}) {
+    deepseekV4Flash({ options = {}, config = {}, mix = { fireworks: true } } = {}) {
         mix = { ...this.mix, ...mix };
         if (mix.nvidia) this.attach('deepseek-ai/deepseek-v4-flash', new MixNVIDIA({ options, config }));
+        if (mix.fireworks) this.attach('accounts/fireworks/models/deepseek-v4-flash', new MixFireworks({ options, config }));
+        if (mix.openrouter) this.attach('deepseek/deepseek-v4-flash', new MixOpenRouter({ options, config }));
+        if (mix.together) this.attach('deepseek-ai/DeepSeek-V4-Flash', new MixTogether({ options, config }));
         return this;
-    }    
+    }
 
     GLM51({ options = {}, config = {}, mix = { fireworks: true } } = {}) {
         mix = { ...this.mix, ...mix };
@@ -1037,6 +1052,10 @@ class ModelMix {
                         ...(config.retry || {})
                     }
                 };
+
+                // Unified effort → native provider fields (skipped if native already set)
+                const providerFamily = resolveProviderFamily(providerInstance);
+                applyUnifiedEffort(currentOptions, currentConfig, providerFamily, currentModelKey);
 
                 if (currentConfig.debug >= 1) {
                     const isPrimary = i === 0;
@@ -2892,6 +2911,19 @@ class MixGoogle extends MixCustom {
             generationConfig.topP = options.top_p;
         }
 
+        // Thinking / effort (from unified config.effort or native options)
+        if (options.thinkingConfig) {
+            generationConfig.thinkingConfig = options.thinkingConfig;
+        } else if (options.thinkingLevel != null || options.thinkingBudget != null) {
+            generationConfig.thinkingConfig = {};
+            if (options.thinkingLevel != null) {
+                generationConfig.thinkingConfig.thinkingLevel = options.thinkingLevel;
+            }
+            if (options.thinkingBudget != null) {
+                generationConfig.thinkingConfig.thinkingBudget = options.thinkingBudget;
+            }
+        }
+
         // Gemini does not support responseMimeType when function calling is used
         const hasTools = options.tools && options.tools.length > 0 &&
             options.tools.some(t => t.functionDeclarations && t.functionDeclarations.length > 0);
@@ -3028,4 +3060,4 @@ class MixGoogle extends MixCustom {
     }
 }
 
-module.exports = { MixCustom, ModelMix, MixAnthropic, MixKimi, MixMiniMax, MixMiMo, MixOpenAI, MixOpenAIResponses, MixOpenAIWebSocket, MixOpenRouter, MixPerplexity, MixOllama, MixLMStudio, MixGroq, MixTogether, MixGrok, MixCerebras, MixGoogle, MixFireworks, MixNVIDIA };
+module.exports = { MixCustom, ModelMix, MixAnthropic, MixKimi, MixMiniMax, MixMiMo, MixOpenAI, MixOpenAIResponses, MixOpenAIWebSocket, MixOpenRouter, MixPerplexity, MixOllama, MixLMStudio, MixGroq, MixTogether, MixGrok, MixCerebras, MixGoogle, MixFireworks, MixNVIDIA, normalizeEffort, applyUnifiedEffort, resolveProviderFamily };

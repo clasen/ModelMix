@@ -13,7 +13,7 @@ const mmix = new ModelMix({
     }
 });
 
-mmix.attach('deepseek-r1-distill-llama-70b', new MixGroq({
+mmix.attach('openai/gpt-oss-120b', new MixGroq({
     config: {
         apiKey: env.GROQ_API_KEY,
     }

@@ -90,7 +90,6 @@ console.log(ETH.price);
 ModelMix.new()
   .gptOss()
   .kimiK25think()
-  .deepseekR1()
   .hermes3()
   .addText('What is the capital of France?');
 ```
@@ -101,6 +100,32 @@ This pattern allows you to:
 - Get structured JSON responses when needed
 - Track token usage across all providers
 - Keep your code clean and maintainable
+
+## 🎛️ Unified Effort Scale
+
+Control reasoning depth with one ModelMix policy value (`-1` adaptive, or `0`–`100`). It lives **outside** native `options` and is mapped to each provider’s effort API at request time.
+
+```javascript
+// In config (ModelMix.new or per-model shorthand)
+ModelMix.new({ config: { effort: 50 } }).sonnet46().addText('...').message();
+ModelMix.new().deepseekV4Flash({ config: { effort: 100 } }).addText('...').message();
+
+// Fluent
+ModelMix.new().effort(-1).minimaxM3().addText('...').message();
+```
+
+**Native wins:** if you already set a provider-native field (`reasoning_effort`, `output_config.effort`, `thinkingConfig`, etc.), unified `effort` is ignored for that request.
+
+| Scale | OpenAI | Anthropic | Gemini 3+ | DeepSeek V4 | MiniMax M3 |
+|------|--------|-----------|-----------|-------------|------------|
+| 0–19 / 0–24* | `none` | `low` | `minimal` | thinking `disabled` | `thinking.disabled` |
+| 20–39 / 25–49* | `low` | `medium` | `low` | `low` + thinking on | `thinking.adaptive` |
+| 40–59 / 50–74* | `medium` | `high` | `medium` | `high` + thinking on | `thinking.adaptive` |
+| 60–79 / 75–100* | `high` | `xhigh` | `high` | `high` + thinking on | `thinking.adaptive` |
+| 80–100 | `xhigh` | `max` | — | `max` + thinking on | `thinking.adaptive` |
+| `-1` | no-op (no adaptive API) | `thinking.type = adaptive` | `thinkingBudget: -1` | no-op (no adaptive API) | `thinking.type = adaptive` |
+
+\* Gemini bands use 0–24 / 25–49 / 50–74 / 75–100. Gemini 2.5 maps 0–100 to `thinkingBudget` (0→0, 100→model max). `-1` sets the provider’s adaptive/dynamic control when it exists; otherwise it is a no-op. Levels are clamped to what each model supports. Providers without effort control are a no-op.
 
 ## 🔧 Model Context Protocol (MCP) Integration
 
@@ -170,6 +195,7 @@ Here's a comprehensive list of available methods:
 | `grok420[think]()`  | Grok       | grok-4.20-0309               | [\$1.25 / \$2.50][6]       |
 | `grok41[think]()`   | Grok       | grok-4-1-fast                | [\$0.20 / \$0.50][6]       |
 | `qwen36plus()`      | Fireworks/Together | qwen3p6-plus / Qwen3.6-Plus | [\$0.50 / \$3.00][10] |
+| `deepseekV4Flash()` | Fireworks  | models/deepseek-v4-flash     | [\$0.14 / \$0.28][10]      |
 | `deepseekV4Pro()`   | Fireworks  | models/deepseek-v4-pro       | [\$1.74 / \$3.48][10]      |
 | `GLM52()`           | Together   | zai-org/GLM-5.2              | [\$1.40 / \$4.40][7]       |
 | `GLM51()`           | Fireworks  | models/glm-5p1               | [\$1.05 / \$3.50][10]      |
@@ -195,7 +221,7 @@ Here's a comprehensive list of available methods:
 [11]: https://platform.kimi.ai/docs/guide/kimi-k3-pricing "Kimi K3 Pricing"
 
 Each method accepts optional `options`, `config`, and (for multi-provider methods) `mix` parameters to customize behavior.  
-For NVIDIA on DeepSeek V4 Pro, use `deepseekV4Pro({ mix: { nvidia: true } })`.
+For NVIDIA on DeepSeek V4 Flash/Pro, use `deepseekV4Flash({ mix: { nvidia: true } })` or `deepseekV4Pro({ mix: { nvidia: true } })`.
 For Together on Qwen 3.6 Plus, use `qwen36plus({ mix: { fireworks: false, together: true } })`.
 For OpenRouter instead of Moonshot's native API, use `kimiK3({ mix: { moonshot: false, openrouter: true } })`.
 
@@ -617,6 +643,7 @@ new ModelMix(args = { options: {}, config: {} })
   - **config**: This object contains configuration settings that control the behavior of the `ModelMix` instance. These settings can also be overridden for specific model instances. Examples of configuration settings include:
     - `system`: Sets the default system message for the model, e.g., "You are an assistant."
     - `max_history`: Limits the number of historical messages to retain, e.g., 1.
+    - `effort`: Unified reasoning effort (`-1` adaptive, or `0`–`100`). Not a native provider field — use `config.effort` or `.effort(n)`.
     - `roundRobin`: When `true`, rotates through attached models on each request for load balancing. When `false` (default), uses fallback mode where models are tried sequentially only if previous ones fail.
     - `bottleneck`: Configures the rate limiting behavior using Bottleneck. For example:
       - `maxConcurrent`: Maximum number of concurrent requests
@@ -637,6 +664,7 @@ new ModelMix(args = { options: {}, config: {} })
 - `attach(modelKey, modelInstance)`: Attaches a model instance to the `ModelMix`.
 - `new()`: `static` Creates a new `ModelMix`.
 - `new()`: Creates a new `ModelMix` using instance setup.
+- `effort(n)`: Sets unified effort (`-1` or `0`–`100`) on `config.effort`.
 
 - `setSystem(text)`: Sets the system prompt.
 - `setSystemFromFile(filePath)`: Sets the system prompt from a file.

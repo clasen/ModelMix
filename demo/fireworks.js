@@ -1,14 +1,12 @@
 import { ModelMix } from '../index.js';
-try { process.loadEnvFile(); } catch {}
+try { process.loadEnvFile(); } catch { }
 
 async function main() {
     try {
         const ai = ModelMix.new();
 
-        const response = await ai
-            .GLM46()
-            .deepseekV32()
-            .GLM47()
+        const response = await ai.effort(50)
+            .deepseekV4Flash()
             .addText('What is the capital of France?')
             .message();
 
@@ -20,4 +18,3 @@ async function main() {
 }
 
 main();
-

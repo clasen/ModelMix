@@ -29,6 +29,7 @@ Do NOT use for:
 - [Installation](#installation)
 - [Creating an instance](#creating-an-instance)
 - [Attaching models](#attaching-models)
+- [Unified effort](#unified-effort)
 - [Get a text response](#get-a-text-response)
 - [Get structured JSON](#get-structured-json)
 - [Stream a response](#stream-a-response)
@@ -71,7 +72,8 @@ const model = ModelMix.new({
         system: "You are a helpful assistant.",
         max_history: 5,   // -1 = unlimited, 0 = none (default), N = keep last N
         debug: 0,          // 0=silent, 1=minimal, 2=summary, 3=full, 4=verbose
-        roundRobin: false  // false=fallback, true=rotate models
+        roundRobin: false, // false=fallback, true=rotate models
+        effort: 50         // unified 0..100, or -1 adaptive
     }
 });
 ```
@@ -89,6 +91,31 @@ const model = ModelMix.new()
 ```
 
 If `sonnet46` fails, it automatically tries `gpt52`, then `gemini3flash`.
+
+### Unified effort
+
+Provider-agnostic reasoning intensity. **Not** an `options` field — use `config.effort` or `.effort(n)`.
+
+```javascript
+ModelMix.new({ config: { effort: 40 } }).sonnet46().addText('Plan this refactor').message();
+ModelMix.new().deepseekV4Flash({ config: { effort: 100 } }).addText('...').message();
+ModelMix.new().effort(-1).minimaxM3().addText('Quick question').message();
+
+// Native provider fields win when already set
+ModelMix.new({ config: { effort: 80 } })
+  .gpt52({ options: { reasoning_effort: 'none' } }) // stays none
+```
+
+| Value | OpenAI | Anthropic | Gemini 3+ | DeepSeek V4 | MiniMax M3 |
+|------|--------|-----------|-----------|-------------|------------|
+| 0–19 | `none` | `low` | `minimal` (0–24) | thinking `disabled` | `thinking.disabled` |
+| 20–39 | `low` | `medium` | `low` (25–49) | `low` + thinking on | `thinking.adaptive` |
+| 40–59 | `medium` | `high` | `medium` (50–74) | `high` + thinking on | `thinking.adaptive` |
+| 60–79 | `high` | `xhigh` | `high` (75–100) | `high` + thinking on | `thinking.adaptive` |
+| 80–100 | `xhigh` | `max` | — | `max` + thinking on | `thinking.adaptive` |
+| `-1` | no-op (no adaptive API) | `thinking.type=adaptive` | `thinkingBudget: -1` | no-op (no adaptive API) | `thinking.type=adaptive` |
+
+Gemini 2.5 maps 0–100 to numeric `thinkingBudget`. `-1` sets the provider adaptive/dynamic control when available; otherwise no-op. Levels clamp to what each model supports. `*think()` shorthands that set native effort still win over unified `effort`.
 
 ## Available Model Shorthands
 
@@ -119,7 +146,7 @@ Thinking variants: append `think` — e.g. `fable5think()` `opus5think()` `opus4
 `minimaxM25()` `minimaxM27()` `minimaxM3()`
 
 ### Fireworks
-`deepseekV32()` `GLM5()` `GLM47()`
+`deepseekV4Flash()` `deepseekV4Pro()` `GLM5()` `GLM47()`
 
 ### Cerebras
 `GLM46()`
@@ -128,7 +155,7 @@ Thinking variants: append `think` — e.g. `fable5think()` `opus5think()` `opus4
 `GLM45()`
 
 ### Multi-provider (auto-fallback across free/paid tiers)
-`deepseekR1()` `hermes3()` `kimiK25think()` `GLM47()`
+`hermes3()` `kimiK25think()` `GLM47()`
 
 ### Local
 `lmstudio()` — for LM Studio local models
@@ -403,7 +430,6 @@ For full debug output, also set: `DEBUG=ModelMix* node script.js`
 const model = ModelMix.new()
     .gptOss()
     .kimiK25think()
-    .deepseekR1()
     .hermes3()
     .addText("What is the capital of France?");
 console.log(await model.message());
@@ -426,7 +452,7 @@ const model = ModelMix.new({
         minimax: false,      // default: false
         fireworks: false     // default: false
     }
-}).deepseekR1();
+}).GLM47();
 ```
 
 ## Agent Usage Rules
@@ -439,6 +465,7 @@ const model = ModelMix.new({
 - Use `.json()` for structured output instead of parsing text manually. Use descriptor objects `{ description, required, enum, default, nullable }` for richer schema control.
 - Use `.message()` for simple text, `.raw()` when you need tokens/thinking/toolCalls.
 - For thinking models, append `think` to the method name (e.g. `sonnet45think()`).
+- For cross-provider reasoning intensity, use unified `effort` (`-1` or `0`–`100`) via `config.effort` or `.effort(n)` — never put it in `options`. Native fields win if already set.
 - Template placeholders use `{key}` syntax in both system prompts and user messages.
 - The library uses CommonJS internally but supports ESM import via `{ ModelMix }`.
 - GPT-5+ models automatically use `max_completion_tokens` instead of `max_tokens`.

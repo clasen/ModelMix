@@ -2,7 +2,7 @@ import { ModelMix } from '../index.js';
 try { process.loadEnvFile(); } catch { }
 
 const model = ModelMix.new()
-    .deepseekV4Flash()
+    .deepseekV4Flash({ mix: { nvidia: true } })
     .addText("Create exactly 5 characters for a narrative game.")
 
 const jsonResult = await model.json([], [{
