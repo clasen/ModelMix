@@ -647,14 +647,6 @@ class ModelMix {
         return this;
     }
 
-    GLM47({ options = {}, config = {}, mix = { fireworks: true } } = {}) {
-        mix = { ...this.mix, ...mix };
-        if (mix.fireworks) this.attach('accounts/fireworks/models/glm-4p7', new MixFireworks({ options, config }));
-        if (mix.openrouter) this.attach('z-ai/glm-4.7', new MixOpenRouter({ options, config }));
-        if (mix.cerebras) this.attach('zai-glm-4.7', new MixCerebras({ options, config }));
-        return this;
-    }
-
     addText(text, { role = "user" } = {}) {
         const content = [{
             type: "text",

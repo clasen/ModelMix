@@ -106,16 +106,15 @@ ModelMix.new({ config: { effort: 80 } })
   .gpt52({ options: { reasoning_effort: 'none' } }) // stays none
 ```
 
-| Value | OpenAI | Anthropic | Gemini 3+ | DeepSeek V4 | MiniMax M3 |
-|------|--------|-----------|-----------|-------------|------------|
-| 0–19 | `none` | `low` | `minimal` (0–24) | thinking `disabled` | `thinking.disabled` |
-| 20–39 | `low` | `medium` | `low` (25–49) | `low` + thinking on | `thinking.adaptive` |
-| 40–59 | `medium` | `high` | `medium` (50–74) | `high` + thinking on | `thinking.adaptive` |
-| 60–79 | `high` | `xhigh` | `high` (75–100) | `high` + thinking on | `thinking.adaptive` |
-| 80–100 | `xhigh` | `max` | — | `max` + thinking on | `thinking.adaptive` |
-| `-1` | no-op (no adaptive API) | `thinking.type=adaptive` | `thinkingBudget: -1` | no-op (no adaptive API) | `thinking.type=adaptive` |
+| | 0–19 | 20–39 | 40–59 | 60–79 | 80–100 | `-1` |
+|--|------|-------|-------|-------|--------|------|
+| OpenAI | `none` | `low` | `medium` | `high` | `xhigh` | — |
+| Anthropic | `low` | `medium` | `high` | `xhigh` | `max` | adaptive |
+| Gemini 3+\* | `minimal` | `low` | `medium` | `high` | — | dynamic |
+| DeepSeek V4 | off | `low`↑ | `high`↑ | `high`↑ | `max`↑ | — |
+| MiniMax M3 | off | adaptive | adaptive | adaptive | adaptive | adaptive |
 
-Gemini 2.5 maps 0–100 to numeric `thinkingBudget`. `-1` sets the provider adaptive/dynamic control when available; otherwise no-op. Levels clamp to what each model supports. `*think()` shorthands that set native effort still win over unified `effort`.
+\* Gemini bands: 0–24 / 25–49 / 50–74 / 75–100. DeepSeek `↑` = thinking on; `off` = thinking disabled. MiniMax `off`/`adaptive` = `thinking.disabled` / `thinking.type=adaptive`. Gemini 2.5 maps 0–100 to `thinkingBudget`. `-1` = adaptive/dynamic when available, else no-op. Levels clamp per model. `*think()` shorthands still win over unified `effort`.
 
 ## Available Model Shorthands
 
@@ -146,7 +145,7 @@ Thinking variants: append `think` — e.g. `fable5think()` `opus5think()` `opus4
 `minimaxM25()` `minimaxM27()` `minimaxM3()`
 
 ### Fireworks
-`deepseekV4Flash()` `deepseekV4Pro()` `GLM5()` `GLM47()`
+`deepseekV4Flash()` `deepseekV4Pro()` `GLM5()`
 
 ### Cerebras
 `GLM46()`
@@ -155,7 +154,7 @@ Thinking variants: append `think` — e.g. `fable5think()` `opus5think()` `opus4
 `GLM45()`
 
 ### Multi-provider (auto-fallback across free/paid tiers)
-`hermes3()` `kimiK25think()` `GLM47()`
+`hermes3()` `kimiK25think()`
 
 ### Local
 `lmstudio()` — for LM Studio local models
@@ -452,7 +451,7 @@ const model = ModelMix.new({
         minimax: false,      // default: false
         fireworks: false     // default: false
     }
-}).GLM47();
+}).kimiK25think();
 ```
 
 ## Agent Usage Rules

@@ -107,7 +107,7 @@ Control reasoning depth with one ModelMix policy value (`-1` adaptive, or `0`–
 
 ```javascript
 // In config (ModelMix.new or per-model shorthand)
-ModelMix.new({ config: { effort: 50 } }).sonnet46().addText('...').message();
+ModelMix.new({ config: { effort: 50 } }).opus5().addText('...').message();
 ModelMix.new().deepseekV4Flash({ config: { effort: 100 } }).addText('...').message();
 
 // Fluent
@@ -116,16 +116,15 @@ ModelMix.new().effort(-1).minimaxM3().addText('...').message();
 
 **Native wins:** if you already set a provider-native field (`reasoning_effort`, `output_config.effort`, `thinkingConfig`, etc.), unified `effort` is ignored for that request.
 
-| Scale | OpenAI | Anthropic | Gemini 3+ | DeepSeek V4 | MiniMax M3 |
-|------|--------|-----------|-----------|-------------|------------|
-| 0–19 / 0–24* | `none` | `low` | `minimal` | thinking `disabled` | `thinking.disabled` |
-| 20–39 / 25–49* | `low` | `medium` | `low` | `low` + thinking on | `thinking.adaptive` |
-| 40–59 / 50–74* | `medium` | `high` | `medium` | `high` + thinking on | `thinking.adaptive` |
-| 60–79 / 75–100* | `high` | `xhigh` | `high` | `high` + thinking on | `thinking.adaptive` |
-| 80–100 | `xhigh` | `max` | — | `max` + thinking on | `thinking.adaptive` |
-| `-1` | no-op (no adaptive API) | `thinking.type = adaptive` | `thinkingBudget: -1` | no-op (no adaptive API) | `thinking.type = adaptive` |
+| | 0–19 | 20–39 | 40–59 | 60–79 | 80–100 | `-1` |
+|--|------|-------|-------|-------|--------|------|
+| OpenAI | `none` | `low` | `medium` | `high` | `xhigh` | — |
+| Anthropic | `low` | `medium` | `high` | `xhigh` | `max` | adaptive |
+| Gemini 3+\* | `minimal` | `low` | `medium` | `high` | — | dynamic |
+| DeepSeek V4 | off | `low`↑ | `high`↑ | `high`↑ | `max`↑ | — |
+| MiniMax M3 | off | adaptive | adaptive | adaptive | adaptive | adaptive |
 
-\* Gemini bands use 0–24 / 25–49 / 50–74 / 75–100. Gemini 2.5 maps 0–100 to `thinkingBudget` (0→0, 100→model max). `-1` sets the provider’s adaptive/dynamic control when it exists; otherwise it is a no-op. Levels are clamped to what each model supports. Providers without effort control are a no-op.
+\* Gemini bands: 0–24 / 25–49 / 50–74 / 75–100. DeepSeek `↑` = thinking on; `off` = thinking disabled. MiniMax `off`/`adaptive` = `thinking.disabled` / `thinking.type=adaptive`. Gemini 2.5 maps 0–100 to `thinkingBudget`. `-1` = provider adaptive/dynamic when available, else no-op. Levels clamp to what each model supports.
 
 ## 🔧 Model Context Protocol (MCP) Integration
 
@@ -163,8 +162,8 @@ Here's a comprehensive list of available methods:
 | Method              | Provider   | Model                        | Price (I/O) per 1 M tokens |
 | ------------------- | ---------- | ---------------------------- | -------------------------- |
 | `gpt56sol()`        | OpenAI     | gpt-5.6-sol                  | [\$5.00 / \$30.00][1]      |
-| `gpt56terra()`      | OpenAI     | gpt-5.6-terra                | [\$2.50 / \$15.00][1]      |
-| `gpt56luna()`       | OpenAI     | gpt-5.6-luna                 | [\$1.00 / \$6.00][1]       |
+| `gpt56terra()`      | OpenAI     | gpt-5.6-terra                | [\$2.00 / \$12.00][1]      |
+| `gpt56luna()`       | OpenAI     | gpt-5.6-luna                 | [\$0.20 / \$1.20][1]       |
 | `gpt55()`           | OpenAI     | gpt-5.5                      | [\$5.00 / \$30.00][1]      |
 | `gpt54()`           | OpenAI     | gpt-5.4                      | [\$2.50 / \$15.00][1]      |
 | `gpt54mini()`       | OpenAI     | gpt-5.4-mini                 | [\$0.75 / \$4.50][1]       |
@@ -230,7 +229,7 @@ const result = await ModelMix.new({
         options: { temperature: 0.7 },
         config: { system: "You are a helpful assistant" }
     })
-    .sonnet46()
+    .gpt56luna()
     .addText("Tell me a story about a cat");
     .message();
 ```
