@@ -1,4 +1,5 @@
 const { expect } = require('chai');
+const nock = require('nock');
 const { ModelMix, MixAnthropic } = require('../index.js');
 
 describe('Anthropic Model Registration Tests', () => {
@@ -19,6 +20,7 @@ describe('Anthropic Model Registration Tests', () => {
         expect(model.models[0].key).to.equal('claude-fable-5');
         expect(model.models[0].provider.options.output_config).to.deep.equal({ effort: 'max' });
         expect(model.models[0].provider.options.thinking).to.deep.equal({ display: 'summarized' });
+        expect(model.models[0].provider.options).to.not.have.property('temperature');
     });
 
     it('should register Claude Opus 5', () => {
@@ -38,6 +40,98 @@ describe('Anthropic Model Registration Tests', () => {
         expect(model.models[0].key).to.equal('claude-opus-5');
         expect(model.models[0].provider.options.output_config).to.deep.equal({ effort: 'max' });
         expect(model.models[0].provider.options.thinking).to.deep.equal({ display: 'summarized' });
+        expect(model.models[0].provider.options).to.not.have.property('temperature');
+    });
+
+    describe('Sampling params (temperature/top_p/top_k)', () => {
+        it('should detect models that reject sampling params', () => {
+            expect(MixAnthropic.rejectsSamplingParams('claude-opus-5')).to.equal(true);
+            expect(MixAnthropic.rejectsSamplingParams('claude-opus-4-8')).to.equal(true);
+            expect(MixAnthropic.rejectsSamplingParams('claude-opus-4-7')).to.equal(true);
+            expect(MixAnthropic.rejectsSamplingParams('claude-sonnet-5')).to.equal(true);
+            expect(MixAnthropic.rejectsSamplingParams('claude-fable-5')).to.equal(true);
+            expect(MixAnthropic.rejectsSamplingParams('anthropic/claude-opus-5')).to.equal(true);
+
+            expect(MixAnthropic.rejectsSamplingParams('claude-opus-4-6')).to.equal(false);
+            expect(MixAnthropic.rejectsSamplingParams('claude-opus-4-1-20250805')).to.equal(false);
+            expect(MixAnthropic.rejectsSamplingParams('claude-sonnet-4-6')).to.equal(false);
+            expect(MixAnthropic.rejectsSamplingParams('claude-haiku-4-5-20251001')).to.equal(false);
+        });
+
+        it('should strip sampling params for Opus 5 requests', async () => {
+            const originalApiKey = process.env.ANTHROPIC_API_KEY;
+            process.env.ANTHROPIC_API_KEY = 'test-anthropic-key';
+
+            try {
+                const provider = new MixAnthropic();
+                let requestBody;
+                nock('https://api.anthropic.com')
+                    .post('/v1/messages', body => {
+                        requestBody = body;
+                        return true;
+                    })
+                    .reply(200, {
+                        content: [{ type: 'text', text: 'Done' }],
+                        usage: { input_tokens: 1, output_tokens: 1 }
+                    });
+
+                await provider.create({
+                    config: { system: 'You are an assistant.' },
+                    options: {
+                        model: 'claude-opus-5',
+                        messages: [{ role: 'user', content: 'Hello' }],
+                        max_tokens: 100,
+                        temperature: 0.5,
+                        top_p: 0.9,
+                        top_k: 40
+                    }
+                });
+
+                expect(requestBody).to.not.have.property('temperature');
+                expect(requestBody).to.not.have.property('top_p');
+                expect(requestBody).to.not.have.property('top_k');
+                expect(requestBody.model).to.equal('claude-opus-5');
+            } finally {
+                if (originalApiKey === undefined) delete process.env.ANTHROPIC_API_KEY;
+                else process.env.ANTHROPIC_API_KEY = originalApiKey;
+                nock.cleanAll();
+            }
+        });
+
+        it('should keep temperature for Opus 4.6 requests', async () => {
+            const originalApiKey = process.env.ANTHROPIC_API_KEY;
+            process.env.ANTHROPIC_API_KEY = 'test-anthropic-key';
+
+            try {
+                const provider = new MixAnthropic();
+                let requestBody;
+                nock('https://api.anthropic.com')
+                    .post('/v1/messages', body => {
+                        requestBody = body;
+                        return true;
+                    })
+                    .reply(200, {
+                        content: [{ type: 'text', text: 'Done' }],
+                        usage: { input_tokens: 1, output_tokens: 1 }
+                    });
+
+                await provider.create({
+                    config: { system: 'You are an assistant.' },
+                    options: {
+                        model: 'claude-opus-4-6',
+                        messages: [{ role: 'user', content: 'Hello' }],
+                        max_tokens: 100,
+                        temperature: 0.5
+                    }
+                });
+
+                expect(requestBody.temperature).to.equal(0.5);
+            } finally {
+                if (originalApiKey === undefined) delete process.env.ANTHROPIC_API_KEY;
+                else process.env.ANTHROPIC_API_KEY = originalApiKey;
+                nock.cleanAll();
+            }
+        });
     });
 
     it('should register Claude Opus 4.8', () => {

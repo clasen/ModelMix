@@ -140,7 +140,7 @@ describe('Live MCP Integration Tests', function () {
         });
 
         it('should use custom MCP tools with Claude Opus 5', async function () {
-            // Opus 5 rejects temperature (deprecated); omit it from options.
+            // Opus 5 rejects temperature; MixAnthropic strips it on request.
             const model = ModelMix.new({ config: setup.config }).opus5();
 
             model.addTool({

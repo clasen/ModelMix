@@ -128,6 +128,7 @@ All providers inherit from `MixCustom` base class which provides common function
   }
   ```
 - **Special Notes**:
+  - Removes `temperature`, `top_p`, and `top_k` for Opus 4.7+ / Claude 5 family (API rejects them)
   - Removes `top_p` when thinking mode is enabled
   - Uses `x-api-key` header instead of `authorization`
   - Requires `anthropic-version` header

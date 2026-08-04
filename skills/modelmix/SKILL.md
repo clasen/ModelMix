@@ -469,6 +469,7 @@ const model = ModelMix.new({
 - The library uses CommonJS internally but supports ESM import via `{ ModelMix }`.
 - GPT-5+ models automatically use `max_completion_tokens` instead of `max_tokens`.
 - o-series models (o3, o4mini) automatically strip `max_tokens` and `temperature` since those APIs don't support them.
+- Anthropic Opus 4.7+ / Claude 5 family automatically strip `temperature`, `top_p`, and `top_k` (API rejects them).
 - `addText()`, `addImage()`, `addImageFromUrl()`, and `addImageFromBuffer()` all accept `{ role }` as second argument (default `"user"`).
 
 ## API Quick Reference

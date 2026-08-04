@@ -2207,9 +2207,30 @@ class MixAnthropic extends MixCustom {
 
     static maxEffortThinkingOptions = {
         output_config: { effort: 'max' },
-        thinking: { display: 'summarized' },
-        temperature: 1
+        thinking: { display: 'summarized' }
     };
+
+    /**
+     * Opus 4.7+ and Claude 5 family reject sampling params (temperature/top_p/top_k).
+     * See: https://platform.claude.com/docs/en/about-claude/models/migration-guide
+     */
+    static rejectsSamplingParams(model = '') {
+        const id = String(model).toLowerCase();
+        if (!id.includes('claude')) return false;
+        if (id.includes('mythos') || id.includes('fable')) return true;
+
+        const opus = id.match(/claude-opus-(\d+)(?:-(\d+))?/);
+        if (opus) {
+            const major = Number(opus[1]);
+            const minor = opus[2] !== undefined ? Number(opus[2]) : 0;
+            return major > 4 || (major === 4 && minor >= 7);
+        }
+
+        const sonnet = id.match(/claude-sonnet-(\d+)/);
+        if (sonnet) return Number(sonnet[1]) >= 5;
+
+        return false;
+    }
 
     getDefaultConfig(customConfig) {
 
@@ -2227,6 +2248,12 @@ class MixAnthropic extends MixCustom {
     async create({ config = {}, options = {} } = {}) {
 
         delete options.response_format;
+
+        if (MixAnthropic.rejectsSamplingParams(options.model)) {
+            delete options.temperature;
+            delete options.top_p;
+            delete options.top_k;
+        }
 
         options.system = config.system;
 
