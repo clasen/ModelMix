@@ -98,7 +98,7 @@ describe('Live Integration Tests', function () {
         });
 
         it('should return structured JSON with Sonnet 4.6 thinking', async function () {
-            const model = ModelMix.new(setup).sonnet46think();
+            const model = ModelMix.new(setup).effort(100).sonnet46();
 
             model.addText('Generate information about a fictional city.');
 
@@ -192,18 +192,6 @@ describe('Live Integration Tests', function () {
             expect(response.toLowerCase()).to.include('gptoss test successful');
         });
 
-        it('should work with Grok 4.1 model', async function () {
-            const model = ModelMix.new(setup).grok41();
-
-            model.addText('Say "grok41 test successful" and nothing else.');
-
-            const response = await model.message();
-            console.log(`Grok 4.1 response: ${response}`);
-
-            expect(response).to.be.a('string');
-            expect(response.toLowerCase()).to.include('grok41 test successful');
-        });
-
         const grokSeriesTests = [
             { name: 'Grok 4.3', factory: (m) => m.grok43(), token: 'grok43' },
             { name: 'Grok 4.20 reasoning', factory: (m) => m.grok420think(), token: 'grok420think' },
@@ -275,8 +263,8 @@ describe('Live Integration Tests', function () {
             expect(result.features).to.be.an('array');
         });
 
-        it('should return structured JSON with Grok3Mini', async function () {
-            const model = ModelMix.new(setup).grok41();
+        it('should return structured JSON with Grok 4.3', async function () {
+            const model = ModelMix.new(setup).grok43();
 
             model.addText('Generate information about a fictional technology.');
 
@@ -287,7 +275,7 @@ describe('Live Integration Tests', function () {
                 power: "1000 qubits"
             });
 
-            console.log(`Grok3Mini JSON result:`, result);
+            console.log(`Grok 4.3 JSON result:`, result);
 
             expect(result).to.be.an('object');
             expect(result).to.have.property('name');

@@ -81,9 +81,31 @@ describe('Unified effort scale', () => {
             expect(mapEffort('openai', 10, 'gpt-oss-120b')).to.deep.equal({ reasoning_effort: 'low' });
         });
 
-        it('maps Anthropic effort to output_config.effort', () => {
-            expect(mapEffort('anthropic', 10)).to.deep.equal({ output_config: { effort: 'low' } });
-            expect(mapEffort('anthropic', 90)).to.deep.equal({ output_config: { effort: 'max' } });
+        it('maps Anthropic adaptive models to thinking + output_config.effort', () => {
+            expect(mapEffort('anthropic', 10, 'claude-opus-5')).to.deep.equal({
+                thinking: { type: 'adaptive', display: 'summarized' },
+                output_config: { effort: 'low' }
+            });
+            expect(mapEffort('anthropic', 90, 'claude-fable-5')).to.deep.equal({
+                thinking: { type: 'adaptive', display: 'summarized' },
+                output_config: { effort: 'max' }
+            });
+            expect(mapEffort('anthropic', 50, 'claude-sonnet-4-6')).to.deep.equal({
+                thinking: { type: 'adaptive', display: 'summarized' },
+                output_config: { effort: 'high' }
+            });
+        });
+
+        it('maps Anthropic manual models to thinking.type=enabled + budget_tokens', () => {
+            expect(mapEffort('anthropic', 50, 'claude-sonnet-4-5-20250929')).to.deep.equal({
+                thinking: { type: 'enabled', budget_tokens: 8192 }
+            });
+            expect(mapEffort('anthropic', 100, 'claude-haiku-4-5-20251001')).to.deep.equal({
+                thinking: { type: 'enabled', budget_tokens: 16384 }
+            });
+            expect(mapEffort('anthropic', 0, 'claude-sonnet-4-5-20250929')).to.deep.equal({
+                thinking: { type: 'enabled', budget_tokens: 1024 }
+            });
         });
 
         it('maps Anthropic adaptive to thinking.type=adaptive', () => {
@@ -223,6 +245,14 @@ describe('Unified effort scale', () => {
             const options = {};
             applyUnifiedEffort(options, { effort: 90 }, 'anthropic', 'claude-opus-5');
             expect(options.output_config).to.deep.equal({ effort: 'max' });
+            expect(options.thinking).to.deep.equal({ type: 'adaptive', display: 'summarized' });
+        });
+
+        it('applies Anthropic manual thinking for Sonnet 4.5', () => {
+            const options = {};
+            applyUnifiedEffort(options, { effort: 50 }, 'anthropic', 'claude-sonnet-4-5-20250929');
+            expect(options.thinking).to.deep.equal({ type: 'enabled', budget_tokens: 8192 });
+            expect(options.output_config).to.equal(undefined);
         });
 
         it('skips Anthropic mapping when output_config.effort is set', () => {
@@ -306,16 +336,29 @@ describe('Unified effort scale', () => {
             expect(request.reasoning).to.deep.equal({ effort: 'none' });
         });
 
-        it('Anthropic *think() native effort wins over config.effort', () => {
-            const model = ModelMix.new({ config: { effort: 20 } }).opus5think();
-            expect(model.models[0].provider.options.output_config.effort).to.equal('max');
+        it('Anthropic config.effort maps through .effort().opus5()', () => {
+            const model = ModelMix.new().effort(100).opus5();
+            expect(model.config.effort).to.equal(100);
 
             const options = {
                 ...model.models[0].provider.options,
                 model: 'claude-opus-5'
             };
-            applyUnifiedEffort(options, { effort: 20 }, 'anthropic', 'claude-opus-5');
+            applyUnifiedEffort(options, model.config, 'anthropic', 'claude-opus-5');
             expect(options.output_config.effort).to.equal('max');
+            expect(options.thinking).to.deep.equal({ type: 'adaptive', display: 'summarized' });
+        });
+
+        it('Anthropic .effort(50).sonnet45() maps to manual budget_tokens', () => {
+            const model = ModelMix.new().effort(50).sonnet45();
+            expect(model.config.effort).to.equal(50);
+
+            const options = {
+                ...model.models[0].provider.options,
+                model: 'claude-sonnet-4-5-20250929'
+            };
+            applyUnifiedEffort(options, model.config, 'anthropic', 'claude-sonnet-4-5-20250929');
+            expect(options.thinking).to.deep.equal({ type: 'enabled', budget_tokens: 8192 });
         });
 
         it('MixGoogle generationConfig includes thinkingConfig from options', async () => {

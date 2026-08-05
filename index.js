@@ -72,11 +72,8 @@ const MODEL_PRICING = {
     'claude-opus-4-8': [5.00, 25.00],
     'claude-opus-4-7': [5.00, 25.00],
     'claude-opus-4-6': [5.00, 25.00],
-    'claude-opus-4-1-20250805': [15.00, 75.00],
     'claude-sonnet-4-6': [3.00, 15.00],
     'claude-sonnet-4-5-20250929': [3.00, 15.00],
-    'claude-sonnet-4-20250514': [3.00, 15.00],
-    'claude-3-5-haiku-20241022': [0.80, 4.00],
     'claude-haiku-4-5-20251001': [1.00, 5.00],
     // Google
     'gemini-3.1-pro-preview':[2.00, 12.00],
@@ -93,8 +90,6 @@ const MODEL_PRICING = {
     'grok-4.20-multi-agent-0309': [1.25, 2.50],
     'grok-4.20-0309-reasoning': [1.25, 2.50],
     'grok-4.20-0309-non-reasoning': [1.25, 2.50],
-    'grok-4-1-fast-reasoning': [0.20, 0.50],
-    'grok-4-1-fast-non-reasoning': [0.20, 0.50],
     // Fireworks
     'accounts/fireworks/models/deepseek-v4-flash': [0.14, 0.28],
     'accounts/fireworks/models/deepseek-v4-pro': [1.74, 3.48],
@@ -110,12 +105,10 @@ const MODEL_PRICING = {
     'accounts/fireworks/models/qwen3p7-plus': [0.40, 1.60],
     'qwen/qwen3.7-plus': [0.32, 1.28],
     'qwen/qwen3.8-max': [2.00, 6.00],
-    'fireworks/glm-5': [1.00, 3.20],
     // MiniMax
     'MiniMax-M2.5': [0.30, 1.20],
     'MiniMax-M2.7': [0.30, 1.20],
     'MiniMax-M3': [0.30, 1.20],
-    'fireworks/minimax-m2p5': [0.30, 1.20],
     'minimax/minimax-m2.7': [0.30, 1.20],
     'minimax/minimax-m3': [0.30, 1.20],
     'MiniMaxAI/MiniMax-M3': [0.30, 1.20],
@@ -392,28 +385,8 @@ class ModelMix {
     fable5({ options = {}, config = {} } = {}) {
         return this.attach('claude-fable-5', new MixAnthropic({ options, config }));
     }
-    fable5think({ options = {}, config = {} } = {}) {
-        options = { ...MixAnthropic.maxEffortThinkingOptions, ...options };
-        return this.attach('claude-fable-5', new MixAnthropic({ options, config }));
-    }
     opus5({ options = {}, config = {} } = {}) {
         return this.attach('claude-opus-5', new MixAnthropic({ options, config }));
-    }
-    opus5think({ options = {}, config = {} } = {}) {
-        options = { ...MixAnthropic.maxEffortThinkingOptions, ...options };
-        return this.attach('claude-opus-5', new MixAnthropic({ options, config }));
-    }
-    opus48think({ options = {}, config = {} } = {}) {
-        options = { ...MixAnthropic.thinkingOptions, ...options };
-        return this.attach('claude-opus-4-8', new MixAnthropic({ options, config }));
-    }
-    opus47think({ options = {}, config = {} } = {}) {
-        options = { ...MixAnthropic.thinkingOptions, ...options };
-        return this.attach('claude-opus-4-7', new MixAnthropic({ options, config }));
-    }    
-    opus46think({ options = {}, config = {} } = {}) {
-        options = { ...MixAnthropic.thinkingOptions, ...options };
-        return this.attach('claude-opus-4-6', new MixAnthropic({ options, config }));
     }
     opus48({ options = {}, config = {} } = {}) {
         return this.attach('claude-opus-4-8', new MixAnthropic({ options, config }));
@@ -424,50 +397,16 @@ class ModelMix {
     opus46({ options = {}, config = {} } = {}) {
         return this.attach('claude-opus-4-6', new MixAnthropic({ options, config }));
     }
-    opus41({ options = {}, config = {} } = {}) {
-        return this.attach('claude-opus-4-1-20250805', new MixAnthropic({ options, config }));
-    }
-    opus41think({ options = {}, config = {} } = {}) {
-        options = { ...MixAnthropic.thinkingOptions, ...options };
-        return this.attach('claude-opus-4-1-20250805', new MixAnthropic({ options, config }));
-    }
     sonnet5({ options = {}, config = {} } = {}) {
         return this.attach('claude-sonnet-5', new MixAnthropic({ options, config }));
-    }
-    sonnet5think({ options = {}, config = {} } = {}) {
-        options = { ...MixAnthropic.thinkingOptions, ...options };
-        return this.attach('claude-sonnet-5', new MixAnthropic({ options, config }));
-    }
-    sonnet4({ options = {}, config = {} } = {}) {
-        return this.attach('claude-sonnet-4-20250514', new MixAnthropic({ options, config }));
-    }
-    sonnet4think({ options = {}, config = {} } = {}) {
-        options = { ...MixAnthropic.thinkingOptions, ...options };
-        return this.attach('claude-sonnet-4-20250514', new MixAnthropic({ options, config }));
     }
     sonnet46({ options = {}, config = {} } = {}) {
         return this.attach('claude-sonnet-4-6', new MixAnthropic({ options, config }));
     }
-    sonnet46think({ options = {}, config = {} } = {}) {
-        options = { ...MixAnthropic.thinkingOptions, ...options };
-        return this.attach('claude-sonnet-4-6', new MixAnthropic({ options, config }));
-    }
-
     sonnet45({ options = {}, config = {} } = {}) {
         return this.attach('claude-sonnet-4-5-20250929', new MixAnthropic({ options, config }));
     }
-    sonnet45think({ options = {}, config = {} } = {}) {
-        options = { ...MixAnthropic.thinkingOptions, ...options };
-        return this.attach('claude-sonnet-4-5-20250929', new MixAnthropic({ options, config }));
-    }
-    haiku35({ options = {}, config = {} } = {}) {
-        return this.attach('claude-3-5-haiku-20241022', new MixAnthropic({ options, config }));
-    }
     haiku45({ options = {}, config = {} } = {}) {
-        return this.attach('claude-haiku-4-5-20251001', new MixAnthropic({ options, config }));
-    }
-    haiku45think({ options = {}, config = {} } = {}) {
-        options = { ...MixAnthropic.thinkingOptions, ...options };
         return this.attach('claude-haiku-4-5-20251001', new MixAnthropic({ options, config }));
     }
     gemini25flash({ options = {}, config = {} } = {}) {
@@ -515,12 +454,6 @@ class ModelMix {
     }
     grok420({ options = {}, config = {} } = {}) {
         return this.attach('grok-4.20-0309-non-reasoning', new MixGrok({ options, config }));
-    }
-    grok41think({ options = {}, config = {} } = {}) {
-        return this.attach('grok-4-1-fast-reasoning', new MixGrok({ options, config }));
-    }
-    grok41({ options = {}, config = {} } = {}) {
-        return this.attach('grok-4-1-fast-non-reasoning', new MixGrok({ options, config }));
     }
 
     qwen3({ options = {}, config = {}, mix = { together: true, cerebras: false } } = {}) {
@@ -593,7 +526,6 @@ class ModelMix {
     minimaxM25({ options = {}, config = {}, mix = { minimax: true } } = {}) {
         mix = { ...this.mix, ...mix };
         if (mix.minimax) this.attach('MiniMax-M2.5', new MixMiniMax({ options, config }));
-        if (mix.fireworks) this.attach('fireworks/minimax-m2p5', new MixFireworks({ options, config }));
         return this;
     }
 
@@ -658,12 +590,6 @@ class ModelMix {
     GLM52({ options = {}, config = {}, mix = { together: true } } = {}) {
         mix = { ...this.mix, ...mix };
         if (mix.together) this.attach('zai-org/GLM-5.2', new MixTogether({ options, config }));
-        return this;
-    }
-
-    GLM5({ options = {}, config = {}, mix = { fireworks: true } } = {}) {
-        mix = { ...this.mix, ...mix };
-        if (mix.fireworks) this.attach('fireworks/glm-5', new MixFireworks({ options, config }));
         return this;
     }
 
@@ -1007,7 +933,7 @@ class ModelMix {
 
     async execute({ config = {}, options = {} } = {}) {
         if (!this.models || this.models.length === 0) {
-            throw new Error("No models specified. Use methods like .gpt5(), .sonnet4() first.");
+            throw new Error("No models specified. Use methods like .gpt5(), .sonnet46() first.");
         }
 
         return this.limiter.schedule(async () => {
@@ -2216,19 +2142,6 @@ class MixKimi extends MixOpenAI {
 }
 
 class MixAnthropic extends MixCustom {
-
-    static thinkingOptions = {
-        thinking: {
-            "type": "enabled",
-            "budget_tokens": 1638
-        },
-        temperature: 1
-    };
-
-    static maxEffortThinkingOptions = {
-        output_config: { effort: 'max' },
-        thinking: { display: 'summarized' }
-    };
 
     /**
      * Opus 4.7+ and Claude 5 family reject sampling params (temperature/top_p/top_k).

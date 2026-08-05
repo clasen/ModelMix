@@ -114,7 +114,7 @@ ModelMix.new({ config: { effort: 80 } })
 | DeepSeek V4 | off | `low`↑ | `high`↑ | `high`↑ | `max`↑ | — |
 | MiniMax M3 | off | adaptive | adaptive | adaptive | adaptive | adaptive |
 
-\* Gemini bands: 0–24 / 25–49 / 50–74 / 75–100. DeepSeek `↑` = thinking on; `off` = thinking disabled. MiniMax `off`/`adaptive` = `thinking.disabled` / `thinking.type=adaptive`. Gemini 2.5 maps 0–100 to `thinkingBudget`. `-1` = adaptive/dynamic when available, else no-op. Levels clamp per model. `*think()` shorthands still win over unified `effort`.
+\* Gemini bands: 0–24 / 25–49 / 50–74 / 75–100. DeepSeek `↑` = thinking on; `off` = thinking disabled. MiniMax `off`/`adaptive` = `thinking.disabled` / `thinking.type=adaptive`. Gemini 2.5 maps 0–100 to `thinkingBudget`. Anthropic: adaptive + `output_config.effort` on Claude 5 / Fable / Opus 4.6+ / Sonnet 4.6+; Sonnet 4.5 / Haiku 4.5 use `thinking.type=enabled` + `budget_tokens`. `-1` = adaptive/dynamic when available, else no-op. Levels clamp per model. Former Anthropic `*think()` methods are removed — use `.effort(n).<model>()`.
 
 ## Available Model Shorthands
 
@@ -122,15 +122,15 @@ ModelMix.new({ config: { effort: 80 } })
 `gpt52()` `gpt52chat()` `gpt51()` `gpt5()` `gpt5mini()` `gpt5nano()` `gpt45()` `gpt41()` `gpt41mini()` `gpt41nano()` `o3()` `o4mini()`
 
 ### Anthropic
-`fable5()` `opus5()` `opus48()` `opus47()` `opus46()` `opus41()` `sonnet5()` `sonnet46()` `sonnet45()` `sonnet4()` `haiku45()` `haiku35()`
+`fable5()` `opus5()` `opus48()` `opus47()` `opus46()` `sonnet5()` `sonnet46()` `sonnet45()` `haiku45()`
 
-Thinking variants: append `think` — e.g. `fable5think()` `opus5think()` `opus48think()` `opus47think()` `opus46think()` `sonnet5think()` `sonnet46think()` `sonnet45think()` `sonnet4think()` `opus41think()` `haiku45think()`
+Use `.effort(n)` (or `config.effort`) to enable Anthropic thinking — e.g. `.effort(100).opus5()`.
 
 ### Google
 `gemini3pro()` `gemini3flash()` `gemini36flash()` `gemini35flash()` `gemini25pro()` `gemini25flash()`
 
 ### Grok
-`grok45()` `grok43()` `grok420multiAgent()` `grok420()` `grok420think()` `grok41()` `grok41think()`
+`grok45()` `grok43()` `grok420multiAgent()` `grok420()` `grok420think()`
 
 ### Perplexity
 `sonar()` `sonarPro()`
@@ -145,7 +145,7 @@ Thinking variants: append `think` — e.g. `fable5think()` `opus5think()` `opus4
 `minimaxM25()` `minimaxM27()` `minimaxM3()`
 
 ### Fireworks
-`qwen36plus()` `qwen37plus()` `deepseekV4Flash()` `deepseekV4Pro()` `GLM5()`
+`qwen36plus()` `qwen37plus()` `deepseekV4Flash()` `deepseekV4Pro()`
 
 ### Cerebras
 `GLM46()`
@@ -286,7 +286,8 @@ const code = await ModelMix.new()
 
 ```javascript
 const raw = await ModelMix.new()
-    .sonnet45think()
+    .effort(100)
+    .sonnet45()
     .addText("Solve this step by step: 2+2*3")
     .raw();
 // raw.message, raw.think, raw.tokens, raw.toolCalls, raw.response
@@ -463,8 +464,7 @@ const model = ModelMix.new({
 - When using MCP tools or `addTool()`, set `max_history` to at least 3 — tool call/response pairs consume history slots.
 - Use `.json()` for structured output instead of parsing text manually. Use descriptor objects `{ description, required, enum, default, nullable }` for richer schema control.
 - Use `.message()` for simple text, `.raw()` when you need tokens/thinking/toolCalls.
-- For thinking models, append `think` to the method name (e.g. `sonnet45think()`).
-- For cross-provider reasoning intensity, use unified `effort` (`-1` or `0`–`100`) via `config.effort` or `.effort(n)` — never put it in `options`. Native fields win if already set.
+- For Anthropic thinking, use unified `effort` (`-1` or `0`–`100`) via `config.effort` or `.effort(n)` — e.g. `.effort(100).opus5()`. Never put `effort` in `options`. Native fields win if already set.
 - Template placeholders use `{key}` syntax in both system prompts and user messages.
 - The library uses CommonJS internally but supports ESM import via `{ ModelMix }`.
 - GPT-5+ models automatically use `max_completion_tokens` instead of `max_tokens`.

@@ -286,28 +286,14 @@ export declare class ModelMix {
 
   // Anthropic
   fable5(args?: ModelAttachArgs): this;
-  fable5think(args?: ModelAttachArgs): this;
   opus5(args?: ModelAttachArgs): this;
-  opus5think(args?: ModelAttachArgs): this;
-  opus48think(args?: ModelAttachArgs): this;
-  opus47think(args?: ModelAttachArgs): this;
-  opus46think(args?: ModelAttachArgs): this;
   opus48(args?: ModelAttachArgs): this;
   opus47(args?: ModelAttachArgs): this;
   opus46(args?: ModelAttachArgs): this;
-  opus41(args?: ModelAttachArgs): this;
-  opus41think(args?: ModelAttachArgs): this;
   sonnet5(args?: ModelAttachArgs): this;
-  sonnet5think(args?: ModelAttachArgs): this;
-  sonnet4(args?: ModelAttachArgs): this;
-  sonnet4think(args?: ModelAttachArgs): this;
   sonnet46(args?: ModelAttachArgs): this;
-  sonnet46think(args?: ModelAttachArgs): this;
   sonnet45(args?: ModelAttachArgs): this;
-  sonnet45think(args?: ModelAttachArgs): this;
-  haiku35(args?: ModelAttachArgs): this;
   haiku45(args?: ModelAttachArgs): this;
-  haiku45think(args?: ModelAttachArgs): this;
 
   // Google
   gemini25flash(args?: ModelAttachArgs): this;
@@ -329,8 +315,6 @@ export declare class ModelMix {
   grok420multiAgent(args?: ModelAttachArgs): this;
   grok420think(args?: ModelAttachArgs): this;
   grok420(args?: ModelAttachArgs): this;
-  grok41think(args?: ModelAttachArgs): this;
-  grok41(args?: ModelAttachArgs): this;
 
   // Multi-provider
   qwen3(args?: ModelAttachArgs): this;
@@ -352,7 +336,6 @@ export declare class ModelMix {
   deepseekV4Flash(args?: ModelAttachArgs): this;
   GLM51(args?: ModelAttachArgs): this;
   GLM52(args?: ModelAttachArgs): this;
-  GLM5(args?: ModelAttachArgs): this;
 
   addText(text: string, options?: RoleOptions): this;
   addTextFromFile(filePath: string, options?: RoleOptions): this;

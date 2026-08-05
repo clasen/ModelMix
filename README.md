@@ -124,7 +124,9 @@ ModelMix.new().effort(-1).minimaxM3().addText('...').message();
 | DeepSeek V4 | off | `low`↑ | `high`↑ | `high`↑ | `max`↑ | — |
 | MiniMax M3 | off | adaptive | adaptive | adaptive | adaptive | adaptive |
 
-\* Gemini bands: 0–24 / 25–49 / 50–74 / 75–100. DeepSeek `↑` = thinking on; `off` = thinking disabled. MiniMax `off`/`adaptive` = `thinking.disabled` / `thinking.type=adaptive`. Gemini 2.5 maps 0–100 to `thinkingBudget`. `-1` = provider adaptive/dynamic when available, else no-op. Levels clamp to what each model supports.
+\* Gemini bands: 0–24 / 25–49 / 50–74 / 75–100. DeepSeek `↑` = thinking on; `off` = thinking disabled. MiniMax `off`/`adaptive` = `thinking.disabled` / `thinking.type=adaptive`. Gemini 2.5 maps 0–100 to `thinkingBudget`. Anthropic maps adaptive thinking + `output_config.effort` on Claude 5 / Fable / Opus 4.6+ / Sonnet 4.6+; older models (Sonnet 4.5, Haiku 4.5) get `thinking.type=enabled` + `budget_tokens`. `-1` = provider adaptive/dynamic when available, else no-op. Levels clamp to what each model supports.
+
+Migration: former Anthropic `*think()` shorthands are removed — use `.effort(100).opus5()` (or any 0–100 / `-1`) instead.
 
 ## 🔧 Model Context Protocol (MCP) Integration
 
@@ -177,14 +179,14 @@ Here's a comprehensive list of available methods:
 | `gpt41mini()`       | OpenAI     | gpt-4.1-mini                 | [\$0.40 / \$1.60][1]       |
 | `gpt41nano()`       | OpenAI     | gpt-4.1-nano                 | [\$0.10 / \$0.40][1]       |
 | `gptOss()`          | Together   | gpt-oss-120B                 | [\$0.15 / \$0.60][7]       |
-| `fable5[think]()`   | Anthropic  | claude-fable-5               | [\$10.00 / \$50.00][2]     |
-| `opus5[think]()`    | Anthropic  | claude-opus-5                | [\$5.00 / \$25.00][2]      |
-| `opus48[think]()`   | Anthropic  | claude-opus-4-8              | [\$5.00 / \$25.00][2]      |
-| `opus47[think]()`   | Anthropic  | claude-opus-4-7              | [\$5.00 / \$25.00][2]      |
-| `opus46[think]()`   | Anthropic  | claude-opus-4-6              | [\$5.00 / \$25.00][2]      |
-| `sonnet5[think]()`  | Anthropic  | claude-sonnet-5              | [\$3.00 / \$15.00][2]      |
-| `sonnet46[think]()` | Anthropic  | claude-sonnet-4-6            | [\$3.00 / \$15.00][2]      |
-| `haiku45[think]()`  | Anthropic  | claude-haiku-4-5-20251001    | [\$1.00 / \$5.00][2]       |
+| `fable5()`          | Anthropic  | claude-fable-5               | [\$10.00 / \$50.00][2]     |
+| `opus5()`           | Anthropic  | claude-opus-5                | [\$5.00 / \$25.00][2]      |
+| `opus48()`          | Anthropic  | claude-opus-4-8              | [\$5.00 / \$25.00][2]      |
+| `opus47()`          | Anthropic  | claude-opus-4-7              | [\$5.00 / \$25.00][2]      |
+| `opus46()`          | Anthropic  | claude-opus-4-6              | [\$5.00 / \$25.00][2]      |
+| `sonnet5()`         | Anthropic  | claude-sonnet-5              | [\$3.00 / \$15.00][2]      |
+| `sonnet46()`        | Anthropic  | claude-sonnet-4-6            | [\$3.00 / \$15.00][2]      |
+| `haiku45()`         | Anthropic  | claude-haiku-4-5-20251001    | [\$1.00 / \$5.00][2]       |
 | `gemini31pro()`     | Google     | gemini-3.1-pro-preview       | [\$2.00 / \$12.00][3]      |
 | `gemini36flash()`   | Google     | gemini-3.6-flash             | [\$1.50 / \$7.50][3]       |
 | `gemini35flash()`   | Google     | gemini-3.5-flash             | [\$0.75 / \$4.50][3]       |
@@ -193,7 +195,6 @@ Here's a comprehensive list of available methods:
 | `grok43()`          | Grok       | grok-4.3                     | [\$1.25 / \$2.50][6]       |
 | `grok420multiAgent()`| Grok      | grok-4.20-multi-agent-0309   | [\$1.25 / \$2.50][6]       |
 | `grok420[think]()`  | Grok       | grok-4.20-0309               | [\$1.25 / \$2.50][6]       |
-| `grok41[think]()`   | Grok       | grok-4-1-fast                | [\$0.20 / \$0.50][6]       |
 | `qwen36plus()`      | Fireworks/Together | qwen3p6-plus / Qwen3.6-Plus | [\$0.50 / \$3.00][10] |
 | `qwen37plus()`      | Fireworks  | models/qwen3p7-plus          | [\$0.40 / \$1.60][10]      |
 | `qwen38max()`       | OpenRouter | qwen/qwen3.8-max             | [\$2.00 / \$6.00][12]      |

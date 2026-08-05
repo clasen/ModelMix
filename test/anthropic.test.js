@@ -12,15 +12,15 @@ describe('Anthropic Model Registration Tests', () => {
         expect(model.models[0].provider).to.be.instanceOf(MixAnthropic);
     });
 
-    it('should register Claude Fable 5 with max effort thinking', () => {
-        const model = ModelMix.new();
-        model.fable5think();
+    it('should apply max effort thinking via .effort(100).fable5()', () => {
+        const model = ModelMix.new().effort(100).fable5();
+        const { applyUnifiedEffort } = require('../effort.js');
 
-        expect(model.models).to.have.length(1);
-        expect(model.models[0].key).to.equal('claude-fable-5');
-        expect(model.models[0].provider.options.output_config).to.deep.equal({ effort: 'max' });
-        expect(model.models[0].provider.options.thinking).to.deep.equal({ display: 'summarized' });
-        expect(model.models[0].provider.options).to.not.have.property('temperature');
+        expect(model.config.effort).to.equal(100);
+        const options = { model: 'claude-fable-5' };
+        applyUnifiedEffort(options, model.config, 'anthropic', 'claude-fable-5');
+        expect(options.output_config).to.deep.equal({ effort: 'max' });
+        expect(options.thinking).to.deep.equal({ type: 'adaptive', display: 'summarized' });
     });
 
     it('should register Claude Opus 5', () => {
@@ -32,15 +32,15 @@ describe('Anthropic Model Registration Tests', () => {
         expect(model.models[0].provider).to.be.instanceOf(MixAnthropic);
     });
 
-    it('should register Claude Opus 5 with max effort thinking', () => {
-        const model = ModelMix.new();
-        model.opus5think();
+    it('should apply max effort thinking via .effort(100).opus5()', () => {
+        const model = ModelMix.new().effort(100).opus5();
+        const { applyUnifiedEffort } = require('../effort.js');
 
-        expect(model.models).to.have.length(1);
-        expect(model.models[0].key).to.equal('claude-opus-5');
-        expect(model.models[0].provider.options.output_config).to.deep.equal({ effort: 'max' });
-        expect(model.models[0].provider.options.thinking).to.deep.equal({ display: 'summarized' });
-        expect(model.models[0].provider.options).to.not.have.property('temperature');
+        expect(model.config.effort).to.equal(100);
+        const options = { model: 'claude-opus-5' };
+        applyUnifiedEffort(options, model.config, 'anthropic', 'claude-opus-5');
+        expect(options.output_config).to.deep.equal({ effort: 'max' });
+        expect(options.thinking).to.deep.equal({ type: 'adaptive', display: 'summarized' });
     });
 
     describe('Sampling params (temperature/top_p/top_k)', () => {
@@ -53,7 +53,6 @@ describe('Anthropic Model Registration Tests', () => {
             expect(MixAnthropic.rejectsSamplingParams('anthropic/claude-opus-5')).to.equal(true);
 
             expect(MixAnthropic.rejectsSamplingParams('claude-opus-4-6')).to.equal(false);
-            expect(MixAnthropic.rejectsSamplingParams('claude-opus-4-1-20250805')).to.equal(false);
             expect(MixAnthropic.rejectsSamplingParams('claude-sonnet-4-6')).to.equal(false);
             expect(MixAnthropic.rejectsSamplingParams('claude-haiku-4-5-20251001')).to.equal(false);
         });
@@ -143,16 +142,14 @@ describe('Anthropic Model Registration Tests', () => {
         expect(model.models[0].provider).to.be.instanceOf(MixAnthropic);
     });
 
-    it('should register Claude Opus 4.8 with thinking enabled', () => {
-        const model = ModelMix.new();
-        model.opus48think();
+    it('should apply adaptive thinking via .effort(100).opus48()', () => {
+        const model = ModelMix.new().effort(100).opus48();
+        const { applyUnifiedEffort } = require('../effort.js');
 
-        expect(model.models).to.have.length(1);
-        expect(model.models[0].key).to.equal('claude-opus-4-8');
-        expect(model.models[0].provider.options.thinking).to.deep.equal({
-            type: 'enabled',
-            budget_tokens: 1638
-        });
+        const options = { model: 'claude-opus-4-8' };
+        applyUnifiedEffort(options, model.config, 'anthropic', 'claude-opus-4-8');
+        expect(options.thinking).to.deep.equal({ type: 'adaptive', display: 'summarized' });
+        expect(options.output_config).to.deep.equal({ effort: 'max' });
     });
 
     it('should register Claude Sonnet 5', () => {
@@ -164,16 +161,14 @@ describe('Anthropic Model Registration Tests', () => {
         expect(model.models[0].provider).to.be.instanceOf(MixAnthropic);
     });
 
-    it('should register Claude Sonnet 5 with thinking enabled', () => {
-        const model = ModelMix.new();
-        model.sonnet5think();
+    it('should apply adaptive thinking via .effort(100).sonnet5()', () => {
+        const model = ModelMix.new().effort(100).sonnet5();
+        const { applyUnifiedEffort } = require('../effort.js');
 
-        expect(model.models).to.have.length(1);
-        expect(model.models[0].key).to.equal('claude-sonnet-5');
-        expect(model.models[0].provider.options.thinking).to.deep.equal({
-            type: 'enabled',
-            budget_tokens: 1638
-        });
+        const options = { model: 'claude-sonnet-5' };
+        applyUnifiedEffort(options, model.config, 'anthropic', 'claude-sonnet-5');
+        expect(options.thinking).to.deep.equal({ type: 'adaptive', display: 'summarized' });
+        expect(options.output_config).to.deep.equal({ effort: 'max' });
     });
 
     describe('Thinking block extraction', () => {

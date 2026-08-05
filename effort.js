@@ -170,6 +170,62 @@ function isMiniMax(modelKey) {
     return typeof modelKey === 'string' && modelKey.toLowerCase().includes('minimax');
 }
 
+/** Max budget_tokens when mapping unified effort onto manual Anthropic thinking. */
+const ANTHROPIC_MANUAL_BUDGET_MAX = 16384;
+
+/**
+ * Models that use adaptive thinking + output_config.effort (Claude 5 / Fable /
+ * Opus 4.6+ / Sonnet 4.6+). Older ones (Sonnet 4.5, Haiku 4.5, Opus 4.5) use
+ * thinking.type=enabled + budget_tokens.
+ */
+function usesAnthropicAdaptiveThinking(modelKey) {
+    const id = String(modelKey || '').toLowerCase();
+    if (!id) return true;
+    if (!id.includes('claude')) return true;
+    if (id.includes('fable') || id.includes('mythos')) return true;
+
+    const opus = id.match(/claude-opus-(\d+)(?:-(\d+))?/);
+    if (opus) {
+        const major = Number(opus[1]);
+        const minor = opus[2] !== undefined ? Number(opus[2]) : 0;
+        return major > 4 || (major === 4 && minor >= 6);
+    }
+
+    const sonnet = id.match(/claude-sonnet-(\d+)(?:-(\d+))?/);
+    if (sonnet) {
+        const major = Number(sonnet[1]);
+        const minor = sonnet[2] !== undefined ? Number(sonnet[2]) : 0;
+        return major > 4 || (major === 4 && minor >= 6);
+    }
+
+    // Haiku 4.5 and earlier: manual extended thinking only
+    if (id.includes('haiku')) return false;
+
+    return true;
+}
+
+function mapAnthropicManualBudget(normalized) {
+    return Math.max(1024, Math.round((normalized / 100) * ANTHROPIC_MANUAL_BUDGET_MAX));
+}
+
+function mapAnthropicEffort(normalized, modelKey) {
+    if (!usesAnthropicAdaptiveThinking(modelKey)) {
+        return {
+            thinking: {
+                type: 'enabled',
+                budget_tokens: mapAnthropicManualBudget(normalized)
+            }
+        };
+    }
+
+    const desired = levelFromBands(normalized, ANTHROPIC_BANDS);
+    const level = pickNearestLevel(desired, ANTHROPIC_LEVELS, ANTHROPIC_LEVELS);
+    return {
+        thinking: { type: 'adaptive', display: 'summarized' },
+        output_config: { effort: level }
+    };
+}
+
 function mapDeepSeekEffort(normalized) {
     // DeepSeek V4 has no adaptive mode (only enabled/disabled + low|high|max)
     if (normalized === -1) return null;
@@ -282,9 +338,7 @@ function mapEffort(providerFamily, effort, modelKey) {
     }
 
     if (providerFamily === 'anthropic') {
-        const desired = levelFromBands(normalized, ANTHROPIC_BANDS);
-        const level = pickNearestLevel(desired, ANTHROPIC_LEVELS, ANTHROPIC_LEVELS);
-        return { output_config: { effort: level } };
+        return mapAnthropicEffort(normalized, modelKey);
     }
 
     if (providerFamily === 'google') {
@@ -357,6 +411,7 @@ module.exports = {
     resolveProviderFamily,
     isDeepSeekV4,
     isMiniMax,
+    usesAnthropicAdaptiveThinking,
     levelFromBands,
     pickNearestLevel,
     OPENAI_BANDS,
@@ -367,4 +422,5 @@ module.exports = {
     ANTHROPIC_LEVELS,
     GEMINI_LEVELS,
     DEEPSEEK_LEVELS,
+    ANTHROPIC_MANUAL_BUDGET_MAX,
 };
