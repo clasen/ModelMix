@@ -88,6 +88,7 @@ const MODEL_PRICING = {
     'gemini-2.5-flash': [0.30, 2.50],
     'gemini-3.1-flash-lite-preview': [0.25, 1.50],
     // Grok
+    'grok-4.5': [2.00, 6.00],
     'grok-4.3': [1.25, 2.50],
     'grok-4.20-multi-agent-0309': [1.25, 2.50],
     'grok-4.20-0309-reasoning': [1.25, 2.50],
@@ -106,6 +107,9 @@ const MODEL_PRICING = {
     'accounts/fireworks/models/kimi-k2p5': [0.50, 2.80],
     'accounts/fireworks/models/qwen3p6-plus': [0.50, 3.00],
     'Qwen/Qwen3.6-Plus': [0.50, 3.00],
+    'accounts/fireworks/models/qwen3p7-plus': [0.40, 1.60],
+    'qwen/qwen3.7-plus': [0.32, 1.28],
+    'qwen/qwen3.8-max': [2.00, 6.00],
     'fireworks/glm-5': [1.00, 3.20],
     // MiniMax
     'MiniMax-M2.5': [0.30, 1.20],
@@ -497,6 +501,9 @@ class ModelMix {
         return this.attach('sonar', new MixPerplexity({ options, config }));
     }
 
+    grok45({ options = {}, config = {} } = {}) {
+        return this.attach('grok-4.5', new MixGrok({ options, config }));
+    }
     grok43({ options = {}, config = {} } = {}) {
         return this.attach('grok-4.3', new MixGrok({ options, config }));
     }
@@ -527,7 +534,20 @@ class ModelMix {
         if (mix.fireworks) this.attach('accounts/fireworks/models/qwen3p6-plus', new MixFireworks({ options, config }));
         if (mix.together) this.attach('Qwen/Qwen3.6-Plus', new MixTogether({ options, config }));
         return this;
-    } 
+    }
+
+    qwen37plus({ options = {}, config = {}, mix = { fireworks: true } } = {}) {
+        mix = { ...this.mix, ...mix };
+        if (mix.fireworks) this.attach('accounts/fireworks/models/qwen3p7-plus', new MixFireworks({ options, config }));
+        if (mix.openrouter) this.attach('qwen/qwen3.7-plus', new MixOpenRouter({ options, config }));
+        return this;
+    }
+
+    qwen38max({ options = {}, config = {}, mix = { openrouter: true } } = {}) {
+        mix = { ...this.mix, ...mix };
+        if (mix.openrouter) this.attach('qwen/qwen3.8-max', new MixOpenRouter({ options, config }));
+        return this;
+    }
 
     hermes3({ options = {}, config = {}, mix = {} } = {}) {
         mix = { ...this.mix, ...mix };

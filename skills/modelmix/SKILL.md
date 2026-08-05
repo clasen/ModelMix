@@ -130,7 +130,7 @@ Thinking variants: append `think` — e.g. `fable5think()` `opus5think()` `opus4
 `gemini3pro()` `gemini3flash()` `gemini36flash()` `gemini35flash()` `gemini25pro()` `gemini25flash()`
 
 ### Grok
-`grok43()` `grok420multiAgent()` `grok420()` `grok420think()` `grok41()` `grok41think()`
+`grok45()` `grok43()` `grok420multiAgent()` `grok420()` `grok420think()` `grok41()` `grok41think()`
 
 ### Perplexity
 `sonar()` `sonarPro()`
@@ -145,13 +145,13 @@ Thinking variants: append `think` — e.g. `fable5think()` `opus5think()` `opus4
 `minimaxM25()` `minimaxM27()` `minimaxM3()`
 
 ### Fireworks
-`deepseekV4Flash()` `deepseekV4Pro()` `GLM5()`
+`qwen36plus()` `qwen37plus()` `deepseekV4Flash()` `deepseekV4Pro()` `GLM5()`
 
 ### Cerebras
 `GLM46()`
 
 ### OpenRouter
-`GLM45()`
+`qwen38max()` `GLM45()`
 
 ### Multi-provider (auto-fallback across free/paid tiers)
 `hermes3()` `kimiK25think()`

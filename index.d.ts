@@ -324,6 +324,7 @@ export declare class ModelMix {
   sonar(args?: ModelAttachArgs): this;
 
   // Grok
+  grok45(args?: ModelAttachArgs): this;
   grok43(args?: ModelAttachArgs): this;
   grok420multiAgent(args?: ModelAttachArgs): this;
   grok420think(args?: ModelAttachArgs): this;
@@ -334,6 +335,8 @@ export declare class ModelMix {
   // Multi-provider
   qwen3(args?: ModelAttachArgs): this;
   qwen36plus(args?: ModelAttachArgs): this;
+  qwen37plus(args?: ModelAttachArgs): this;
+  qwen38max(args?: ModelAttachArgs): this;
   hermes3(args?: ModelAttachArgs): this;
   kimiK26think(args?: ModelAttachArgs): this;
   kimiK27Code(args?: ModelAttachArgs): this;

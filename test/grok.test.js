@@ -3,6 +3,7 @@ const { ModelMix } = require('../index.js');
 
 describe('Grok Model Registration Tests', () => {
     const grokModels = [
+        { method: 'grok45', key: 'grok-4.5' },
         { method: 'grok43', key: 'grok-4.3' },
         { method: 'grok420multiAgent', key: 'grok-4.20-multi-agent-0309' },
         { method: 'grok420think', key: 'grok-4.20-0309-reasoning' },

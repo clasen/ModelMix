@@ -189,11 +189,14 @@ Here's a comprehensive list of available methods:
 | `gemini36flash()`   | Google     | gemini-3.6-flash             | [\$1.50 / \$7.50][3]       |
 | `gemini35flash()`   | Google     | gemini-3.5-flash             | [\$0.75 / \$4.50][3]       |
 | `gemini31flashLite()`| Google     | gemini-3.1-flash-lite-preview | [\$0.25 / \$1.50][3]       |
+| `grok45()`          | Grok       | grok-4.5                     | [\$2.00 / \$6.00][6]       |
 | `grok43()`          | Grok       | grok-4.3                     | [\$1.25 / \$2.50][6]       |
 | `grok420multiAgent()`| Grok      | grok-4.20-multi-agent-0309   | [\$1.25 / \$2.50][6]       |
 | `grok420[think]()`  | Grok       | grok-4.20-0309               | [\$1.25 / \$2.50][6]       |
 | `grok41[think]()`   | Grok       | grok-4-1-fast                | [\$0.20 / \$0.50][6]       |
 | `qwen36plus()`      | Fireworks/Together | qwen3p6-plus / Qwen3.6-Plus | [\$0.50 / \$3.00][10] |
+| `qwen37plus()`      | Fireworks  | models/qwen3p7-plus          | [\$0.40 / \$1.60][10]      |
+| `qwen38max()`       | OpenRouter | qwen/qwen3.8-max             | [\$2.00 / \$6.00][12]      |
 | `deepseekV4Flash()` | Fireworks  | models/deepseek-v4-flash     | [\$0.14 / \$0.28][10]      |
 | `deepseekV4Pro()`   | Fireworks  | models/deepseek-v4-pro       | [\$1.74 / \$3.48][10]      |
 | `GLM52()`           | Together   | zai-org/GLM-5.2              | [\$1.40 / \$4.40][7]       |
@@ -218,10 +221,12 @@ Here's a comprehensive list of available methods:
 [9]: https://platform.minimax.io/docs/api-reference/anthropic-api-compatible-cache#supported-models-and-pricing "MiniMax Pricing"
 [10]: https://fireworks.ai/pricing#serverless-pricing "Fireworks Pricing"
 [11]: https://platform.kimi.ai/docs/guide/kimi-k3-pricing "Kimi K3 Pricing"
+[12]: https://openrouter.ai/qwen/qwen3.8-max "OpenRouter Pricing"
 
 Each method accepts optional `options`, `config`, and (for multi-provider methods) `mix` parameters to customize behavior.  
 For NVIDIA on DeepSeek V4 Flash/Pro, use `deepseekV4Flash({ mix: { nvidia: true } })` or `deepseekV4Pro({ mix: { nvidia: true } })`.
 For Together on Qwen 3.6 Plus, use `qwen36plus({ mix: { fireworks: false, together: true } })`.
+For OpenRouter on Qwen 3.7 Plus, use `qwen37plus({ mix: { fireworks: false, openrouter: true } })`.
 For OpenRouter instead of Moonshot's native API, use `kimiK3({ mix: { moonshot: false, openrouter: true } })`.
 
 ```javascript
