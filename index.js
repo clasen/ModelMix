@@ -23,7 +23,8 @@ const {
 const {
     normalizeEffort,
     applyUnifiedEffort,
-    resolveProviderFamily
+    resolveProviderFamily,
+    resolveGrok420ModelKey
 } = require('./effort');
 
 const DEFAULT_RETRYABLE_STATUS_CODES = [408, 425, 429, 500, 502, 503, 504, 529];
@@ -88,6 +89,7 @@ const MODEL_PRICING = {
     'grok-4.5': [2.00, 6.00],
     'grok-4.3': [1.25, 2.50],
     'grok-4.20-multi-agent-0309': [1.25, 2.50],
+    'grok-4.20-0309': [1.25, 2.50],
     'grok-4.20-0309-reasoning': [1.25, 2.50],
     'grok-4.20-0309-non-reasoning': [1.25, 2.50],
     // Fireworks
@@ -449,11 +451,9 @@ class ModelMix {
     grok420multiAgent({ options = {}, config = {} } = {}) {
         return this.attach('grok-4.20-multi-agent-0309', new MixGrok({ options, config }));
     }
-    grok420think({ options = {}, config = {} } = {}) {
-        return this.attach('grok-4.20-0309-reasoning', new MixGrok({ options, config }));
-    }
+    /** Non-reasoning by default; with `.effort(20+)` / `-1` resolves to the reasoning model at request time. */
     grok420({ options = {}, config = {} } = {}) {
-        return this.attach('grok-4.20-0309-non-reasoning', new MixGrok({ options, config }));
+        return this.attach('grok-4.20-0309', new MixGrok({ options, config }));
     }
 
     qwen3({ options = {}, config = {}, mix = { together: true, cerebras: false } } = {}) {
@@ -489,7 +489,7 @@ class ModelMix {
         return this;
     }
 
-    kimiK26think({ options = {}, config = {}, mix = { fireworks: true } } = {}) {
+    kimiK26({ options = {}, config = {}, mix = { fireworks: true } } = {}) {
         mix = { ...this.mix, ...mix };
         if (mix.fireworks) this.attach('accounts/fireworks/models/kimi-k2p6', new MixFireworks({ options, config }));
         if (mix.openrouter) this.attach('moonshotai/kimi-k2.6', new MixOpenRouter({ options, config }));
@@ -510,7 +510,7 @@ class ModelMix {
         return this;
     }
 
-    kimiK25think({ options = {}, config = {}, mix = { together: true } } = {}) {
+    kimiK25({ options = {}, config = {}, mix = { together: true } } = {}) {
         mix = { ...this.mix, ...mix };
         if (mix.together) this.attach('moonshotai/Kimi-K2.5', new MixTogether({ options, config }));
         if (mix.fireworks) this.attach('accounts/fireworks/models/kimi-k2p5', new MixFireworks({ options, config }));
@@ -991,9 +991,17 @@ class ModelMix {
                     }
                 };
 
+                // Grok 4.20 alias → reasoning / non-reasoning from unified effort
+                const resolvedModelKey = resolveGrok420ModelKey(
+                    currentModelKey,
+                    currentConfig.effort,
+                    currentOptions
+                );
+                currentOptions.model = resolvedModelKey;
+
                 // Unified effort → native provider fields (skipped if native already set)
                 const providerFamily = resolveProviderFamily(providerInstance);
-                applyUnifiedEffort(currentOptions, currentConfig, providerFamily, currentModelKey);
+                applyUnifiedEffort(currentOptions, currentConfig, providerFamily, resolvedModelKey);
 
                 if (currentConfig.debug >= 1) {
                     const isPrimary = i === 0;
@@ -1003,7 +1011,7 @@ class ModelMix {
                         : ' (fallback)';
                     // Extract provider name from class name (e.g., "MixOpenRouter" -> "openrouter")
                     const providerName = providerInstance.constructor.name.replace(/^Mix/, '').toLowerCase();
-                    const header = `\n${prefix} [${providerName}:${currentModelKey}] #${originalIndex + 1}${suffix}`;
+                    const header = `\n${prefix} [${providerName}:${resolvedModelKey}] #${originalIndex + 1}${suffix}`;
 
                     if (currentConfig.debug >= 2) {
                         console.log(`${header}\n${ModelMix.formatInputSummary(this.messages, currentConfig.system, currentConfig.debug)}`);
@@ -1048,7 +1056,7 @@ class ModelMix {
                             if (currentConfig.debug >= 1) {
                                 const nextAttempt = attempt + 2;
                                 const totalAttempts = retries + 1;
-                                console.log(`↺ Retrying [${currentModelKey}] due to status ${statusCode} (${nextAttempt}/${totalAttempts})`);
+                                console.log(`↺ Retrying [${resolvedModelKey}] due to status ${statusCode} (${nextAttempt}/${totalAttempts})`);
                             }
 
                             const delay = Math.min(baseDelayMs * Math.pow(2, attempt), maxDelayMs);
@@ -1060,7 +1068,7 @@ class ModelMix {
                     const elapsedMs = Date.now() - startTime;
 
                     if (result.tokens) {
-                        result.tokens.cost = ModelMix.calculateCost(currentModelKey, result.tokens);
+                        result.tokens.cost = ModelMix.calculateCost(resolvedModelKey, result.tokens);
                         const elapsedSec = elapsedMs / 1000;
                         result.tokens.speed = elapsedSec > 0 ? Math.round(result.tokens.output / elapsedSec) : 0;
                     }

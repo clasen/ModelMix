@@ -105,6 +105,39 @@ const PROVIDER_FAMILY_BY_CLASS = {
     MixCustom: null,
 };
 
+/** Logical alias from `.grok420()` — resolved to reasoning / non-reasoning at request time. */
+const GROK420_ALIAS = 'grok-4.20-0309';
+const GROK420_REASONING = 'grok-4.20-0309-reasoning';
+const GROK420_NON_REASONING = 'grok-4.20-0309-non-reasoning';
+
+function isGrok420Alias(modelKey) {
+    return modelKey === GROK420_ALIAS;
+}
+
+/**
+ * Pick Grok 4.20 concrete model from unified effort (and native reasoning_effort).
+ * - no effort / OpenAI band `none` (0–19) / native `none` → non-reasoning
+ * - effort -1 or 20–100 / native non-none reasoning_effort → reasoning
+ */
+function resolveGrok420ModelKey(modelKey, effort, options = {}) {
+    if (!isGrok420Alias(modelKey)) return modelKey;
+
+    const native = options.reasoning_effort;
+    if (native != null && native !== '') {
+        return native === 'none' ? GROK420_NON_REASONING : GROK420_REASONING;
+    }
+
+    if (effort === undefined || effort === null) {
+        return GROK420_NON_REASONING;
+    }
+
+    const normalized = normalizeEffort(effort);
+    if (normalized === -1) return GROK420_REASONING;
+
+    const level = levelFromBands(normalized, OPENAI_BANDS);
+    return level === 'none' ? GROK420_NON_REASONING : GROK420_REASONING;
+}
+
 function normalizeEffort(value) {
     if (typeof value !== 'number' || !Number.isFinite(value) || !Number.isInteger(value)) {
         throw new Error(`Invalid effort: expected integer -1 or 0..100, got ${JSON.stringify(value)}`);
@@ -332,6 +365,10 @@ function mapEffort(providerFamily, effort, modelKey) {
         if (isMiniMax(modelKey)) {
             return mapMiniMaxEffort(normalized);
         }
+        // Non-reasoning Grok 4.20 has no reasoning_effort control
+        if (modelKey === GROK420_NON_REASONING) {
+            return null;
+        }
         const desired = levelFromBands(normalized, OPENAI_BANDS);
         const level = pickNearestLevel(desired, OPENAI_LEVELS, supportedOpenAILevels(modelKey));
         return { reasoning_effort: level };
@@ -409,6 +446,8 @@ module.exports = {
     applyUnifiedEffort,
     hasNativeEffort,
     resolveProviderFamily,
+    resolveGrok420ModelKey,
+    isGrok420Alias,
     isDeepSeekV4,
     isMiniMax,
     usesAnthropicAdaptiveThinking,
@@ -423,4 +462,7 @@ module.exports = {
     GEMINI_LEVELS,
     DEEPSEEK_LEVELS,
     ANTHROPIC_MANUAL_BUDGET_MAX,
+    GROK420_ALIAS,
+    GROK420_REASONING,
+    GROK420_NON_REASONING,
 };

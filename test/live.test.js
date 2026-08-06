@@ -194,8 +194,8 @@ describe('Live Integration Tests', function () {
 
         const grokSeriesTests = [
             { name: 'Grok 4.3', factory: (m) => m.grok43(), token: 'grok43' },
-            { name: 'Grok 4.20 reasoning', factory: (m) => m.grok420think(), token: 'grok420think' },
-            { name: 'Grok 4.20 non-reasoning', factory: (m) => m.grok420(), token: 'grok420' }
+            { name: 'Grok 4.20 reasoning', factory: (m) => m.effort(50).grok420(), token: 'grok420' },
+            { name: 'Grok 4.20 non-reasoning', factory: (m) => m.grok420(), token: 'grok420nr' }
         ];
 
         for (const grokModel of grokSeriesTests) {
@@ -242,7 +242,7 @@ describe('Live Integration Tests', function () {
     describe('JSON Structured Output for New Models', function () {
 
         it('should return structured JSON with KimiK25 Thinking', async function () {
-            const model = ModelMix.new(setup).kimiK25think();
+            const model = ModelMix.new(setup).kimiK25();
 
             model.addText('Generate information about a fictional vehicle.');
 

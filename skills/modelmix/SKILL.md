@@ -114,7 +114,7 @@ ModelMix.new({ config: { effort: 80 } })
 | DeepSeek V4 | off | `low`↑ | `high`↑ | `high`↑ | `max`↑ | — |
 | MiniMax M3 | off | adaptive | adaptive | adaptive | adaptive | adaptive |
 
-\* Gemini bands: 0–24 / 25–49 / 50–74 / 75–100. DeepSeek `↑` = thinking on; `off` = thinking disabled. MiniMax `off`/`adaptive` = `thinking.disabled` / `thinking.type=adaptive`. Gemini 2.5 maps 0–100 to `thinkingBudget`. Anthropic: adaptive + `output_config.effort` on Claude 5 / Fable / Opus 4.6+ / Sonnet 4.6+; Sonnet 4.5 / Haiku 4.5 use `thinking.type=enabled` + `budget_tokens`. `-1` = adaptive/dynamic when available, else no-op. Levels clamp per model. Former Anthropic `*think()` methods are removed — use `.effort(n).<model>()`.
+\* Gemini bands: 0–24 / 25–49 / 50–74 / 75–100. DeepSeek `↑` = thinking on; `off` = thinking disabled. MiniMax `off`/`adaptive` = `thinking.disabled` / `thinking.type=adaptive`. Gemini 2.5 maps 0–100 to `thinkingBudget`. Anthropic: adaptive + `output_config.effort` on Claude 5 / Fable / Opus 4.6+ / Sonnet 4.6+; Sonnet 4.5 / Haiku 4.5 use `thinking.type=enabled` + `budget_tokens`. `-1` = adaptive/dynamic when available, else no-op. Levels clamp per model. Former `*think()` methods are removed — use `.effort(n).<model>()`. Kimi: `kimiK25()` / `kimiK26()`. Grok 4.20: `.grok420()` non-reasoning; `.effort(20+|-1).grok420()` selects reasoning.
 
 ## Available Model Shorthands
 
@@ -130,13 +130,13 @@ Use `.effort(n)` (or `config.effort`) to enable Anthropic thinking — e.g. `.ef
 `gemini3pro()` `gemini3flash()` `gemini36flash()` `gemini35flash()` `gemini25pro()` `gemini25flash()`
 
 ### Grok
-`grok45()` `grok43()` `grok420multiAgent()` `grok420()` `grok420think()`
+`grok45()` `grok43()` `grok420multiAgent()` `grok420()`
 
 ### Perplexity
 `sonar()` `sonarPro()`
 
 ### Together
-`qwen36plus()` `GLM52()` `kimiK25think()` `gptOss()`
+`qwen36plus()` `GLM52()` `kimiK25()` `kimiK26()` `gptOss()`
 
 ### Moonshot
 `kimiK3()` — requires `MOONSHOT_API_KEY`; use `{ mix: { moonshot: false, openrouter: true } }` for OpenRouter.
@@ -145,7 +145,7 @@ Use `.effort(n)` (or `config.effort`) to enable Anthropic thinking — e.g. `.ef
 `minimaxM25()` `minimaxM27()` `minimaxM3()`
 
 ### Fireworks
-`qwen36plus()` `qwen37plus()` `deepseekV4Flash()` `deepseekV4Pro()`
+`qwen36plus()` `qwen37plus()` `deepseekV4Flash()` `deepseekV4Pro()` `kimiK26()`
 
 ### Cerebras
 `GLM46()`
@@ -154,7 +154,7 @@ Use `.effort(n)` (or `config.effort`) to enable Anthropic thinking — e.g. `.ef
 `qwen38max()` `GLM45()`
 
 ### Multi-provider (auto-fallback across free/paid tiers)
-`hermes3()` `kimiK25think()`
+`hermes3()` `kimiK25()`
 
 ### Local
 `lmstudio()` — for LM Studio local models
@@ -429,7 +429,7 @@ For full debug output, also set: `DEBUG=ModelMix* node script.js`
 ```javascript
 const model = ModelMix.new()
     .gptOss()
-    .kimiK25think()
+    .kimiK25()
     .hermes3()
     .addText("What is the capital of France?");
 console.log(await model.message());
@@ -452,7 +452,7 @@ const model = ModelMix.new({
         minimax: false,      // default: false
         fireworks: false     // default: false
     }
-}).kimiK25think();
+}).kimiK25();
 ```
 
 ## Agent Usage Rules

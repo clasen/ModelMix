@@ -313,7 +313,7 @@ export declare class ModelMix {
   grok45(args?: ModelAttachArgs): this;
   grok43(args?: ModelAttachArgs): this;
   grok420multiAgent(args?: ModelAttachArgs): this;
-  grok420think(args?: ModelAttachArgs): this;
+  /** Non-reasoning by default; with `.effort(20+)` / `-1` uses the reasoning model at request time. */
   grok420(args?: ModelAttachArgs): this;
 
   // Multi-provider
@@ -322,10 +322,10 @@ export declare class ModelMix {
   qwen37plus(args?: ModelAttachArgs): this;
   qwen38max(args?: ModelAttachArgs): this;
   hermes3(args?: ModelAttachArgs): this;
-  kimiK26think(args?: ModelAttachArgs): this;
+  kimiK26(args?: ModelAttachArgs): this;
   kimiK27Code(args?: ModelAttachArgs): this;
   kimiK3(args?: ModelAttachArgs): this;
-  kimiK25think(args?: ModelAttachArgs): this;
+  kimiK25(args?: ModelAttachArgs): this;
   lmstudio(model?: string, args?: ModelAttachArgs): this;
   minimaxM25(args?: ModelAttachArgs): this;
   minimaxM27(args?: ModelAttachArgs): this;

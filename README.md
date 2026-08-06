@@ -89,7 +89,7 @@ console.log(ETH.price);
 ```javascript
 ModelMix.new()
   .gptOss()
-  .kimiK25think()
+  .kimiK25()
   .hermes3()
   .addText('What is the capital of France?');
 ```
@@ -126,7 +126,7 @@ ModelMix.new().effort(-1).minimaxM3().addText('...').message();
 
 \* Gemini bands: 0–24 / 25–49 / 50–74 / 75–100. DeepSeek `↑` = thinking on; `off` = thinking disabled. MiniMax `off`/`adaptive` = `thinking.disabled` / `thinking.type=adaptive`. Gemini 2.5 maps 0–100 to `thinkingBudget`. Anthropic maps adaptive thinking + `output_config.effort` on Claude 5 / Fable / Opus 4.6+ / Sonnet 4.6+; older models (Sonnet 4.5, Haiku 4.5) get `thinking.type=enabled` + `budget_tokens`. `-1` = provider adaptive/dynamic when available, else no-op. Levels clamp to what each model supports.
 
-Migration: former Anthropic `*think()` shorthands are removed — use `.effort(100).opus5()` (or any 0–100 / `-1`) instead.
+Migration: former `*think()` shorthands are removed — use `.effort(n).<model>()` (or any 0–100 / `-1`). Kimi: `kimiK25()` / `kimiK26()`. Grok 4.20: `.grok420()` is non-reasoning; `.effort(20+).grok420()` (or `-1`) selects the reasoning model.
 
 ## 🔧 Model Context Protocol (MCP) Integration
 
@@ -194,7 +194,7 @@ Here's a comprehensive list of available methods:
 | `grok45()`          | Grok       | grok-4.5                     | [\$2.00 / \$6.00][6]       |
 | `grok43()`          | Grok       | grok-4.3                     | [\$1.25 / \$2.50][6]       |
 | `grok420multiAgent()`| Grok      | grok-4.20-multi-agent-0309   | [\$1.25 / \$2.50][6]       |
-| `grok420[think]()`  | Grok       | grok-4.20-0309               | [\$1.25 / \$2.50][6]       |
+| `grok420()`         | Grok       | grok-4.20-0309 (†)           | [\$1.25 / \$2.50][6]       |
 | `qwen36plus()`      | Fireworks/Together | qwen3p6-plus / Qwen3.6-Plus | [\$0.50 / \$3.00][10] |
 | `qwen37plus()`      | Fireworks  | models/qwen3p7-plus          | [\$0.40 / \$1.60][10]      |
 | `qwen38max()`       | OpenRouter | qwen/qwen3.8-max             | [\$2.00 / \$6.00][12]      |
@@ -208,8 +208,8 @@ Here's a comprehensive list of available methods:
 | `sonarPro()`        | Perplexity | sonar-pro                    | [\$3.00 / \$15.00][4]      |
 | `hermes3()`         | Lambda     | Hermes-3-Llama-3.1-405B-FP8  | [\$0.80 / \$0.80][8]       |
 | `kimiK3()`          | Moonshot   | kimi-k3                      | [\$3.00 / \$15.00][11]     |
-| `kimiK25think()`    | Together   | Kimi-K2.5                    | [\$0.50 / \$2.80][7]       |
-| `kimiK26think()`    | Fireworks  | models/kimi-k2p6             | [\$0.95 / \$4.00][10]      |
+| `kimiK25()`         | Together   | Kimi-K2.5                    | [\$0.50 / \$2.80][7]       |
+| `kimiK26()`         | Fireworks  | models/kimi-k2p6             | [\$0.95 / \$4.00][10]      |
 
 [1]: https://platform.openai.com/docs/pricing "Pricing | OpenAI"
 [2]: https://docs.anthropic.com/en/docs/about-claude/pricing "Pricing - Anthropic"
@@ -225,6 +225,7 @@ Here's a comprehensive list of available methods:
 [12]: https://openrouter.ai/qwen/qwen3.8-max "OpenRouter Pricing"
 
 Each method accepts optional `options`, `config`, and (for multi-provider methods) `mix` parameters to customize behavior.  
+† `grok420()` resolves to `grok-4.20-0309-non-reasoning` by default, or `grok-4.20-0309-reasoning` when `.effort(20+)` / `-1` (or native non-`none` `reasoning_effort`) is set.  
 For NVIDIA on DeepSeek V4 Flash/Pro, use `deepseekV4Flash({ mix: { nvidia: true } })` or `deepseekV4Pro({ mix: { nvidia: true } })`.
 For Together on Qwen 3.6 Plus, use `qwen36plus({ mix: { fireworks: false, together: true } })`.
 For OpenRouter on Qwen 3.7 Plus, use `qwen37plus({ mix: { fireworks: false, openrouter: true } })`.
