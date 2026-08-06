@@ -127,7 +127,7 @@ ModelMix.new({ config: { effort: 80 } })
 Use `.effort(n)` (or `config.effort`) to enable Anthropic thinking — e.g. `.effort(100).opus5()`.
 
 ### Google
-`gemini3pro()` `gemini3flash()` `gemini36flash()` `gemini35flash()` `gemini25pro()` `gemini25flash()`
+`gemini3pro()` `gemini3flash()` `gemini36flash()` `gemini35flash()` `gemini35flashLite()` `gemini31flashLite()` `gemini25pro()` `gemini25flash()`
 
 ### Grok
 `grok45()` `grok43()` `grok420multiAgent()` `grok420()`

@@ -302,6 +302,7 @@ export declare class ModelMix {
   gemini3flash(args?: ModelAttachArgs): this;
   gemini36flash(args?: ModelAttachArgs): this;
   gemini35flash(args?: ModelAttachArgs): this;
+  gemini35flashLite(args?: ModelAttachArgs): this;
   gemini31flashLite(args?: ModelAttachArgs): this;
   gemini25pro(args?: ModelAttachArgs): this;
 

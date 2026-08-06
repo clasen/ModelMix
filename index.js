@@ -82,6 +82,7 @@ const MODEL_PRICING = {
     'gemini-3-flash-preview': [0.50, 3.00],
     'gemini-3.6-flash': [1.50, 7.50],
     'gemini-3.5-flash': [0.75, 4.50],
+    'gemini-3.5-flash-lite': [0.30, 2.50],
     'gemini-2.5-pro': [1.25, 10.00],
     'gemini-2.5-flash': [0.30, 2.50],
     'gemini-3.1-flash-lite-preview': [0.25, 1.50],
@@ -428,6 +429,9 @@ class ModelMix {
     }
     gemini35flash({ options = {}, config = {} } = {}) {
         return this.attach('gemini-3.5-flash', new MixGoogle({ options, config }));
+    }
+    gemini35flashLite({ options = {}, config = {} } = {}) {
+        return this.attach('gemini-3.5-flash-lite', new MixGoogle({ options, config }));
     }
     gemini31flashLite({ options = {}, config = {} } = {}) {
         return this.attach('gemini-3.1-flash-lite-preview', new MixGoogle({ options, config }));

@@ -190,6 +190,7 @@ Here's a comprehensive list of available methods:
 | `gemini31pro()`     | Google     | gemini-3.1-pro-preview       | [\$2.00 / \$12.00][3]      |
 | `gemini36flash()`   | Google     | gemini-3.6-flash             | [\$1.50 / \$7.50][3]       |
 | `gemini35flash()`   | Google     | gemini-3.5-flash             | [\$0.75 / \$4.50][3]       |
+| `gemini35flashLite()`| Google    | gemini-3.5-flash-lite        | [\$0.30 / \$2.50][3]       |
 | `gemini31flashLite()`| Google     | gemini-3.1-flash-lite-preview | [\$0.25 / \$1.50][3]       |
 | `grok45()`          | Grok       | grok-4.5                     | [\$2.00 / \$6.00][6]       |
 | `grok43()`          | Grok       | grok-4.3                     | [\$1.25 / \$2.50][6]       |

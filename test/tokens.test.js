@@ -108,15 +108,18 @@ describe('Token Usage Tracking', () => {
     it('should register Gemini Flash shortcuts with Google provider', function () {
         const model = ModelMix.new()
             .gemini36flash()
-            .gemini35flash();
+            .gemini35flash()
+            .gemini35flashLite();
 
         expect(model.models.map(({ key }) => key)).to.deep.equal([
             'gemini-3.6-flash',
-            'gemini-3.5-flash'
+            'gemini-3.5-flash',
+            'gemini-3.5-flash-lite'
         ]);
         expect(model.models.every(({ provider }) => provider instanceof MixGoogle)).to.equal(true);
         expect(ModelMix.calculateCost('gemini-3.6-flash', { input: 1_000_000, output: 1_000_000 })).to.equal(9);
         expect(ModelMix.calculateCost('gemini-3.5-flash', { input: 1_000_000, output: 1_000_000 })).to.equal(5.25);
+        expect(ModelMix.calculateCost('gemini-3.5-flash-lite', { input: 1_000_000, output: 1_000_000 })).to.equal(2.8);
     });
 
     it('should register MiMo shortcuts with native and OpenRouter providers', function () {
