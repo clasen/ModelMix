@@ -1,0 +1,2 @@
+You are a <%- role %>.
+<%- include('system-rules.txt') %>

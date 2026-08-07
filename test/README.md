@@ -9,7 +9,7 @@ This comprehensive test suite provides complete coverage for the ModelMix librar
 These tests require actual API keys and test the complete integration:
 - Real image processing with multiple providers
 - Actual JSON structured output  
-- Template replacement with real models
+- EJS template rendering with real models
 - Multi-modal combinations
 - Performance testing with real APIs
 
@@ -45,13 +45,14 @@ npm test -- --grep "Live Integration"
 - ✅ Context preservation through fallbacks
 - ✅ Provider-specific configurations
 
-### 3. File Operations and Templates (`templates.test.js`)
-- ✅ Template variable replacement
-- ✅ Template file loading
-- ✅ JSON file processing
-- ✅ Absolute and relative paths
-- ✅ File error handling
-- ✅ Complex template + file integration
+### 3. File Operations and EJS Templates (`templates.test.js`)
+- ✅ Raw and XML-escaped EJS output
+- ✅ Nested data, conditionals, and loops
+- ✅ Uniform, weighted, nested, and included choice blocks
+- ✅ File templates and relative includes
+- ✅ Raw file and JSON data injection
+- ✅ Missing-variable and missing-file errors
+- ✅ JSON, block, system, and multi-turn integration
 
 ### 4. Image Processing and Multimodal (`images.test.js`)
 - ✅ Base64 data handling

@@ -1,0 +1,4 @@
+Your account details:
+- Username: <%- username %>
+- Role: <%- role %>
+- Created: <%- createdDate %>

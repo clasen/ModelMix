@@ -1,13 +1,12 @@
 const { expect } = require('chai');
 const sinon = require('sinon');
 const nock = require('nock');
-const fs = require('fs');
 const path = require('path');
 const { ModelMix } = require('../index.js');
 
-describe('Template and File Operations Tests', () => {
-    
-    // Setup test hooks
+describe('EJS Template and File Operations Tests', () => {
+    const fixturesPath = path.join(__dirname, 'fixtures');
+
     if (global.setupTestHooks) {
         global.setupTestHooks();
     }
@@ -17,367 +16,558 @@ describe('Template and File Operations Tests', () => {
         sinon.restore();
     });
 
-    describe('Template Replacement', () => {
-        let model;
-
-        beforeEach(() => {
-            model = ModelMix.new({
-                config: { debug: false }
+    function mockOpenAI(assertRequest, responseText = 'Template processed successfully') {
+        nock('https://api.openai.com')
+            .post('/v1/responses')
+            .reply(function (uri, body) {
+                assertRequest(body);
+                return [200, testUtils.createMockResponse('openai-responses', responseText)];
             });
+    }
+
+    function userTexts(body) {
+        return body.input
+            .filter(message => message.role === 'user')
+            .flatMap(message => message.content)
+            .filter(content => content.type === 'input_text')
+            .map(content => content.text);
+    }
+
+    describe('EJS rendering', () => {
+        it('renders inline variables with plain data keys', async () => {
+            const model = ModelMix.new()
+                .gpt51()
+                .replace({ name: 'Alice', age: 30, city: 'New York' })
+                .addText('Hello <%- name %>, you are <%- age %> years old and live in <%- city %>.');
+
+            mockOpenAI(body => {
+                expect(userTexts(body)).to.deep.equal([
+                    'Hello Alice, you are 30 years old and live in New York.'
+                ]);
+            });
+
+            await model.message();
         });
 
-        it('should replace simple template variables', async () => {
-            model.gpt51()
+        it('supports nested data, conditionals, and loops', async () => {
+            const model = ModelMix.new()
+                .gpt51()
                 .replace({
-                    '{{name}}': 'Alice',
-                    '{{age}}': '30',
-                    '{{city}}': 'New York'
+                    user: {
+                        name: 'Charlie',
+                        active: true,
+                        roles: ['admin', 'reviewer']
+                    }
                 })
-                .addText('Hello {{name}}, you are {{age}} years old and live in {{city}}.');
+                .addText('<% if (user.active) { %><%- user.name %>: <% user.roles.forEach((role, index) => { %><%= index ? ", " : "" %><%- role %><% }) %><% } %>');
 
-            nock('https://api.openai.com')
-                .post('/v1/responses')
-                .reply(function (uri, body) {
-                    const userMsg = body.input.find(m => m.role === 'user');
-                    expect(userMsg.content[0].text).to.equal('Hello Alice, you are 30 years old and live in New York.');
-                    return [200, testUtils.createMockResponse('openai-responses', 'Template processed successfully')];
-                });
+            mockOpenAI(body => {
+                expect(userTexts(body)).to.deep.equal(['Charlie: admin, reviewer']);
+            });
 
-            const response = await model.message();
-            expect(response).to.include('Template processed successfully');
+            await model.message();
         });
 
-        it('should handle multiple template replacements', async () => {
-            model.gpt51()
-                .replace({ '{{greeting}}': 'Hello' })
-                .replace({ '{{name}}': 'Bob' })
-                .replace({ '{{action}}': 'welcome' })
-                .addText('{{greeting}} {{name}}, {{action}} to our platform!');
+        it('keeps raw and XML-escaped output distinct', async () => {
+            const value = 'Hello & "World" <test>';
+            const model = ModelMix.new()
+                .gpt51()
+                .replace({ value })
+                .addText('Escaped: <%= value %>\nRaw: <%- value %>');
 
-            nock('https://api.openai.com')
-                .post('/v1/responses')
-                .reply(function (uri, body) {
-                    const userMsg = body.input.find(m => m.role === 'user');
-                    expect(userMsg.content[0].text).to.equal('Hello Bob, welcome to our platform!');
-                    return [200, testUtils.createMockResponse('openai-responses', 'Multiple templates replaced')];
-                });
+            mockOpenAI(body => {
+                expect(userTexts(body)).to.deep.equal([
+                    'Escaped: Hello &amp; &#34;World&#34; &lt;test&gt;\nRaw: Hello & "World" <test>'
+                ]);
+            });
 
-            const response = await model.message();
-            expect(response).to.include('Multiple templates replaced');
+            await model.message();
         });
 
-        it('should handle nested template objects', async () => {
-            model.gpt51()
-                .replace({
-                    '{{user_name}}': 'Charlie',
-                    '{{user_role}}': 'admin',
-                    '{{company_name}}': 'TechCorp',
-                    '{{company_domain}}': 'techcorp.com'
-                })
-                .addText('User {{user_name}} with role {{user_role}} works at {{company_name}} ({{company_domain}})');
+        it('does not execute EJS received through template data', async () => {
+            const model = ModelMix.new()
+                .gpt51()
+                .replace({ payload: '<%- secret %>', secret: 'must-not-render' })
+                .addText('Payload: <%- payload %>');
 
-            nock('https://api.openai.com')
-                .post('/v1/responses')
-                .reply(function (uri, body) {
-                    const userMsg = body.input.find(m => m.role === 'user');
-                    expect(userMsg.content[0].text).to.equal('User Charlie with role admin works at TechCorp (techcorp.com)');
-                    return [200, testUtils.createMockResponse('openai-responses', 'Nested templates working')];
-                });
+            mockOpenAI(body => {
+                expect(userTexts(body)).to.deep.equal(['Payload: <%- secret %>']);
+            });
 
-            const response = await model.message();
-            expect(response).to.include('Nested templates working');
+            await model.message();
         });
 
-        it('should preserve unreplaced templates', async () => {
-            model.gpt51()
-                .replace({ '{{name}}': 'David' })
-                .addText('Hello {{name}}, your ID is {{user_id}} and status is {{status}}');
+        it('selects uniformly when choice options omit weights', async () => {
+            const model = ModelMix.new()
+                .gpt51()
+                .addText(`<% choice %>
+<% option %>
+Use emojis.
+<% option %>
+Use few emojis.
+<% option %>
+Do not use emojis.
+<% /choice %>`);
+            sinon.stub(model, '_choiceRandom').returns(0.5);
 
-            nock('https://api.openai.com')
-                .post('/v1/responses')
-                .reply(function (uri, body) {
-                    const userMsg = body.input.find(m => m.role === 'user');
-                    expect(userMsg.content[0].text).to.equal('Hello David, your ID is {{user_id}} and status is {{status}}');
-                    return [200, testUtils.createMockResponse('openai-responses', 'Partial template replacement')];
-                });
+            mockOpenAI(body => {
+                expect(userTexts(body)[0].trim()).to.equal('Use few emojis.');
+            });
 
-            const response = await model.message();
-            expect(response).to.include('Partial template replacement');
+            await model.message();
         });
 
-        it('should handle empty and special character replacements', async () => {
-            model.gpt51()
-                .replace({
-                    '{{empty}}': '',
-                    '{{special}}': 'Hello & "World" <test>',
-                    '{{number}}': '42',
-                    '{{boolean}}': 'true'
-                })
-                .addText('Empty: {{empty}}, Special: {{special}}, Number: {{number}}, Boolean: {{boolean}}');
+        it('selects weighted options using relative weights', async () => {
+            const model = ModelMix.new()
+                .gpt51()
+                .replace({ language: 'Spanish' })
+                .addText(`<% choice %>
+<% option 20 %>
+Use emojis in <%- language %>.
+<% option 40 %>
+Use few emojis in <%- language %>.
+<% option 40 %>
+Do not use emojis in <%- language %>.
+<% /choice %>`);
+            sinon.stub(model, '_choiceRandom').returns(0.2);
+
+            mockOpenAI(body => {
+                expect(userTexts(body)[0].trim()).to.equal('Use few emojis in Spanish.');
+            });
+
+            await model.message();
+        });
+
+        it('supports nested choices', async () => {
+            const model = ModelMix.new()
+                .gpt51()
+                .addText(`<% choice %>
+<% option %>
+Tone:
+<% choice %>
+<% option %>
+formal
+<% option %>
+casual
+<% /choice %>
+<% option %>
+No tone instruction.
+<% /choice %>`);
+            const random = sinon.stub(model, '_choiceRandom');
+            random.onFirstCall().returns(0.1);
+            random.onSecondCall().returns(0.9);
+
+            mockOpenAI(body => {
+                expect(userTexts(body)[0].trim()).to.equal('Tone:\ncasual');
+            });
+
+            await model.message();
+            expect(random.callCount).to.equal(2);
+        });
+
+        it('rerolls choices on each new request', async () => {
+            const template = `<% choice %>
+<% option %>
+first
+<% option %>
+second
+<% /choice %>`;
+            const model = ModelMix.new().gpt51().addText(template);
+            const random = sinon.stub(model, '_choiceRandom');
+            random.onFirstCall().returns(0.1);
+            random.onSecondCall().returns(0.9);
+
+            mockOpenAI(body => {
+                expect(userTexts(body)[0].trim()).to.equal('first');
+            }, 'First response');
+            await model.message();
+
+            model.addText(template);
+            mockOpenAI(body => {
+                expect(userTexts(body)[0].trim()).to.equal('second');
+            }, 'Second response');
+            await model.message();
+
+            expect(random.callCount).to.equal(2);
+        });
+
+        it('fails before the request when a variable is missing', async () => {
+            const model = ModelMix.new()
+                .gpt51()
+                .replace({ name: 'David' })
+                .addText('Hello <%- name %>, status: <%- status %>');
+
+            let error;
+            try {
+                await model.message();
+            } catch (caught) {
+                error = caught;
+            }
+
+            expect(error).to.be.instanceOf(Error);
+            expect(error.message).to.include('Failed to render message template');
+            expect(error.message).to.include('status is not defined');
+        });
+
+        it('rejects invalid template data immediately', () => {
+            const model = ModelMix.new().gpt51();
+
+            expect(() => model.replace(null)).to.throw(TypeError, 'Template data must be a plain non-null object.');
+            expect(() => model.replace(undefined)).to.throw(TypeError, 'Template data must be a plain non-null object.');
+            expect(() => model.replace([])).to.throw(TypeError, 'Template data must be a plain non-null object.');
+            expect(() => ModelMix.new({ config: { replace: null } })).to.throw(
+                TypeError,
+                'Template data must be a plain non-null object.'
+            );
+            expect(() => model.replace({ $mix: 'reserved' })).to.throw(
+                TypeError,
+                'Template data key "$mix" is reserved.'
+            );
+        });
+
+        it('reports malformed choice directives with their source line', async () => {
+            const cases = [
+                {
+                    source: '<% choice %>\n<% option %>\none\n<% option 2 %>\ntwo\n<% /choice %>',
+                    message: 'Choice options must either all have weights or all omit them',
+                    line: 4
+                },
+                {
+                    source: '<% choice %>\n<% option 0 %>\none\n<% /choice %>',
+                    message: 'Choice weight must be a positive finite number',
+                    line: 2
+                },
+                {
+                    source: '<% option %>\none',
+                    message: 'Option directive must be inside a choice',
+                    line: 1
+                },
+                {
+                    source: '<% choice %>\ntext\n<% option %>\none\n<% /choice %>',
+                    message: 'Choice content must be inside an option',
+                    line: 2
+                },
+                {
+                    source: '<% choice %>\n<% option %>\none',
+                    message: 'Unclosed choice directive',
+                    line: 1
+                }
+            ];
+
+            for (const testCase of cases) {
+                const model = ModelMix.new().gpt51().addText(testCase.source);
+                let error;
+                try {
+                    await model.message();
+                } catch (caught) {
+                    error = caught;
+                }
+                expect(error).to.be.instanceOf(Error);
+                expect(error.message).to.include(testCase.message);
+                expect(error.message).to.include(`message template at line ${testCase.line}`);
+            }
+        });
+
+        it('rerolls earlier choices after a later template fails to render', async () => {
+            const model = ModelMix.new()
+                .gpt51()
+                .addText(`<% choice %>
+<% option %>
+A
+<% option %>
+B
+<% /choice %>`)
+                .addText('<%- missing %>');
+            const random = sinon.stub(model, '_choiceRandom');
+            random.onFirstCall().returns(0.1);
+            random.onSecondCall().returns(0.9);
+
+            let error;
+            try {
+                await model.message();
+            } catch (caught) {
+                error = caught;
+            }
+            expect(error).to.be.instanceOf(Error);
+            expect(model.messages[0].content[0].text).to.include('<% choice %>');
+
+            model.replace({ missing: 'ready' });
+            mockOpenAI(body => {
+                const text = userTexts(body).join('\n').trim();
+                expect(text).to.include('B');
+                expect(text).to.not.include('A');
+                expect(text).to.include('ready');
+            });
+            await model.message();
+
+            expect(random.callCount).to.equal(2);
+        });
+
+        it('rerolls choices after a request fails', async () => {
+            const template = `<% choice %>
+<% option %>
+A
+<% option %>
+B
+<% /choice %>`;
+            const model = ModelMix.new().gpt51().addText(template);
+            const random = sinon.stub(model, '_choiceRandom');
+            random.onFirstCall().returns(0.1);
+            random.onSecondCall().returns(0.9);
 
             nock('https://api.openai.com')
                 .post('/v1/responses')
-                .reply(function (uri, body) {
-                    const userMsg = body.input.find(m => m.role === 'user');
-                    expect(userMsg.content[0].text).to.equal('Empty: , Special: Hello & "World" <test>, Number: 42, Boolean: true');
-                    return [200, testUtils.createMockResponse('openai-responses', 'Special characters handled')];
-                });
+                .reply(500, { error: 'temporary failure' });
+            let error;
+            try {
+                await model.message();
+            } catch (caught) {
+                error = caught;
+            }
+            expect(error).to.exist;
+            expect(model.messages[0].content[0].text).to.equal(template);
 
-            const response = await model.message();
-            expect(response).to.include('Special characters handled');
+            mockOpenAI(body => {
+                expect(userTexts(body)[0].trim()).to.equal('B');
+            });
+            await model.message();
+
+            expect(random.callCount).to.equal(2);
+        });
+
+        it('does not let a failed concurrent request overwrite a successful choice', async () => {
+            const template = `<% choice %>
+<% option %>
+A
+<% option %>
+B
+<% /choice %>`;
+            const model = ModelMix.new({
+                config: {
+                    max_history: 10,
+                    bottleneck: { maxConcurrent: 2, minTime: 0 }
+                }
+            }).gpt51().addText(template);
+            const content = model.messages[0].content[0];
+            const random = sinon.stub(model, '_choiceRandom');
+            random.onFirstCall().returns(0.1);
+            random.onSecondCall().returns(0.9);
+
+            nock('https://api.openai.com')
+                .post('/v1/responses')
+                .delay(100)
+                .reply(500, { error: 'delayed failure' });
+            nock('https://api.openai.com')
+                .post('/v1/responses')
+                .reply(200, testUtils.createMockResponse('openai-responses', 'Success'));
+
+            const results = await Promise.allSettled([model.message(), model.message()]);
+
+            expect(results.map(result => result.status)).to.deep.equal(['rejected', 'fulfilled']);
+            expect(content.text.trim()).to.equal('B');
+            expect(model.messageTemplates.has(content)).to.equal(false);
+            expect(random.callCount).to.equal(2);
         });
     });
 
-    describe('File Operations', () => {
-        let model;
-        const fixturesPath = path.join(__dirname, 'fixtures');
+    describe('File templates and data', () => {
+        it('renders a file template with a relative include', async () => {
+            const model = ModelMix.new()
+                .gpt51()
+                .replace({
+                    name: 'Eve',
+                    platform: 'ModelMix',
+                    username: 'eve_user',
+                    role: 'developer',
+                    createdDate: '2026-08-07',
+                    website: 'https://modelmix.dev',
+                    company: 'AI Solutions',
+                    showAccount: true
+                })
+                .addTextFromFile(path.join(fixturesPath, 'template.txt'));
 
-        beforeEach(() => {
-            model = ModelMix.new({
-                config: { debug: false }
+            mockOpenAI(body => {
+                const content = userTexts(body)[0];
+                expect(content).to.include('Hello Eve, welcome to ModelMix!');
+                expect(content).to.include('Username: eve_user');
+                expect(content).to.include('Role: developer');
+                expect(content).to.include('Created: 2026-08-07');
+                expect(content).to.include('The AI Solutions Team');
             });
+
+            await model.message();
         });
 
-        it('should load and replace from template file', async () => {
-            model.gpt51()
-                .replaceKeyFromFile('{{template}}', path.join(fixturesPath, 'template.txt'))
-                .replace({
-                    '{{name}}': 'Eve',
-                    '{{platform}}': 'ModelMix',
-                    '{{username}}': 'eve_user',
-                    '{{role}}': 'developer',
-                    '{{created_date}}': '2023-12-01',
-                    '{{website}}': 'https://modelmix.dev',
-                    '{{company}}': 'AI Solutions'
-                })
-                .addText('Process this template: {{template}}');
+        it('processes choice directives inside relative includes', async () => {
+            const model = ModelMix.new()
+                .gpt51()
+                .addTextFromFile(path.join(fixturesPath, 'choice-template.txt'));
+            sinon.stub(model, '_choiceRandom').returns(0.75);
 
-            nock('https://api.openai.com')
-                .post('/v1/responses')
-                .reply(function (uri, body) {
-                    const userMsg = body.input.find(m => m.role === 'user');
-                    const content = userMsg.content[0].text;
-                    expect(content).to.include('Hello Eve, welcome to ModelMix!');
-                    expect(content).to.include('Username: eve_user');
-                    expect(content).to.include('Role: developer');
-                    expect(content).to.include('Created: 2023-12-01');
-                    expect(content).to.include('The AI Solutions Team');
-                    return [200, testUtils.createMockResponse('openai-responses', 'Template file processed')];
-                });
+            mockOpenAI(body => {
+                expect(userTexts(body)[0].trim()).to.equal('Style:\nBe concise.');
+            });
 
-            const response = await model.message();
-            expect(response).to.include('Template file processed');
+            await model.message();
         });
 
-        it('should load and process JSON data file', async () => {
-            model.gpt51()
-                .replaceKeyFromFile('{{data}}', path.join(fixturesPath, 'data.json'))
-                .addText('Process this data: {{data}}');
+        it('preserves a system template filename through new instances', async () => {
+            const base = ModelMix.new()
+                .setSystemFromFile(path.join(fixturesPath, 'system-template.txt'))
+                .replace({ role: 'data analyst', language: 'Spanish' });
+            const model = base.new().gpt51().addText('Analyze this.');
 
-            nock('https://api.openai.com')
-                .post('/v1/responses')
-                .reply(function (uri, body) {
-                    const userMsg = body.input.find(m => m.role === 'user');
-                    const content = userMsg.content[0].text;
-                    expect(content).to.include('Alice Smith');
-                    expect(content).to.include('alice@example.com');
-                    expect(content).to.include('admin');
-                    expect(content).to.include('Bob Johnson');
-                    expect(content).to.include('Carol Davis');
-                    expect(content).to.include('"theme": "dark"');
-                    expect(content).to.include('"version": "1.0.0"');
-                    return [200, testUtils.createMockResponse('openai-responses', 'JSON data processed')];
-                });
+            mockOpenAI(body => {
+                const system = body.input.find(message => message.role === 'developer');
+                expect(system.content[0].text).to.include('You are a data analyst.');
+                expect(system.content[0].text).to.include('Always respond in Spanish.');
+            });
 
-            const response = await model.message();
-            expect(response).to.include('JSON data processed');
+            await model.message();
         });
 
-        it('should handle file loading errors gracefully', async () => {
-            model.gpt51()
-                .replaceKeyFromFile('{{missing}}', path.join(fixturesPath, 'nonexistent.txt'))
-                .addText('This should contain: {{missing}}');
+        it('injects file contents as raw data without recursively rendering them', async () => {
+            const model = ModelMix.new()
+                .gpt51()
+                .replaceKeyFromFile('templateSource', path.join(fixturesPath, 'template.txt'))
+                .replace({ name: 'must-not-render' })
+                .addText('Source:\n<%- templateSource %>');
 
-            nock('https://api.openai.com')
-                .post('/v1/responses')
-                .reply(function (uri, body) {
-                    const userMsg = body.input.find(m => m.role === 'user');
-                    expect(userMsg.content[0].text).to.equal('This should contain: {{missing}}');
-                    return [200, testUtils.createMockResponse('openai-responses', 'File not found handled')];
-                });
+            mockOpenAI(body => {
+                const content = userTexts(body)[0];
+                expect(content).to.include('Hello <%- name %>, welcome to <%- platform %>!');
+                expect(content).to.not.include('Hello must-not-render');
+            });
 
-            const response = await model.message();
-            expect(response).to.include('File not found handled');
+            await model.message();
         });
 
-        it('should handle multiple file replacements', async () => {
-            model.gpt51()
-                .replaceKeyFromFile('{{template}}', path.join(fixturesPath, 'template.txt'))
-                .replaceKeyFromFile('{{data}}', path.join(fixturesPath, 'data.json'))
-                .replace({
-                    '{{name}}': 'Frank',
-                    '{{platform}}': 'TestPlatform',
-                    '{{username}}': 'frank_test',
-                    '{{role}}': 'tester',
-                    '{{created_date}}': '2023-12-15',
-                    '{{website}}': 'https://test.com',
-                    '{{company}}': 'Test Corp'
-                })
-                .addText('Template: {{template}}\n\nData: {{data}}');
+        it('injects JSON file contents without XML escaping', async () => {
+            const model = ModelMix.new()
+                .gpt51()
+                .replaceKeyFromFile('data', path.join(fixturesPath, 'data.json'))
+                .addText('Process this data:\n<%- data %>');
 
-            nock('https://api.openai.com')
-                .post('/v1/responses')
-                .reply(function (uri, body) {
-                    const userMsg = body.input.find(m => m.role === 'user');
-                    const content = userMsg.content[0].text;
-                    expect(content).to.include('Hello Frank, welcome to TestPlatform!');
-                    expect(content).to.include('Username: frank_test');
-                    expect(content).to.include('Alice Smith');
-                    expect(content).to.include('"theme": "dark"');
-                    return [200, testUtils.createMockResponse('openai-responses', 'Multiple files processed')];
-                });
+            mockOpenAI(body => {
+                const content = userTexts(body)[0];
+                expect(content).to.include('Alice Smith');
+                expect(content).to.include('alice@example.com');
+                expect(content).to.include('"theme": "dark"');
+            });
 
-            const response = await model.message();
-            expect(response).to.include('Multiple files processed');
+            await model.message();
         });
 
-        it('should handle relative and absolute paths', async () => {
-            const absolutePath = path.resolve(fixturesPath, 'template.txt');
+        it('throws immediately when a template or data file is missing', () => {
+            const model = ModelMix.new().gpt51();
+            const missingPath = path.join(fixturesPath, 'nonexistent.txt');
 
-            model.gpt51()
-                .replaceKeyFromFile('{{absolute}}', absolutePath)
-                .replace({
-                    '{{name}}': 'Grace',
-                    '{{platform}}': 'AbsolutePath',
-                    '{{username}}': 'grace_abs',
-                    '{{role}}': 'admin',
-                    '{{created_date}}': '2023-12-20',
-                    '{{website}}': 'https://absolute.com',
-                    '{{company}}': 'Absolute Corp'
-                })
-                .addText('Absolute path content: {{absolute}}');
-
-            nock('https://api.openai.com')
-                .post('/v1/responses')
-                .reply(function (uri, body) {
-                    const userMsg = body.input.find(m => m.role === 'user');
-                    const content = userMsg.content[0].text;
-                    expect(content).to.include('Hello Grace, welcome to AbsolutePath!');
-                    expect(content).to.include('The Absolute Corp Team');
-                    return [200, testUtils.createMockResponse('openai-responses', 'Absolute path works')];
-                });
-
-            const response = await model.message();
-            expect(response).to.include('Absolute path works');
+            expect(() => model.addTextFromFile(missingPath)).to.throw(`File not found: ${missingPath}`);
+            expect(() => model.replaceKeyFromFile('missing', missingPath)).to.throw(`File not found: ${missingPath}`);
         });
     });
 
-    describe('Template and File Integration', () => {
-        let model;
-        const fixturesPath = path.join(__dirname, 'fixtures');
-
-        beforeEach(() => {
-            model = ModelMix.new({
-                config: { debug: false }
-            });
-        });
-
-        it('should combine file loading with template replacement in complex scenarios', async () => {
-            model.gpt51()
-                .replaceKeyFromFile('{{user_data}}', path.join(fixturesPath, 'data.json'))
-                .replace({
-                    '{{action}}': 'analyze',
-                    '{{target}}': 'user behavior patterns',
-                    '{{format}}': 'detailed report'
-                })
-                .addText('Please {{action}} the following {{target}} and generate a {{format}}:\n\n{{user_data}}');
+    describe('Execution integration', () => {
+        it('renders system and message templates for JSON output', async () => {
+            const schema = { summary: 'Analysis summary', userCount: 0 };
+            const model = ModelMix.new()
+                .gpt51()
+                .setSystem('You are a <%- role %>.')
+                .replace({ role: 'data analyst', instruction: 'Count active users' })
+                .replaceKeyFromFile('data', path.join(fixturesPath, 'data.json'))
+                .addText('<%- instruction %> from this data: <%- data %>');
 
             nock('https://api.openai.com')
                 .post('/v1/responses')
                 .reply(function (uri, body) {
-                    const userMsg = body.input.find(m => m.role === 'user');
-                    const content = userMsg.content[0].text;
-                    expect(content).to.include('Please analyze the following user behavior patterns and generate a detailed report:');
-                    expect(content).to.include('Alice Smith');
-                    expect(content).to.include('total_users');
-                    return [200, testUtils.createMockResponse('openai-responses', 'Complex template integration successful')];
-                });
-
-            const response = await model.message();
-            expect(response).to.include('Complex template integration successful');
-        });
-
-        it('should handle template chains with JSON output', async () => {
-            const schema = {
-                summary: 'Analysis summary',
-                user_count: 0,
-                active_users: 0,
-                roles: ['admin', 'user']
-            };
-
-            model.gpt51()
-                .replaceKeyFromFile('{{data}}', path.join(fixturesPath, 'data.json'))
-                .replace({ '{{instruction}}': 'Count active users by role' })
-                .addText('{{instruction}} from this data: {{data}}');
-
-            nock('https://api.openai.com')
-                .post('/v1/responses')
-                .reply(function (uri, body) {
-                    const userMsg = body.input.find(m => m.role === 'user');
-                    expect(userMsg.content[0].text).to.include('Count active users by role');
-                    expect(userMsg.content[0].text).to.include('Alice Smith');
+                    const system = body.input.find(message => message.role === 'developer');
+                    expect(system.content[0].text).to.include('You are a data analyst.');
+                    expect(system.content[0].text).to.include('Output JSON Schema');
+                    expect(userTexts(body)[0]).to.include('Count active users');
                     return [200, {
                         output: [{
                             type: 'message',
-                            content: [{ type: 'output_text', text: JSON.stringify({
-                                summary: 'User analysis completed',
-                                user_count: 3,
-                                active_users: 2,
-                                roles: ['admin', 'user', 'moderator']
-                            }) }]
+                            content: [{
+                                type: 'output_text',
+                                text: JSON.stringify({ summary: 'Complete', userCount: 3 })
+                            }]
                         }],
                         usage: { input_tokens: 10, output_tokens: 5, total_tokens: 15 }
                     }];
                 });
 
             const result = await model.json(schema);
-            expect(result.summary).to.equal('User analysis completed');
-            expect(result.user_count).to.equal(3);
-            expect(result.active_users).to.equal(2);
-            expect(result.roles).to.deep.equal(['admin', 'user', 'moderator']);
-        });
-    });
-
-    describe('Error Handling', () => {
-        let model;
-
-        beforeEach(() => {
-            model = ModelMix.new({
-                config: { debug: false }
-            });
+            expect(result).to.deep.equal({ summary: 'Complete', userCount: 3 });
         });
 
-        it('should handle template replacement errors gracefully', () => {
-            expect(() => {
-                model.gpt51().replace(null);
-            }).to.not.throw();
+        it('renders the system before adding block instructions', async () => {
+            const model = ModelMix.new()
+                .gpt51()
+                .setSystem('Act as <%- role %>.')
+                .replace({ role: 'reviewer' })
+                .addText('Review this.');
 
-            expect(() => {
-                model.gpt51().replace(undefined);
-            }).to.not.throw();
+            mockOpenAI(body => {
+                const system = body.input.find(message => message.role === 'developer');
+                expect(system.content[0].text).to.equal(
+                    'Act as reviewer.\nReturn the result of the task between triple backtick block code tags ```'
+                );
+            }, '```\napproved\n```');
+
+            expect(await model.block()).to.equal('approved');
         });
 
-        it('should handle file reading errors without crashing', async () => {
-            model.gpt51()
-                .replaceKeyFromFile('{{bad_file}}', '/path/that/does/not/exist.txt')
-                .addText('Content: {{bad_file}}');
+        it('keeps rendered history snapshots when template data changes', async () => {
+            const model = ModelMix.new({ config: { max_history: 10 } })
+                .gpt51()
+                .replace({ name: 'Alice' })
+                .addText('Hello <%- name %>.');
+
+            mockOpenAI(body => {
+                expect(userTexts(body)).to.deep.equal(['Hello Alice.']);
+            }, 'First response');
+            await model.message();
+
+            model.replace({ name: 'Bob' }).addText('Hello <%- name %>.');
+            mockOpenAI(body => {
+                expect(userTexts(body)).to.deep.equal(['Hello Alice.', 'Hello Bob.']);
+            }, 'Second response');
+            await model.message();
+        });
+
+        it('keeps a system choice stable across provider fallback', async () => {
+            const systems = [];
+            const model = ModelMix.new()
+                .gpt51()
+                .sonnet46()
+                .setSystem(`<% choice %>
+<% option %>
+First system.
+<% option %>
+Second system.
+<% /choice %>`)
+                .addText('Hello');
+            const random = sinon.stub(model, '_choiceRandom').returns(0.9);
 
             nock('https://api.openai.com')
                 .post('/v1/responses')
-                .reply(200, testUtils.createMockResponse('openai-responses', 'Error handled gracefully'));
+                .reply(function (uri, body) {
+                    systems.push(body.input.find(message => message.role === 'developer').content[0].text.trim());
+                    return [500, { error: 'temporary failure' }];
+                });
+            nock('https://api.anthropic.com')
+                .post('/v1/messages')
+                .reply(function (uri, body) {
+                    systems.push(body.system.trim());
+                    return [200, {
+                        content: [{ type: 'text', text: 'Fallback response' }],
+                        usage: { input_tokens: 10, output_tokens: 5 }
+                    }];
+                });
 
-            const response = await model.message();
-            expect(response).to.include('Error handled gracefully');
+            expect(await model.message()).to.equal('Fallback response');
+            expect(systems).to.deep.equal(['Second system.', 'Second system.']);
+            expect(random.callCount).to.equal(1);
         });
     });
 });

@@ -1,0 +1,6 @@
+<% choice %>
+<% option %>
+Be detailed.
+<% option %>
+Be concise.
+<% /choice %>

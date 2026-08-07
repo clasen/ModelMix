@@ -1,7 +1,9 @@
 const { expect } = require('chai');
 const sinon = require('sinon');
 const nock = require('nock');
-const { ModelMix } = require('../index.js');
+const { EventEmitter } = require('events');
+const Module = require('module');
+const { MixCustom, MixGoogle, ModelMix } = require('../index.js');
 
 describe('Provider Fallback Chain Tests', () => {
     
@@ -438,6 +440,103 @@ describe('Provider Fallback Chain Tests', () => {
             model = ModelMix.new({
                 config: { debug: false }
             });
+        });
+
+        it('should not expose provider configuration or options in errors', () => {
+            const provider = new MixCustom({
+                config: { apiKey: 'secret-test-key' },
+                options: { user: 'private-user-id' }
+            });
+
+            const error = provider.handleError(new Error('Request failed'));
+
+            expect(error).to.not.have.property('config');
+            expect(error).to.not.have.property('options');
+            expect(JSON.stringify(error)).to.not.include('secret-test-key');
+            expect(JSON.stringify(error)).to.not.include('private-user-id');
+        });
+
+        it('should redact Gemini API keys from HTTP errors', async () => {
+            const apiKey = 'secret-test-key';
+            const provider = new MixGoogle({ config: { apiKey } });
+
+            nock('https://generativelanguage.googleapis.com')
+                .post('/v1beta/models/gemini-test:generateContent')
+                .query({ key: apiKey })
+                .reply(401, {
+                    error: 'Unauthorized',
+                    requestUrl: `https://example.test?key=${apiKey}`
+                });
+
+            let error;
+            try {
+                await provider.create({
+                    config: { system: 'Test system' },
+                    options: { model: 'gemini-test', messages: [] }
+                });
+            } catch (caught) {
+                error = caught;
+            }
+
+            expect(error).to.exist;
+            expect(error.message).to.not.include(apiKey);
+            expect(error.details.requestUrl).to.include('[REDACTED]');
+            expect(error.stack).to.not.include(apiKey);
+            expect(JSON.stringify(error)).to.not.include(apiKey);
+        });
+
+        it('should not expose config or options when realtime closes early', async () => {
+            class ClosingWebSocket extends EventEmitter {
+                constructor() {
+                    super();
+                    queueMicrotask(() => this.emit('close'));
+                }
+
+                close() {}
+                send() {}
+            }
+
+            const indexPath = require.resolve('../index.js');
+            const cachedIndex = require.cache[indexPath];
+            const originalLoad = Module._load;
+            let RealtimeProvider;
+            try {
+                delete require.cache[indexPath];
+                Module._load = function (request, parent, isMain) {
+                    if (request === 'ws') return ClosingWebSocket;
+                    return originalLoad.call(this, request, parent, isMain);
+                };
+                ({ MixOpenAIWebSocket: RealtimeProvider } = require('../index.js'));
+            } finally {
+                Module._load = originalLoad;
+                delete require.cache[indexPath];
+                if (cachedIndex) require.cache[indexPath] = cachedIndex;
+            }
+
+            const apiKey = 'secret-realtime-key';
+            const provider = new RealtimeProvider({ config: { apiKey } });
+            let error;
+            try {
+                await provider.create({
+                    config: { system: 'private system prompt' },
+                    options: {
+                        model: 'gpt-realtime-mini',
+                        messages: [{ role: 'user', content: 'private prompt' }]
+                    }
+                });
+            } catch (caught) {
+                error = caught;
+            }
+
+            expect(error).to.deep.equal({
+                message: 'Realtime WebSocket closed before response.done',
+                statusCode: null,
+                details: null
+            });
+            const serialized = JSON.stringify(error);
+            expect(serialized).to.not.include(apiKey);
+            expect(serialized).to.not.include('private system prompt');
+            expect(serialized).to.not.include('private prompt');
         });
 
         it('should provide detailed error information when all fallbacks fail', async () => {

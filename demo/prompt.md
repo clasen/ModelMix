@@ -1,4 +1,4 @@
-# Writing Prompt: {story_title}
+# Writing Prompt: <%- storyTitle %>
 
 ## Setting
 A small, quiet town where nothing unusual ever happens.

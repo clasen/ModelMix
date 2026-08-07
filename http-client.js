@@ -4,6 +4,19 @@ function headersToObject(headers) {
     return Object.fromEntries(headers.entries());
 }
 
+function sanitizeUrl(url) {
+    try {
+        const parsed = new URL(url);
+        parsed.username = '';
+        parsed.password = '';
+        parsed.search = '';
+        parsed.hash = '';
+        return parsed.toString();
+    } catch {
+        return String(url).replace(/[?#].*$/, '');
+    }
+}
+
 async function parseResponseBody(response) {
     try {
         return await response.json();
@@ -24,7 +37,7 @@ async function parseJsonBody(response) {
 
 async function buildHttpError(url, response) {
     const details = await parseResponseBody(response);
-    const error = new Error(`Request to ${url} failed with status code ${response.status}`);
+    const error = new Error(`Request to ${sanitizeUrl(url)} failed with status code ${response.status}`);
     error.isHttpError = true;
     error.statusCode = response.status;
     error.details = details;
@@ -64,7 +77,7 @@ async function fetchStreamResponse(url, { method = 'POST', headers = {}, body } 
         throw await buildHttpError(url, response);
     }
     if (!response.body) {
-        throw new Error(`Request to ${url} did not return a readable stream`);
+        throw new Error(`Request to ${sanitizeUrl(url)} did not return a readable stream`);
     }
     return {
         data: Readable.fromWeb(response.body),

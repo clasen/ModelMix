@@ -49,7 +49,7 @@ export interface ModelMixConfig {
   roundRobin?: boolean;
   /** Unified effort (-1 adaptive, or 0–100). Not a native provider field. */
   effort?: EffortValue | null;
-  replace?: Record<string, string>;
+  replace?: Record<string, unknown>;
   schema?: Record<string, unknown>;
   [key: string]: unknown;
 }
@@ -256,7 +256,7 @@ export declare class ModelMix {
   static hasToolInteraction(message: ChatMessage | null | undefined): boolean;
 
   new(setup?: ModelMixSetup): ModelMix;
-  replace(keyValues: Record<string, string>): this;
+  replace(keyValues: Record<string, unknown>): this;
   effort(value: EffortValue): this;
   attach(key: string, provider: MixCustom): this;
 
@@ -359,7 +359,6 @@ export declare class ModelMix {
 
   replaceKeyFromFile(key: string, filePath: string): this;
   groupByRoles(messages: ChatMessage[]): ChatMessage[];
-  applyTemplate(): void;
   prepareMessages(): Promise<void>;
   readFile(filePath: string, options?: { encoding?: BufferEncoding | null }): string | Buffer;
   execute(args?: CreateArgs): Promise<ModelMixResult>;
@@ -402,16 +401,11 @@ export declare class MixCustom {
   static extractTokens(data: unknown): TokenUsage;
 
   create(args?: CreateArgs): Promise<ModelMixResult>;
-  handleError(
-    error: unknown,
-    context: CreateArgs
-  ): {
+  handleError(error: unknown): {
     message: string;
     statusCode: number | null;
     details: unknown;
     stack?: string;
-    config?: ModelMixConfig;
-    options?: ModelMixOptions;
   };
   processStream(response: { data: NodeJS.ReadableStream }): Promise<ModelMixResult>;
   extractDelta(data: unknown): string;

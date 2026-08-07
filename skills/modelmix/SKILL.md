@@ -37,7 +37,7 @@ Do NOT use for:
 - [Get raw response (tokens, thinking, tool calls)](#get-raw-response)
 - [Access full response with lastRaw](#access-full-response-with-lastraw)
 - [Add images](#add-images)
-- [Templates with placeholders](#templates-with-placeholders)
+- [EJS templates](#ejs-templates)
 - [Round-robin load balancing](#round-robin-load-balancing)
 - [MCP integration](#mcp-integration)
 - [Custom local tools](#custom-local-tools)
@@ -319,19 +319,36 @@ const description = await model.message();
 
 All image methods accept an optional second argument `{ role }` (default `"user"`).
 
-### Templates with placeholders
+### EJS templates
 
 ```javascript
 const model = ModelMix.new().gpt5mini();
 model.setSystemFromFile('./prompts/system.md');
 model.addTextFromFile('./prompts/task.md');
 model.replace({
-    '{role}': 'data analyst',
-    '{language}': 'Spanish'
+    role: 'data analyst',
+    language: 'Spanish'
 });
-model.replaceKeyFromFile('{code}', './src/utils.js');
+model.replaceKeyFromFile('code', './src/utils.js');
 console.log(await model.message());
 ```
+
+Templates use standard EJS syntax. Use `<%- value %>` for raw prompt content and `<%= value %>` only when XML escaping is intentional. Missing variables and files throw. Templates may contain JavaScript, so the template source must be developer-controlled; untrusted content belongs only in `replace()` data. Relative includes work in templates loaded from files.
+
+Use ModelMix choice directives for random prompt variants:
+
+```ejs
+<% choice %>
+<% option 20 %>
+Use emojis.
+<% option 40 %>
+Use few emojis.
+<% option 40 %>
+Do not use emojis.
+<% /choice %>
+```
+
+Omit all weights for equal probabilities. Otherwise every option needs a positive relative weight; weights do not need to total 100. Keep directives on their own lines. Nested choices and choices inside includes are supported. A request keeps its selections through retries, provider fallbacks, and tool continuations.
 
 ### Round-robin load balancing
 
@@ -465,7 +482,7 @@ const model = ModelMix.new({
 - Use `.json()` for structured output instead of parsing text manually. Use descriptor objects `{ description, required, enum, default, nullable }` for richer schema control.
 - Use `.message()` for simple text, `.raw()` when you need tokens/thinking/toolCalls.
 - For Anthropic thinking, use unified `effort` (`-1` or `0`–`100`) via `config.effort` or `.effort(n)` — e.g. `.effort(100).opus5()`. Never put `effort` in `options`. Native fields win if already set.
-- Template placeholders use `{key}` syntax in both system prompts and user messages.
+- Templates use EJS syntax in both system prompts and user messages; prefer `<%- key %>` for raw prompt data.
 - The library uses CommonJS internally but supports ESM import via `{ ModelMix }`.
 - GPT-5+ models automatically use `max_completion_tokens` instead of `max_tokens`.
 - o-series models (o3, o4mini) automatically strip `max_tokens` and `temperature` since those APIs don't support them.
@@ -483,8 +500,8 @@ const model = ModelMix.new({
 | `.addImage(path, {role?})` | `this` | Add image from file |
 | `.addImageFromUrl(url, {role?})` | `this` | Add image from URL or data URI |
 | `.addImageFromBuffer(buffer, {role?})` | `this` | Add image from Buffer |
-| `.replace({})` | `this` | Set placeholder replacements |
-| `.replaceKeyFromFile(key, path)` | `this` | Replace placeholder with file content |
+| `.replace({})` | `this` | Add EJS template data |
+| `.replaceKeyFromFile(key, path)` | `this` | Add raw file content as EJS template data |
 | `.message()` | `Promise<string>` | Get text response |
 | `.json(example, desc?, opts?)` | `Promise<object\|array>` | Get structured JSON |
 | `.raw()` | `Promise<{message, think, toolCalls, tokens, response}>` | Full response |

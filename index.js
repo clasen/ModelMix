@@ -1,4 +1,5 @@
 const fs = require('fs');
+const ejs = require('ejs');
 const fileType = require('file-type');
 const detectFileTypeFromBuffer = fileType.fileTypeFromBuffer || fileType.fromBuffer;
 const { inspect } = require('util');
@@ -35,6 +36,181 @@ function getErrorStatusCode(error) {
 
 function sleep(ms) {
     return new Promise(resolve => setTimeout(resolve, ms));
+}
+
+function validateTemplateData(value) {
+    const prototype = value && typeof value === 'object'
+        ? Object.getPrototypeOf(value)
+        : null;
+    if (!value || typeof value !== 'object' || Array.isArray(value)
+        || (prototype !== Object.prototype && prototype !== null)) {
+        throw new TypeError('Template data must be a plain non-null object.');
+    }
+    if (Object.prototype.hasOwnProperty.call(value, '$mix')) {
+        throw new TypeError('Template data key "$mix" is reserved.');
+    }
+}
+
+function templateLocation({ filename, label }, lineNumber) {
+    return `${filename || label} at line ${lineNumber}`;
+}
+
+function preprocessChoiceDirectives(source, { filename = null, label = 'template' } = {}) {
+    const parts = source.split(/(\r\n|\n|\r)/);
+    const blocks = [];
+
+    for (let index = 0; index < parts.length; index += 2) {
+        const line = parts[index];
+        const trimmed = line.trim();
+        const lineNumber = (index / 2) + 1;
+        const location = templateLocation({ filename, label }, lineNumber);
+        const newline = parts[index + 1] || '';
+
+        if (/^<%\s*choice\s*%>$/.test(trimmed)) {
+            const parent = blocks[blocks.length - 1];
+            if (parent && parent.optionCount === 0) {
+                throw new Error(`A nested choice must be inside an option (${location}).`);
+            }
+            blocks.push({ lineNumber, optionCount: 0, weighted: null });
+            parts[index] = '<% $mix.choice(option => { -%>';
+            continue;
+        }
+
+        const optionMatch = trimmed.match(/^<%\s*option(?:\s+(.+?))?\s*%>$/);
+        if (optionMatch) {
+            const block = blocks[blocks.length - 1];
+            if (!block) {
+                throw new Error(`Option directive must be inside a choice (${location}).`);
+            }
+
+            const weightText = optionMatch[1];
+            const weighted = weightText !== undefined;
+            if (block.weighted !== null && block.weighted !== weighted) {
+                throw new Error(`Choice options must either all have weights or all omit them (${location}).`);
+            }
+
+            let argument = '';
+            if (weighted) {
+                const weight = Number(weightText);
+                if (!Number.isFinite(weight) || weight <= 0) {
+                    throw new Error(`Choice weight must be a positive finite number (${location}).`);
+                }
+                argument = `${weight}, `;
+            }
+
+            block.weighted = weighted;
+            parts[index] = `<% ${block.optionCount > 0 ? '}); ' : ''}option(${argument}() => { -%>`;
+            block.optionCount += 1;
+            continue;
+        }
+
+        if (/^<%\s*\/choice\s*%>$/.test(trimmed)) {
+            const block = blocks.pop();
+            if (!block) {
+                throw new Error(`Closing choice directive has no matching opening directive (${location}).`);
+            }
+            if (block.optionCount === 0) {
+                throw new Error(`Choice must contain at least one option (${location}).`);
+            }
+            parts[index] = '<% }); }); -%>';
+            continue;
+        }
+
+        if (/^<%\s*(?:choice|option|\/choice)(?:\s|%>)/.test(trimmed)) {
+            throw new Error(`Invalid choice directive (${location}).`);
+        }
+
+        const block = blocks[blocks.length - 1];
+        if (block && block.optionCount === 0) {
+            if (trimmed) {
+                throw new Error(`Choice content must be inside an option (${location}).`);
+            }
+            parts[index] = '<%# -%>';
+        }
+
+        if (newline) parts[index + 1] = newline;
+    }
+
+    if (blocks.length > 0) {
+        const block = blocks[blocks.length - 1];
+        throw new Error(`Unclosed choice directive (${templateLocation({ filename, label }, block.lineNumber)}).`);
+    }
+
+    return parts.join('');
+}
+
+function createTemplateRenderContext(random = Math.random) {
+    const choice = defineOptions => {
+        if (typeof defineOptions !== 'function') {
+            throw new TypeError('$mix.choice expects an option definition callback.');
+        }
+
+        const options = [];
+        let weighted = null;
+        const option = (weightOrRender, renderOption) => {
+            const hasWeight = renderOption !== undefined;
+            const weight = hasWeight ? weightOrRender : 1;
+            const render = hasWeight ? renderOption : weightOrRender;
+
+            if (weighted !== null && weighted !== hasWeight) {
+                throw new TypeError('$mix.choice options cannot mix weighted and unweighted forms.');
+            }
+            if (!Number.isFinite(weight) || weight <= 0) {
+                throw new TypeError('$mix.choice weights must be positive finite numbers.');
+            }
+            if (typeof render !== 'function') {
+                throw new TypeError('$mix.choice options require a render callback.');
+            }
+
+            weighted = hasWeight;
+            options.push({ weight, render });
+        };
+
+        defineOptions(option);
+        if (options.length === 0) {
+            throw new Error('$mix.choice requires at least one option.');
+        }
+
+        const totalWeight = options.reduce((sum, current) => sum + current.weight, 0);
+        if (!Number.isFinite(totalWeight)) {
+            throw new TypeError('$mix.choice total weight must be finite.');
+        }
+
+        let target = random() * totalWeight;
+        for (const current of options) {
+            target -= current.weight;
+            if (target < 0) return current.render();
+        }
+        return options[options.length - 1].render();
+    };
+
+    return {
+        helpers: Object.freeze({ choice }),
+        renderedMessages: new Map(),
+        renderedSystems: new Map()
+    };
+}
+
+function configForDebug(config) {
+    const safeConfig = { ...config };
+    delete safeConfig.apiKey;
+    delete safeConfig.debug;
+    return safeConfig;
+}
+
+function redactSecret(value, secret, seen = new WeakSet()) {
+    if (!secret) return value;
+    if (typeof value === 'string') return value.split(secret).join('[REDACTED]');
+    if (!value || typeof value !== 'object') return value;
+    if (seen.has(value)) return '[Circular]';
+
+    seen.add(value);
+    if (Array.isArray(value)) {
+        return value.map(item => redactSecret(item, secret, seen));
+    }
+    return Object.fromEntries(
+        Object.entries(value).map(([key, item]) => [key, redactSecret(item, secret, seen)])
+    );
 }
 
 // Pricing per 1M tokens: [input, output] in USD
@@ -144,6 +320,7 @@ class ModelMix {
         this.toolClient = {};
         this.mcp = {};
         this.mcpToolsManager = new MCPToolsManager();
+        this.messageTemplates = new WeakMap();
         this.lastRaw = null;
         this.options = {
             max_tokens: 8192,
@@ -172,6 +349,13 @@ class ModelMix {
             roundRobin: false, // false=fallback mode, true=round robin rotation
             ...config
         };
+        this.systemTemplate = {
+            source: this.config.system,
+            filename: null
+        };
+        if (this.config.replace !== undefined) {
+            validateTemplateData(this.config.replace);
+        }
         // Unified effort is ModelMix policy (config.effort / .effort()), not a native option.
         if (this.config.effort !== undefined && this.config.effort !== null) {
             this.config.effort = normalizeEffort(this.config.effort);
@@ -184,6 +368,7 @@ class ModelMix {
     }
 
     replace(keyValues) {
+        validateTemplateData(keyValues);
         this.config.replace = { ...this.config.replace, ...keyValues };
         return this;
     }
@@ -203,11 +388,15 @@ class ModelMix {
     }
 
     new({ options = {}, config = {}, mix = {} } = {}) {
+        const hasSystemOverride = Object.prototype.hasOwnProperty.call(config, 'system');
         const instance = new ModelMix({
             options: { ...this.options, ...options },
             config: { ...this.config, ...config },
             mix: { ...this.mix, ...mix }
         });
+        if (!hasSystemOverride) {
+            instance.systemTemplate = { ...this.systemTemplate };
+        }
         instance.models = this.models; // Share models array for round-robin rotation
         return instance;
     }
@@ -598,29 +787,42 @@ class ModelMix {
     }
 
     addText(text, { role = "user" } = {}) {
+        return this._addText(text, { role, template: { source: text, filename: null } });
+    }
+
+    _addText(text, { role = "user", template = null } = {}) {
         const content = [{
             type: "text",
             text
         }];
 
+        if (template) {
+            this.messageTemplates.set(content[0], template);
+        }
         this.messages.push({ role, content });
         return this;
     }
 
     addTextFromFile(filePath, { role = "user" } = {}) {
-        const content = this.readFile(filePath);
-        this.addText(content, { role });
-        return this;
+        const filename = path.resolve(filePath);
+        const content = this.readFile(filename);
+        return this._addText(content, {
+            role,
+            template: { source: content, filename }
+        });
     }
 
     setSystem(text) {
         this.config.system = text;
+        this.systemTemplate = { source: text, filename: null };
         return this;
     }
 
     setSystemFromFile(filePath) {
-        const content = this.readFile(filePath);
-        this.setSystem(content);
+        const filename = path.resolve(filePath);
+        const content = this.readFile(filename);
+        this.config.system = content;
+        this.systemTemplate = { source: content, filename };
         return this;
     }
 
@@ -771,27 +973,23 @@ class ModelMix {
             stream: false,
         }
 
-        // Apply template replacements to system before adding extra instructions
-        let systemWithReplacements = this._template(this.config.system, this.config.replace);
-
-        let config = {
-            system: systemWithReplacements,
-        }
+        let config = {};
+        let systemSuffix = '';
 
         if (schemaExample) {
             config.schema = generateJsonSchema(schemaExample, schemaDescription);
 
             if (addSchema) {
-                config.system += "\n\nOutput JSON Schema: \n```\n" + JSON.stringify(config.schema) + "\n```";
+                systemSuffix += "\n\nOutput JSON Schema: \n```\n" + JSON.stringify(config.schema) + "\n```";
             }
             if (addExample) {
-                config.system += "\n\nOutput JSON Example: \n```\n" + JSON.stringify(schemaExample) + "\n```";
+                systemSuffix += "\n\nOutput JSON Example: \n```\n" + JSON.stringify(schemaExample) + "\n```";
             }
             if (addNote) {
-                config.system += "\n\nOutput JSON Escape: double quotes, backslashes, and control characters inside JSON strings.\nEnsure the output contains no comments.";
+                systemSuffix += "\n\nOutput JSON Escape: double quotes, backslashes, and control characters inside JSON strings.\nEnsure the output contains no comments.";
             }
         }
-        const { message } = await this.execute({ options, config });
+        const { message } = await this.execute({ options, config, systemSuffix });
         const parsed = JSON.parse(this._extractBlock(message));
         return isArrayWrap ? parsed.out : parsed;
     }
@@ -802,17 +1000,13 @@ class ModelMix {
     }
 
     async block({ addSystemExtra = true } = {}) {
-        // Apply template replacements to system before adding extra instructions
-        let systemWithReplacements = this._template(this.config.system, this.config.replace);
-
-        let config = {
-            system: systemWithReplacements,
-        }
-
-        if (addSystemExtra) {
-            config.system += "\nReturn the result of the task between triple backtick block code tags ```";
-        }
-        const { message } = await this.execute({ options: { stream: false }, config });
+        const systemSuffix = addSystemExtra
+            ? "\nReturn the result of the task between triple backtick block code tags ```"
+            : '';
+        const { message } = await this.execute({
+            options: { stream: false },
+            systemSuffix
+        });
         return this._extractBlock(message);
     }
 
@@ -826,22 +1020,52 @@ class ModelMix {
     }
 
     replaceKeyFromFile(key, filePath) {
-        try {
-            const content = this.readFile(filePath);
-            this.replace({ [key]: this._template(content, this.config.replace) });
-        } catch (error) {
-            // Gracefully handle file read errors without throwing
-            log.warn(`replaceKeyFromFile: ${error.message}`);
-        }
-        return this;
+        const content = this.readFile(filePath);
+        return this.replace({ [key]: content });
     }
 
-    _template(input, replace) {
-        if (!replace) return input;
-        for (const k in replace) {
-            input = input.split(/([¿?¡!,"';:\(\)\.\s])/).map(x => x === k ? replace[k] : x).join("");
+    _choiceRandom() {
+        return Math.random();
+    }
+
+    _renderTemplate(
+        source,
+        { filename = null, label = 'template' } = {},
+        renderContext = createTemplateRenderContext(() => this._choiceRandom())
+    ) {
+        if (typeof source !== 'string') {
+            throw new TypeError(`${label} source must be a string.`);
         }
-        return input;
+
+        try {
+            const template = preprocessChoiceDirectives(source, { filename, label });
+            const data = { ...(this.config.replace || {}), $mix: renderContext.helpers };
+            return ejs.render(template, data, {
+                ...(filename && { filename }),
+                async: false,
+                cache: false,
+                compileDebug: true,
+                unsafePrototypeLocals: false,
+                includer: (originalPath, resolvedFilename) => {
+                    if (!resolvedFilename) {
+                        throw new Error(`Could not find the include file "${originalPath}"`);
+                    }
+                    const includedSource = fs.readFileSync(resolvedFilename, 'utf8').replace(/^\uFEFF/, '');
+                    return {
+                        filename: resolvedFilename,
+                        template: preprocessChoiceDirectives(includedSource, {
+                            filename: resolvedFilename,
+                            label: 'included template'
+                        })
+                    };
+                }
+            });
+        } catch (error) {
+            const location = filename ? ` ${filename}` : '';
+            const renderError = new Error(`Failed to render ${label}${location}: ${error.message}`);
+            renderError.cause = error;
+            throw renderError;
+        }
     }
 
     static hasToolInteraction(message) {
@@ -873,37 +1097,56 @@ class ModelMix {
         }, []);
     }
 
-    applyTemplate() {
-        if (!this.config.replace) return;
+    _renderMessageSnapshot(messages, renderContext) {
+        return messages.map(message => ({
+            ...message,
+            content: Array.isArray(message.content)
+                ? message.content.map(content => {
+                    if (!content || typeof content !== 'object') return content;
 
-        this.config.system = this._template(this.config.system, this.config.replace);
+                    const snapshotContent = { ...content };
+                    const template = content.type === 'text'
+                        ? this.messageTemplates.get(content)
+                        : null;
+                    if (!template) return snapshotContent;
 
-        this.messages = this.messages.map(message => {
-            if (message.content instanceof Array) {
-                message.content = message.content.map(content => {
-                    if (content.type === 'text') {
-                        content.text = this._template(content.text, this.config.replace);
+                    let rendered = renderContext.renderedMessages.get(content)?.rendered;
+                    if (rendered === undefined) {
+                        rendered = this._renderTemplate(template.source, {
+                            filename: template.filename,
+                            label: 'message template'
+                        }, renderContext);
+                        renderContext.renderedMessages.set(content, { rendered, template });
                     }
-                    return content;
-                });
-            }
-            return message;
-        });
+                    snapshotContent.text = rendered;
+                    return snapshotContent;
+                })
+                : message.content
+        }));
     }
 
-    async prepareMessages() {
+    _commitTemplateRenderContext(renderContext) {
+        for (const [content, { rendered, template }] of renderContext.renderedMessages) {
+            if (this.messageTemplates.get(content) !== template) continue;
+            content.text = rendered;
+            this.messageTemplates.delete(content);
+        }
+    }
+
+    async prepareMessages(renderContext = createTemplateRenderContext(() => this._choiceRandom())) {
         await this.processImages();
-        this.applyTemplate();
+
+        let messages = this.messages;
 
         // Smart message slicing based on max_history:
         // 0 = no history (stateless), N = keep last N messages, -1 = unlimited
         if (this.config.max_history > 0) {
-            let sliceStart = Math.max(0, this.messages.length - this.config.max_history);
+            let sliceStart = Math.max(0, messages.length - this.config.max_history);
 
             // If we're slicing into the middle of a tool interaction,
             // backtrack to include the full sequence (user → assistant/tool_calls → tool results)
-            while (sliceStart > 0 && sliceStart < this.messages.length) {
-                const msg = this.messages[sliceStart];
+            while (sliceStart > 0 && sliceStart < messages.length) {
+                const msg = messages[sliceStart];
                 if (ModelMix.hasToolInteraction(msg)) {
                     sliceStart--;
                 } else {
@@ -911,13 +1154,13 @@ class ModelMix {
                 }
             }
 
-            this.messages = this.messages.slice(sliceStart);
+            this.messages = messages.slice(sliceStart);
+            messages = this.messages;
         }
         // max_history = -1: unlimited, no slicing
         // max_history = 0: no history, messages only contain what was added since last call
 
-        this.messages = this.groupByRoles(this.messages);
-        this.options.messages = this.messages;
+        return this.groupByRoles(this._renderMessageSnapshot(messages, renderContext));
     }
 
     readFile(filePath, { encoding = 'utf8' } = {}) {
@@ -935,15 +1178,30 @@ class ModelMix {
         }
     }
 
-    async execute({ config = {}, options = {} } = {}) {
+    _resolveSystemTemplate(config, providerConfig) {
+        if (Object.prototype.hasOwnProperty.call(config, 'system')) {
+            return { source: config.system, filename: null };
+        }
+        if (Object.prototype.hasOwnProperty.call(providerConfig, 'system')) {
+            return { source: providerConfig.system, filename: null };
+        }
+        if (this.config.system !== this.systemTemplate.source) {
+            return { source: this.config.system, filename: null };
+        }
+        return this.systemTemplate;
+    }
+
+    async execute({ config = {}, options = {}, systemSuffix = '', _templateContext = null } = {}) {
         if (!this.models || this.models.length === 0) {
             throw new Error("No models specified. Use methods like .gpt5(), .sonnet46() first.");
         }
 
-        return this.limiter.schedule(async () => {
-            await this.prepareMessages();
+        const isRootExecution = _templateContext === null;
+        const templateContext = _templateContext || createTemplateRenderContext(() => this._choiceRandom());
+        const execution = this.limiter.schedule(async () => {
+            const preparedMessages = await this.prepareMessages(templateContext);
 
-            if (this.messages.length === 0) {
+            if (preparedMessages.length === 0) {
                 throw new Error("No user messages have been added. Use addText(prompt), addTextFromFile(filePath), addImage(filePath), or addImageFromUrl(url) to add a prompt.");
             }
 
@@ -978,6 +1236,7 @@ class ModelMix {
                 // Create clean copies for each provider to avoid contamination
                 const currentOptions = {
                     ...this.options,
+                    messages: preparedMessages,
                     ...providerInstance.options,
                     ...optionsTools,
                     ...options,
@@ -994,6 +1253,18 @@ class ModelMix {
                         ...(config.retry || {})
                     }
                 };
+                const systemTemplate = this._resolveSystemTemplate(config, providerInstance.config);
+                const systemCacheKey = JSON.stringify([systemTemplate.filename, systemTemplate.source]);
+                if (!templateContext.renderedSystems.has(systemCacheKey)) {
+                    templateContext.renderedSystems.set(
+                        systemCacheKey,
+                        this._renderTemplate(systemTemplate.source, {
+                            filename: systemTemplate.filename,
+                            label: 'system template'
+                        }, templateContext)
+                    );
+                }
+                currentConfig.system = templateContext.renderedSystems.get(systemCacheKey) + systemSuffix;
 
                 // Grok 4.20 alias → reasoning / non-reasoning from unified effort
                 const resolvedModelKey = resolveGrok420ModelKey(
@@ -1018,7 +1289,7 @@ class ModelMix {
                     const header = `\n${prefix} [${providerName}:${resolvedModelKey}] #${originalIndex + 1}${suffix}`;
 
                     if (currentConfig.debug >= 2) {
-                        console.log(`${header}\n${ModelMix.formatInputSummary(this.messages, currentConfig.system, currentConfig.debug)}`);
+                        console.log(`${header}\n${ModelMix.formatInputSummary(preparedMessages, currentConfig.system, currentConfig.debug)}`);
                     } else {
                         console.log(header);
                     }
@@ -1091,7 +1362,7 @@ class ModelMix {
                                     }]
                                 });
                             } else {
-                                this.addText(result.message, { role: "assistant" });
+                                this._addText(result.message, { role: "assistant" });
                             }
                         }
 
@@ -1109,7 +1380,7 @@ class ModelMix {
                             });
                         }
 
-                        return this.execute({ options, config });
+                        return this.execute({ options, config, systemSuffix, _templateContext: templateContext });
                     }
 
                     // debug level 1: Just success indicator
@@ -1171,7 +1442,7 @@ class ModelMix {
                                 }]
                             });
                         } else {
-                            this.addText(result.message, { role: "assistant" });
+                            this._addText(result.message, { role: "assistant" });
                         }
                     }
 
@@ -1197,6 +1468,12 @@ class ModelMix {
             log.error("Fallback logic completed without success or throwing the final error.");
             throw lastError || new Error("Failed to get response from any model, and no specific error was caught.");
         });
+
+        if (!isRootExecution) return execution;
+
+        const result = await execution;
+        this._commitTemplateRenderContext(templateContext);
+        return result;
     }
 
     async processToolCalls(toolCalls) {
@@ -1422,9 +1699,7 @@ class MixCustom {
                 console.log('\n[REQUEST DETAILS]');
 
                 console.log('\n[CONFIG]');
-                const configToLog = { ...config };
-                delete configToLog.debug;
-                console.log(ModelMix.formatJSON(configToLog));
+                console.log(ModelMix.formatJSON(configForDebug(config)));
 
                 console.log('\n[OPTIONS]');
                 console.log(ModelMix.formatJSON(request.options));
@@ -1444,11 +1719,11 @@ class MixCustom {
                 }));
             }
         } catch (error) {
-            throw this.handleError(error, { config, options });
+            throw this.handleError(error);
         }
     }
 
-    handleError(error, { config, options }) {
+    handleError(error) {
         let errorMessage = 'An error occurred in MixCustom';
         let statusCode = null;
         let errorDetails = null;
@@ -1462,12 +1737,10 @@ class MixCustom {
         }
 
         const formattedError = {
-            message: errorMessage,
+            message: redactSecret(errorMessage, this.config.apiKey),
             statusCode,
-            details: errorDetails,
-            stack: error.stack,
-            config: config,
-            options: options
+            details: redactSecret(errorDetails, this.config.apiKey),
+            stack: redactSecret(error.stack, this.config.apiKey)
         };
 
         return formattedError;
@@ -1928,9 +2201,7 @@ class MixOpenAIWebSocket extends MixOpenAIResponses {
                 reject({
                     message: `Realtime WebSocket timed out after ${timeoutMs}ms`,
                     statusCode: null,
-                    details: null,
-                    config: mergedConfig,
-                    options
+                    details: null
                 });
             }, timeoutMs);
 
@@ -2024,9 +2295,7 @@ class MixOpenAIWebSocket extends MixOpenAIResponses {
                     reject({
                         message: event.error?.message || 'Realtime WebSocket error',
                         statusCode: null,
-                        details: event.error || event,
-                        config: mergedConfig,
-                        options
+                        details: event.error || event
                     });
                 }
             });
@@ -2039,9 +2308,7 @@ class MixOpenAIWebSocket extends MixOpenAIResponses {
                     message: error.message || 'Realtime WebSocket connection error',
                     statusCode: null,
                     details: null,
-                    stack: error.stack,
-                    config: mergedConfig,
-                    options
+                    stack: error.stack
                 });
             });
 
@@ -2052,9 +2319,7 @@ class MixOpenAIWebSocket extends MixOpenAIResponses {
                 reject({
                     message: 'Realtime WebSocket closed before response.done',
                     statusCode: null,
-                    details: null,
-                    config: mergedConfig,
-                    options
+                    details: null
                 });
             });
         });
@@ -2740,6 +3005,7 @@ class MixGoogle extends MixCustom {
         return super.getDefaultConfig({
             url: 'https://generativelanguage.googleapis.com/v1beta/models',
             apiKey: process.env.GEMINI_API_KEY,
+            ...customConfig
         });
     }
 
@@ -2909,9 +3175,7 @@ class MixGoogle extends MixCustom {
                 console.log('\n[REQUEST DETAILS - GOOGLE]');
 
                 console.log('\n[CONFIG]');
-                const configToLog = { ...config };
-                delete configToLog.debug;
-                console.log(ModelMix.formatJSON(configToLog));
+                console.log(ModelMix.formatJSON(configForDebug(config)));
 
                 console.log('\n[PAYLOAD]');
                 console.log(ModelMix.formatJSON(payload));
@@ -2927,7 +3191,7 @@ class MixGoogle extends MixCustom {
                 }));
             }
         } catch (error) {
-            throw this.handleError(error, { config, options });
+            throw this.handleError(error);
         }
     }
 

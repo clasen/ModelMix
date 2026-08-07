@@ -244,7 +244,9 @@ const result = await ModelMix.new({
 
 ## 🔄 Templates
 
-ModelMix includes a simple but powerful templating system. You can write your system prompts and user messages in external `.md` files with placeholders, then use `replace` to fill them in at runtime.
+ModelMix renders system prompts and user messages with [EJS](https://ejs.co/). Templates can be inline or stored in external files, and support variables, conditionals, loops, and relative includes.
+
+Templates are executable JavaScript and must be controlled by the developer. Pass untrusted content only as template data, never as the template source.
 
 ### Core methods
 
@@ -252,16 +254,16 @@ ModelMix includes a simple but powerful templating system. You can write your sy
 | --- | --- |
 | `setSystemFromFile(path)` | Load the system prompt from a file |
 | `addTextFromFile(path)` | Load a user message from a file |
-| `replace({ key: value })` | Replace placeholders in all messages and the system prompt |
-| `replaceKeyFromFile(key, path)` | Replace a placeholder with the contents of a file |
+| `replace({ key: value })` | Add EJS template data |
+| `replaceKeyFromFile(key, path)` | Add a file's raw contents as template data |
 
 ### Basic example with `replace`
 
 ```javascript
 const gpt = ModelMix.new().gpt52();
 
-gpt.addText('Write a short story about a {animal} that lives in {place}.');
-gpt.replace({ '{animal}': 'cat', '{place}': 'a haunted castle' });
+gpt.addText('Write a short story about a <%- animal %> that lives in <%- place %>.');
+gpt.replace({ animal: 'cat', place: 'a haunted castle' });
 
 console.log(await gpt.message());
 ```
@@ -272,15 +274,15 @@ Instead of writing long prompts inline, keep them in separate Markdown files. Th
 
 **`prompts/system.md`**
 ```markdown
-You are {role}, an expert in {topic}.
-Always respond in {language}.
+You are <%- role %>, an expert in <%- topic %>.
+Always respond in <%- language %>.
 ```
 
 **`prompts/task.md`**
 ```markdown
 Analyze the following and provide 3 key insights:
 
-{content}
+<%- content %>
 ```
 
 **`app.js`**
@@ -291,16 +293,16 @@ gpt.setSystemFromFile('./prompts/system.md');
 gpt.addTextFromFile('./prompts/task.md');
 
 gpt.replace({
-    '{role}': 'a senior analyst',
-    '{topic}': 'market trends',
-    '{language}': 'Spanish',
-    '{content}': 'Bitcoin surpassed $100,000 in December 2024...'
+    role: 'a senior analyst',
+    topic: 'market trends',
+    language: 'Spanish',
+    content: 'Bitcoin surpassed $100,000 in December 2024...'
 });
 
 console.log(await gpt.message());
 ```
 
-### Injecting file contents into a placeholder
+### Injecting file contents as template data
 
 Use `replaceKeyFromFile` when the replacement value itself is a large text stored in a file.
 
@@ -308,7 +310,7 @@ Use `replaceKeyFromFile` when the replacement value itself is a large text store
 ```markdown
 Summarize the following article in 3 bullet points:
 
-{article}
+<%- article %>
 ```
 
 **`app.js`**
@@ -316,7 +318,7 @@ Summarize the following article in 3 bullet points:
 const gpt = ModelMix.new().gpt5mini();
 
 gpt.addTextFromFile('./prompts/summarize.md');
-gpt.replaceKeyFromFile('{article}', './data/article.md');
+gpt.replaceKeyFromFile('article', './data/article.md');
 
 console.log(await gpt.message());
 ```
@@ -327,17 +329,17 @@ Combine all methods to build reusable, file-based prompt pipelines:
 
 **`prompts/system.md`**
 ```markdown
-You are {role}. Follow these rules:
+You are <%- role %>. Follow these rules:
 - Be concise
 - Use examples when possible
-- Respond in {language}
+- Respond in <%- language %>
 ```
 
 **`prompts/review.md`**
 ```markdown
 Review the following code and suggest improvements:
 
-{code}
+<%- code %>
 ```
 
 **`app.js`**
@@ -347,11 +349,62 @@ const gpt = ModelMix.new().gpt5mini();
 gpt.setSystemFromFile('./prompts/system.md');
 gpt.addTextFromFile('./prompts/review.md');
 
-gpt.replace({ '{role}': 'a senior code reviewer', '{language}': 'English' });
-gpt.replaceKeyFromFile('{code}', './src/utils.js');
+gpt.replace({ role: 'a senior code reviewer', language: 'English' });
+gpt.replaceKeyFromFile('code', './src/utils.js');
 
 console.log(await gpt.message());
 ```
+
+### EJS output and control flow
+
+Use `<%- value %>` for raw prompt content and `<%= value %>` only when XML escaping is intentional. Missing variables and missing files throw immediately.
+
+```ejs
+<% if (user.active) { %>
+Review these roles:
+<% user.roles.forEach(role => { %>
+- <%- role %>
+<% }) %>
+<% } %>
+```
+
+### Random prompt choices
+
+Use a `choice` block to include exactly one prompt variant. When no weights are present, every option has the same probability:
+
+```ejs
+<% choice %>
+<% option %>
+Use emojis.
+<% option %>
+Use few emojis.
+<% option %>
+Do not use emojis.
+<% /choice %>
+```
+
+Add a positive weight after every `option` when the probabilities should differ:
+
+```ejs
+<% choice %>
+<% option 20 %>
+Use emojis.
+<% option 40 %>
+Use few emojis.
+<% option 40 %>
+Do not use emojis.
+<% /choice %>
+```
+
+Weights are relative and do not need to total 100. A block must either give every option a weight or omit all weights. Directives must be on their own lines; choices can be nested and can also appear inside relative includes. Each new request makes a new selection, while retries, provider fallbacks, and tool continuations keep the original selection.
+
+File templates can include files relative to their own path:
+
+```ejs
+<%- include('shared/rules.md') %>
+```
+
+Content supplied through `replace()` or `replaceKeyFromFile()` is rendered once as data. EJS tags inside that content are not executed recursively.
 
 ## 🧩 JSON Structured Output
 
@@ -679,8 +732,8 @@ new ModelMix(args = { options: {}, config: {} })
 - `addTextFromFile(filePath, config = { role: "user" })`: Adds a text message from a file.
 - `addImage(filePath, config = { role: "user" })`: Adds an image message from a file path.
 - `addImageFromUrl(url, config = { role: "user" })`: Adds an image message from URL.
-- `replace(keyValues)`: Defines placeholder replacements for messages and system prompt.
-- `replaceKeyFromFile(key, filePath)`: Defines a placeholder replacement with file contents as value.
+- `replace(keyValues)`: Adds EJS data for messages and system prompts.
+- `replaceKeyFromFile(key, filePath)`: Adds raw file contents as an EJS data value.
 - `message()`: Sends the message and returns the response.
 - `raw()`: Sends the message and returns the complete response data including:
   - `message`: The text response from the model
