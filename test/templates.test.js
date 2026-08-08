@@ -398,6 +398,19 @@ B
             await model.message();
         });
 
+        it('resolves a dynamic include path relative to its template', async () => {
+            const model = ModelMix.new()
+                .gpt51()
+                .replace({ rulesFile: 'system-rules.txt', language: 'Spanish' })
+                .addTextFromFile(path.join(fixturesPath, 'dynamic-include.txt'));
+
+            mockOpenAI(body => {
+                expect(userTexts(body)[0].trim()).to.equal('Rules:\nAlways respond in Spanish.');
+            });
+
+            await model.message();
+        });
+
         it('processes choice directives inside relative includes', async () => {
             const model = ModelMix.new()
                 .gpt51()
@@ -406,6 +419,36 @@ B
 
             mockOpenAI(body => {
                 expect(userTexts(body)[0].trim()).to.equal('Style:\nBe concise.');
+            });
+
+            await model.message();
+        });
+
+        it('supports recursive includes with an explicit depth limit', async () => {
+            const model = ModelMix.new()
+                .gpt51()
+                .replace({
+                    node: {
+                        text: 'Root',
+                        children: [{
+                            text: 'Child',
+                            children: [{
+                                text: 'Grandchild',
+                                children: [{ text: 'Too deep', children: [] }]
+                            }]
+                        }]
+                    },
+                    depth: 0,
+                    maxDepth: 2
+                })
+                .addTextFromFile(path.join(fixturesPath, 'tree.ejs'));
+
+            mockOpenAI(body => {
+                const content = userTexts(body)[0];
+                expect(content).to.include('Root');
+                expect(content).to.include('Child');
+                expect(content).to.include('Grandchild');
+                expect(content).to.not.include('Too deep');
             });
 
             await model.message();

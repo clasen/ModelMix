@@ -369,11 +369,41 @@ model.replace({
     role: 'data analyst',
     language: 'Spanish'
 });
-model.replaceKeyFromFile('code', './src/utils.js');
 console.log(await model.message());
 ```
 
-Templates use standard EJS syntax. Use `<%- value %>` for raw prompt content and `<%= value %>` only when XML escaping is intentional. Missing variables and files throw. Templates may contain JavaScript, so the template source must be developer-controlled; untrusted content belongs only in `replace()` data. Relative includes work in templates loaded from files.
+Templates use standard EJS syntax. Use `<%- value %>` for raw prompt content and `<%= value %>` only when XML escaping is intentional. Missing variables and files throw. Templates may contain JavaScript, so the template source must be developer-controlled; untrusted content belongs only in `replace()` data.
+
+Start with a static include. Paths are resolved relative to the containing template:
+
+```ejs
+<%- include('shared/rules.md') %>
+```
+
+Use a variable when the included file must be selected dynamically:
+
+```ejs
+Analyze the following source:
+
+<%- include(sourceFile) %>
+```
+
+```javascript
+model.replace({ sourceFile: '../src/utils.js' });
+```
+
+Included files are EJS source, so the path and file must be developer-controlled. Untrusted runtime content belongs in ordinary `replace()` values, not include paths. For recursive data, a template may include itself with an explicit stopping condition:
+
+```ejs
+<%- node.text %>
+<% if (node.children?.length && depth < maxDepth) { %>
+<% for (const child of node.children) { %>
+<%- include('tree.ejs', { node: child, depth: depth + 1, maxDepth }) %>
+<% } %>
+<% } %>
+```
+
+Initialize it with `replace({ node, depth: 0, maxDepth: 10 })`. Values supplied through `replace()` remain data and are never interpreted recursively as EJS.
 
 Use ModelMix choice directives for random prompt variants:
 
@@ -541,7 +571,6 @@ const model = ModelMix.new({
 | `.addImageFromUrl(url, {role?, cache?})` | `this` | Add image from URL or data URI |
 | `.addImageFromBuffer(buffer, {role?, cache?})` | `this` | Add image from Buffer |
 | `.replace({})` | `this` | Add EJS template data |
-| `.replaceKeyFromFile(key, path)` | `this` | Add raw file content as EJS template data |
 | `.message()` | `Promise<string>` | Get text response |
 | `.json(example, desc?, opts?)` | `Promise<object\|array>` | Get structured JSON |
 | `.raw()` | `Promise<{message, think, toolCalls, tokens, response}>` | Full response |

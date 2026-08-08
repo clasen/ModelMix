@@ -250,7 +250,6 @@ Templates are executable JavaScript and must be controlled by the developer. Pas
 | `setSystemFromFile(path)` | Load the system prompt from a file |
 | `addTextFromFile(path)` | Load a user message from a file |
 | `replace({ key: value })` | Add EJS template data |
-| `replaceKeyFromFile(key, path)` | Add a file's raw contents as template data |
 
 ### Basic example with `replace`
 
@@ -297,15 +296,38 @@ gpt.replace({
 console.log(await gpt.message());
 ```
 
-### Injecting file contents as template data
+### Simple includes
 
-Use `replaceKeyFromFile` when the replacement value itself is a large text stored in a file.
+Use EJS `include` to compose a prompt from other files. Include paths are resolved relative to the template containing them.
+
+```ejs
+<%- include('shared/rules.md') %>
+```
+
+For example:
+
+**`prompts/task.md`**
+```markdown
+Analyze the request following these rules:
+
+<%- include('shared/rules.md') %>
+```
+
+**`prompts/shared/rules.md`**
+```markdown
+- Be concise
+- Explain assumptions
+```
+
+### Dynamic includes
+
+When the file changes at runtime, pass its path as template data and call `include` with that variable. This replaces the file-injection use case while keeping composition inside the template.
 
 **`prompts/summarize.md`**
 ```markdown
 Summarize the following article in 3 bullet points:
 
-<%- article %>
+<%- include(articleFile) %>
 ```
 
 **`app.js`**
@@ -313,10 +335,12 @@ Summarize the following article in 3 bullet points:
 const gpt = ModelMix.new().gpt5mini();
 
 gpt.addTextFromFile('./prompts/summarize.md');
-gpt.replaceKeyFromFile('article', './data/article.md');
+gpt.replace({ articleFile: '../data/article.md' });
 
 console.log(await gpt.message());
 ```
+
+Static and dynamic include paths are resolved relative to the containing template. Included files are EJS template source, so both the path and file must be controlled by the developer. Pass untrusted runtime content through ordinary `replace()` values instead of using it as an include path.
 
 ### Full template workflow
 
@@ -325,16 +349,21 @@ Combine all methods to build reusable, file-based prompt pipelines:
 **`prompts/system.md`**
 ```markdown
 You are <%- role %>. Follow these rules:
+<%- include('partials/rules.md') %>
+- Respond in <%- language %>
+```
+
+**`prompts/partials/rules.md`**
+```markdown
 - Be concise
 - Use examples when possible
-- Respond in <%- language %>
 ```
 
 **`prompts/review.md`**
 ```markdown
 Review the following code and suggest improvements:
 
-<%- code %>
+<%- include('../src/utils.js') %>
 ```
 
 **`app.js`**
@@ -345,7 +374,6 @@ gpt.setSystemFromFile('./prompts/system.md');
 gpt.addTextFromFile('./prompts/review.md');
 
 gpt.replace({ role: 'a senior code reviewer', language: 'English' });
-gpt.replaceKeyFromFile('code', './src/utils.js');
 
 console.log(await gpt.message());
 ```
@@ -393,13 +421,30 @@ Do not use emojis.
 
 Weights are relative and do not need to total 100. A block must either give every option a weight or omit all weights. Directives must be on their own lines; choices can be nested and can also appear inside relative includes. Each new request makes a new selection, while retries, provider fallbacks, and tool continuations keep the original selection.
 
-File templates can include files relative to their own path:
+### Recursive includes
+
+An included template can include itself to render recursive data. Always define a stopping condition:
 
 ```ejs
-<%- include('shared/rules.md') %>
+<%- node.text %>
+
+<% if (node.children?.length && depth < maxDepth) { %>
+<% for (const child of node.children) { %>
+<%- include('tree.ejs', { node: child, depth: depth + 1, maxDepth }) %>
+<% } %>
+<% } %>
 ```
 
-Content supplied through `replace()` or `replaceKeyFromFile()` is rendered once as data. EJS tags inside that content are not executed recursively.
+```javascript
+const gpt = ModelMix.new().gpt5mini();
+
+gpt.addTextFromFile('./prompts/tree.ejs');
+gpt.replace({ node: promptTree, depth: 0, maxDepth: 10 });
+
+console.log(await gpt.message());
+```
+
+Content supplied through `replace()` is rendered once as data. EJS tags inside that content are not executed recursively.
 
 ## 🧩 JSON Structured Output
 
@@ -801,7 +846,6 @@ new ModelMix(args = { options: {}, config: {} })
 - `addImage(filePath, config = { role: "user", cache? })`: Adds an image message from a file path.
 - `addImageFromUrl(url, config = { role: "user", cache? })`: Adds an image message from URL.
 - `replace(keyValues)`: Adds EJS data for messages and system prompts.
-- `replaceKeyFromFile(key, filePath)`: Adds raw file contents as an EJS data value.
 - `message()`: Sends the message and returns the response.
 - `raw()`: Sends the message and returns the complete response data including:
   - `message`: The text response from the model

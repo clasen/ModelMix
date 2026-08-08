@@ -1,0 +1,6 @@
+<%- node.text %>
+<% if (node.children?.length && depth < maxDepth) { %>
+<% for (const child of node.children) { %>
+<%- include('tree.ejs', { node: child, depth: depth + 1, maxDepth }) %>
+<% } %>
+<% } %>
