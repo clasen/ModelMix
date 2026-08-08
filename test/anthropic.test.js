@@ -5,15 +5,29 @@ const { ModelMix, MixAnthropic } = require('../index.js');
 describe('Anthropic Model Registration Tests', () => {
     it('should register Claude Fable 5', () => {
         const model = ModelMix.new();
-        model.fable5();
+        model.fable50();
 
         expect(model.models).to.have.length(1);
         expect(model.models[0].key).to.equal('claude-fable-5');
         expect(model.models[0].provider).to.be.instanceOf(MixAnthropic);
     });
 
-    it('should apply max effort thinking via .effort(100).fable5()', () => {
-        const model = ModelMix.new().effort(100).fable5();
+    it('should keep fable5() as an alias for fable50()', () => {
+        const model = ModelMix.new();
+
+        expect(model.fable5({
+            options: { max_tokens: 123 },
+            config: { url: 'https://anthropic.example.test' }
+        })).to.equal(model);
+        expect(model.models).to.have.length(1);
+        expect(model.models[0].key).to.equal('claude-fable-5');
+        expect(model.models[0].provider).to.be.instanceOf(MixAnthropic);
+        expect(model.models[0].provider.options.max_tokens).to.equal(123);
+        expect(model.models[0].provider.config.url).to.equal('https://anthropic.example.test');
+    });
+
+    it('should apply max effort thinking via .effort(100).fable50()', () => {
+        const model = ModelMix.new().effort(100).fable50();
         const { applyUnifiedEffort } = require('../effort.js');
 
         expect(model.config.effort).to.equal(100);
@@ -25,15 +39,29 @@ describe('Anthropic Model Registration Tests', () => {
 
     it('should register Claude Opus 5', () => {
         const model = ModelMix.new();
-        model.opus5();
+        model.opus50();
 
         expect(model.models).to.have.length(1);
         expect(model.models[0].key).to.equal('claude-opus-5');
         expect(model.models[0].provider).to.be.instanceOf(MixAnthropic);
     });
 
-    it('should apply max effort thinking via .effort(100).opus5()', () => {
-        const model = ModelMix.new().effort(100).opus5();
+    it('should keep opus5() as an alias for opus50()', () => {
+        const model = ModelMix.new();
+
+        expect(model.opus5({
+            options: { max_tokens: 123 },
+            config: { url: 'https://anthropic.example.test' }
+        })).to.equal(model);
+        expect(model.models).to.have.length(1);
+        expect(model.models[0].key).to.equal('claude-opus-5');
+        expect(model.models[0].provider).to.be.instanceOf(MixAnthropic);
+        expect(model.models[0].provider.options.max_tokens).to.equal(123);
+        expect(model.models[0].provider.config.url).to.equal('https://anthropic.example.test');
+    });
+
+    it('should apply max effort thinking via .effort(100).opus50()', () => {
+        const model = ModelMix.new().effort(100).opus50();
         const { applyUnifiedEffort } = require('../effort.js');
 
         expect(model.config.effort).to.equal(100);
@@ -125,6 +153,101 @@ describe('Anthropic Model Registration Tests', () => {
                 });
 
                 expect(requestBody.temperature).to.equal(0.5);
+            } finally {
+                if (originalApiKey === undefined) delete process.env.ANTHROPIC_API_KEY;
+                else process.env.ANTHROPIC_API_KEY = originalApiKey;
+                nock.cleanAll();
+            }
+        });
+    });
+
+    describe('Provider-neutral prompt caching', () => {
+        it('should translate neutral breakpoints and remove foreign OpenAI controls', async () => {
+            const originalApiKey = process.env.ANTHROPIC_API_KEY;
+            process.env.ANTHROPIC_API_KEY = 'test-anthropic-key';
+
+            try {
+                const provider = new MixAnthropic();
+                let requestBody;
+                nock('https://api.anthropic.com')
+                    .post('/v1/messages', body => {
+                        requestBody = body;
+                        return true;
+                    })
+                    .reply(200, {
+                        content: [{ type: 'text', text: 'Done' }],
+                        usage: { input_tokens: 1, output_tokens: 1 }
+                    });
+
+                await provider.create({
+                    config: { system: 'You are an assistant.' },
+                    options: {
+                        model: 'claude-haiku-4-5-20251001',
+                        max_tokens: 16,
+                        cache_control: { type: 'ephemeral', ttl: '1h' },
+                        prompt_cache_key: 'openai-only',
+                        prompt_cache_options: { mode: 'explicit', ttl: '30m' },
+                        messages: [{
+                            role: 'user',
+                            content: [
+                                { type: 'text', text: 'Stable', cache: { breakpoint: true } },
+                                {
+                                    type: 'text',
+                                    text: 'Variable',
+                                    prompt_cache_breakpoint: { mode: 'explicit' }
+                                }
+                            ]
+                        }]
+                    }
+                });
+
+                expect(requestBody).to.not.have.property('prompt_cache_key');
+                expect(requestBody).to.not.have.property('prompt_cache_options');
+                expect(requestBody).to.not.have.property('cache_control');
+                expect(requestBody.messages[0].content[0]).to.deep.equal({
+                    type: 'text',
+                    text: 'Stable',
+                    cache_control: { type: 'ephemeral', ttl: '1h' }
+                });
+                expect(requestBody.messages[0].content[1]).to.deep.equal({
+                    type: 'text',
+                    text: 'Variable'
+                });
+            } finally {
+                if (originalApiKey === undefined) delete process.env.ANTHROPIC_API_KEY;
+                else process.env.ANTHROPIC_API_KEY = originalApiKey;
+                nock.cleanAll();
+            }
+        });
+
+        it('should preserve top-level automatic caching when there is no explicit breakpoint', async () => {
+            const originalApiKey = process.env.ANTHROPIC_API_KEY;
+            process.env.ANTHROPIC_API_KEY = 'test-anthropic-key';
+
+            try {
+                const provider = new MixAnthropic();
+                let requestBody;
+                nock('https://api.anthropic.com')
+                    .post('/v1/messages', body => {
+                        requestBody = body;
+                        return true;
+                    })
+                    .reply(200, {
+                        content: [{ type: 'text', text: 'Done' }],
+                        usage: { input_tokens: 1, output_tokens: 1 }
+                    });
+
+                await provider.create({
+                    config: { system: 'You are an assistant.' },
+                    options: {
+                        model: 'claude-haiku-4-5-20251001',
+                        max_tokens: 16,
+                        cache_control: { type: 'ephemeral' },
+                        messages: [{ role: 'user', content: 'Hello' }]
+                    }
+                });
+
+                expect(requestBody.cache_control).to.deep.equal({ type: 'ephemeral' });
             } finally {
                 if (originalApiKey === undefined) delete process.env.ANTHROPIC_API_KEY;
                 else process.env.ANTHROPIC_API_KEY = originalApiKey;

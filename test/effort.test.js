@@ -336,8 +336,8 @@ describe('Unified effort scale', () => {
             expect(request.reasoning).to.deep.equal({ effort: 'none' });
         });
 
-        it('Anthropic config.effort maps through .effort().opus5()', () => {
-            const model = ModelMix.new().effort(100).opus5();
+        it('Anthropic config.effort maps through .effort().opus50()', () => {
+            const model = ModelMix.new().effort(100).opus50();
             expect(model.config.effort).to.equal(100);
 
             const options = {

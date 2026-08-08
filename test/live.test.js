@@ -31,22 +31,22 @@ describe('Live Integration Tests', function () {
 
     describe('Image Processing', function () {
 
-        it('should process images with OpenAI GPT-5 Nano', async function () {
-            const model = ModelMix.new(setup).gpt5nano();
+        it('should process images with OpenAI GPT-5.6 Luna', async function () {
+            const model = ModelMix.new(setup).gpt56luna();
 
             model.addImageFromUrl(blueSquareBase64)
                 .addText('What color is this image? Answer in one word only.');
 
             const response = await model.message();
 
-            console.log(`OpenAI GPT-5.2 response: ${response}`);
+            console.log(`OpenAI GPT-5.6 Luna response: ${response}`);
 
             expect(response).to.be.a('string');
             expect(response.toLowerCase()).to.include('blue');
         });
 
-        it('should process images with Anthropic Sonnet 4.6', async function () {
-            const model = ModelMix.new(setup).sonnet46();
+        it('should process images with Anthropic Sonnet 5', async function () {
+            const model = ModelMix.new(setup).sonnet5();
 
             model.addImageFromUrl(blueSquareBase64)
                 .addText('What color is this image? Answer in one word only.');
@@ -76,7 +76,7 @@ describe('Live Integration Tests', function () {
     describe('JSON Structured Output', function () {
 
         it('should return structured JSON with OpenAI', async function () {
-            const model = ModelMix.new(setup).gpt5mini();
+            const model = ModelMix.new(setup).gpt56luna();
 
             model.addText('Generate information about a fictional character.');
 
@@ -97,8 +97,8 @@ describe('Live Integration Tests', function () {
             expect(result.skills).to.be.an('array');
         });
 
-        it('should return structured JSON with Sonnet 4.6 thinking', async function () {
-            const model = ModelMix.new(setup).effort(100).sonnet46();
+        it('should return structured JSON with Sonnet 5 thinking', async function () {
+            const model = ModelMix.new(setup).effort(100).sonnet5();
 
             model.addText('Generate information about a fictional city.');
 
@@ -150,7 +150,7 @@ describe('Live Integration Tests', function () {
             // Create a model chain: non-existent model -> Claude
             const model = ModelMix.new(setup)
                 .attach('non-existent-model', new MixOpenAI())
-                .sonnet46();
+                .sonnet5();
 
             model.addText('Say "fallback test successful" and nothing else.');
 
@@ -165,7 +165,7 @@ describe('Live Integration Tests', function () {
             // Create a model chain: non-existent model -> Claude
             const model = ModelMix.new(setup)
                 .attach('non-existent-model', new MixAnthropic())
-                .gpt41nano();
+                .gpt56luna();
 
             model.addText('Say "fallback test successful" and nothing else.');
 

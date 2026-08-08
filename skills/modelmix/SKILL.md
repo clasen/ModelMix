@@ -122,9 +122,9 @@ ModelMix.new({ config: { effort: 80 } })
 `gpt52()` `gpt52chat()` `gpt51()` `gpt5()` `gpt5mini()` `gpt5nano()` `gpt45()` `gpt41()` `gpt41mini()` `gpt41nano()` `o3()` `o4mini()`
 
 ### Anthropic
-`fable5()` `opus5()` `opus48()` `opus47()` `opus46()` `sonnet5()` `sonnet46()` `sonnet45()` `haiku45()`
+`fable50()` `opus50()` `opus48()` `opus47()` `opus46()` `sonnet5()` `sonnet46()` `sonnet45()` `haiku45()`
 
-Use `.effort(n)` (or `config.effort`) to enable Anthropic thinking — e.g. `.effort(100).opus5()`.
+Use `.effort(n)` (or `config.effort`) to enable Anthropic thinking — e.g. `.effort(100).opus50()`. `fable5()` and `opus5()` remain available as compatibility aliases.
 
 ### Google
 `gemini3pro()` `gemini3flash()` `gemini36flash()` `gemini35flash()` `gemini35flashLite()` `gemini31flashLite()` `gemini25pro()` `gemini25flash()`
@@ -301,10 +301,50 @@ After calling `message()`, `json()`, `block()`, or `stream()`, use `lastRaw` to 
 const model = ModelMix.new().gpt5mini().addText("Hello!");
 const text = await model.message();
 console.log(model.lastRaw.tokens);
-// { input: 122, output: 86, total: 541, cost: 0.000319, speed: 38 }
+// {
+//   input: 1200, output: 50, total: 1250,
+//   cached: 1024, cacheWrite: 0, uncachedInput: 176,
+//   cacheWrite5m: 0, cacheWrite1h: 0,
+//   cacheHitRate: 0.8533, cacheSavings: 0.00018432,
+//   cacheWritePremium: 0, breakEvenHits: 0,
+//   cost: 0.00011568,
+//   costBreakdown: {
+//     uncachedInput: 0.0000352, cachedInput: 0.00002048,
+//     cacheWrite: 0, cacheWrite5m: 0, cacheWrite1h: 0,
+//     output: 0.00006, total: 0.00011568
+//   },
+//   speed: 38
+// }
 console.log(model.lastRaw.think);    // reasoning content (if available)
 console.log(model.lastRaw.response); // raw API response
 ```
+
+### GPT-5.6 explicit prompt caching
+
+```javascript
+const model = ModelMix.new()
+  .gpt56luna({
+    options: {
+      prompt_cache_key: 'stable-prefix-v1',
+      prompt_cache_options: { mode: 'explicit', ttl: '30m' }
+    }
+  })
+  .haiku45({
+    options: {
+      cache_control: { type: 'ephemeral', ttl: '1h' }
+    }
+  })
+  .addText(longStableInstructions, {
+    cache: { breakpoint: true }
+  })
+  .addText('Handle this variable request.');
+
+const result = await model.raw();
+```
+
+`cache: { breakpoint: true }` is provider-neutral: GPT-5.6 receives `prompt_cache_breakpoint`, Anthropic receives `cache_control`, and unsupported providers omit it. Keep native request policies inside each model shorthand so they do not leak across fallbacks. Anthropic usage separates `cacheWrite5m` and `cacheWrite1h`; `cacheWrite` stays as their compatible aggregate.
+
+GPT-5.6 replaces `prompt_cache_retention` with `prompt_cache_options.ttl`. Explicit breakpoints also work on image methods and Responses-native `input_text`, `input_image`, and `input_file` blocks. Prompts need at least 1,024 tokens to be cached. Requests over 272K input tokens use 2× input and 1.5× output prices for the complete request; ModelMix applies these multipliers to `cost`, `costBreakdown`, and cache economics.
 
 ### Add images
 
@@ -481,25 +521,25 @@ const model = ModelMix.new({
 - When using MCP tools or `addTool()`, set `max_history` to at least 3 — tool call/response pairs consume history slots.
 - Use `.json()` for structured output instead of parsing text manually. Use descriptor objects `{ description, required, enum, default, nullable }` for richer schema control.
 - Use `.message()` for simple text, `.raw()` when you need tokens/thinking/toolCalls.
-- For Anthropic thinking, use unified `effort` (`-1` or `0`–`100`) via `config.effort` or `.effort(n)` — e.g. `.effort(100).opus5()`. Never put `effort` in `options`. Native fields win if already set.
+- For Anthropic thinking, use unified `effort` (`-1` or `0`–`100`) via `config.effort` or `.effort(n)` — e.g. `.effort(100).opus50()`. Never put `effort` in `options`. Native fields win if already set.
 - Templates use EJS syntax in both system prompts and user messages; prefer `<%- key %>` for raw prompt data.
 - The library uses CommonJS internally but supports ESM import via `{ ModelMix }`.
 - GPT-5+ models automatically use `max_completion_tokens` instead of `max_tokens`.
 - o-series models (o3, o4mini) automatically strip `max_tokens` and `temperature` since those APIs don't support them.
 - Anthropic Opus 4.7+ / Claude 5 family automatically strip `temperature`, `top_p`, and `top_k` (API rejects them).
-- `addText()`, `addImage()`, `addImageFromUrl()`, and `addImageFromBuffer()` all accept `{ role }` as second argument (default `"user"`).
+- `addText()`, `addImage()`, `addImageFromUrl()`, and `addImageFromBuffer()` accept `{ role, cache?: { breakpoint: true } }` as the second argument (default role: `"user"`). Adapters translate or omit the neutral marker by provider.
 
 ## API Quick Reference
 
 | Method | Returns | Description |
 | --- | --- | --- |
-| `.addText(text, {role?})` | `this` | Add user message |
-| `.addTextFromFile(path, {role?})` | `this` | Add user message from file |
+| `.addText(text, {role?, cache?})` | `this` | Add user message |
+| `.addTextFromFile(path, {role?, cache?})` | `this` | Add user message from file |
 | `.setSystem(text)` | `this` | Set system prompt |
 | `.setSystemFromFile(path)` | `this` | Set system prompt from file |
-| `.addImage(path, {role?})` | `this` | Add image from file |
-| `.addImageFromUrl(url, {role?})` | `this` | Add image from URL or data URI |
-| `.addImageFromBuffer(buffer, {role?})` | `this` | Add image from Buffer |
+| `.addImage(path, {role?, cache?})` | `this` | Add image from file |
+| `.addImageFromUrl(url, {role?, cache?})` | `this` | Add image from URL or data URI |
+| `.addImageFromBuffer(buffer, {role?, cache?})` | `this` | Add image from Buffer |
 | `.replace({})` | `this` | Add EJS template data |
 | `.replaceKeyFromFile(key, path)` | `this` | Add raw file content as EJS template data |
 | `.message()` | `Promise<string>` | Get text response |

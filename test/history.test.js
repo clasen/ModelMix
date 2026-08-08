@@ -463,7 +463,7 @@ describe('Conversation History Tests', () => {
             const model = ModelMix.new({
                 config: { debug: false, max_history: 10 }
             });
-            model.opus5();
+            model.opus50();
 
             model.addText('Capital of France?');
             nock('https://api.anthropic.com')
@@ -522,7 +522,7 @@ describe('Conversation History Tests', () => {
             const model = ModelMix.new({
                 config: { debug: false, max_history: 10 }
             });
-            model.effort(100).opus5();
+            model.effort(100).opus50();
 
             model.addText('2+2?');
             nock('https://api.anthropic.com')

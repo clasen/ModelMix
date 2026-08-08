@@ -49,7 +49,7 @@ try { process.loadEnvFile(); } catch {}
 
 // Get structured JSON responses
 const model = ModelMix.new()
-    .opus5() // Anthropic claude-opus-5
+    .opus50() // Anthropic claude-opus-5
     .addText("Name and capital of 3 South American countries.");
 
 const outputExample = { countries: [{ name: "", capital: "" }] };
@@ -107,7 +107,7 @@ Control reasoning depth with one ModelMix policy value (`-1` adaptive, or `0`–
 
 ```javascript
 // In config (ModelMix.new or per-model shorthand)
-ModelMix.new({ config: { effort: 50 } }).opus5().addText('...').message();
+ModelMix.new({ config: { effort: 50 } }).opus50().addText('...').message();
 ModelMix.new().deepseekV4Flash({ config: { effort: 100 } }).addText('...').message();
 
 // Fluent
@@ -179,8 +179,8 @@ Here's a comprehensive list of available methods:
 | `gpt41mini()`       | OpenAI     | gpt-4.1-mini                 | [\$0.40 / \$1.60][1]       |
 | `gpt41nano()`       | OpenAI     | gpt-4.1-nano                 | [\$0.10 / \$0.40][1]       |
 | `gptOss()`          | Together   | gpt-oss-120B                 | [\$0.15 / \$0.60][7]       |
-| `fable5()`          | Anthropic  | claude-fable-5               | [\$10.00 / \$50.00][2]     |
-| `opus5()`           | Anthropic  | claude-opus-5                | [\$5.00 / \$25.00][2]      |
+| `fable50()`         | Anthropic  | claude-fable-5               | [\$10.00 / \$50.00][2]     |
+| `opus50()`          | Anthropic  | claude-opus-5                | [\$5.00 / \$25.00][2]      |
 | `opus48()`          | Anthropic  | claude-opus-4-8              | [\$5.00 / \$25.00][2]      |
 | `opus47()`          | Anthropic  | claude-opus-4-7              | [\$5.00 / \$25.00][2]      |
 | `opus46()`          | Anthropic  | claude-opus-4-6              | [\$5.00 / \$25.00][2]      |
@@ -211,6 +211,8 @@ Here's a comprehensive list of available methods:
 | `kimiK3()`          | Moonshot   | kimi-k3                      | [\$3.00 / \$15.00][11]     |
 | `kimiK25()`         | Together   | Kimi-K2.5                    | [\$0.50 / \$2.80][7]       |
 | `kimiK26()`         | Fireworks  | models/kimi-k2p6             | [\$0.95 / \$4.00][10]      |
+
+`fable5()` and `opus5()` remain available as compatibility aliases for `fable50()` and `opus50()`.
 
 [1]: https://platform.openai.com/docs/pricing "Pricing | OpenAI"
 [2]: https://docs.anthropic.com/en/docs/about-claude/pricing "Pricing - Anthropic"
@@ -594,12 +596,29 @@ Every response from `raw()` now includes a `tokens` object with the following st
 ```javascript
 {
   tokens: {
-    input: 150,    // Number of tokens in the prompt/input
-    output: 75,    // Number of tokens in the completion/output
-    total: 225,    // Total tokens used (input + output)
-    cached: 100,   // Cached input tokens reported by the provider (0 when absent)
-    cost: 0.0012,  // Estimated cost in USD (null if model not in pricing table)
-    speed: 42      // Output tokens per second (int)
+    input: 1200,          // Total input tokens, including cache reads and writes
+    output: 50,           // Number of output tokens
+    total: 1250,          // Total tokens used
+    cached: 1024,         // Input tokens read from cache
+    cacheWrite: 0,        // Input tokens written to cache
+    cacheWrite5m: 0,      // Anthropic writes using the 5-minute TTL
+    cacheWrite1h: 0,      // Anthropic writes using the 1-hour TTL
+    uncachedInput: 176,   // max(0, input - cached - cacheWrite)
+    cacheHitRate: 0.8533, // cached / input, rounded to 4 decimals
+    cacheSavings: 0.00018432, // USD saved by cache reads
+    cacheWritePremium: 0, // Extra USD paid to write this cache entry
+    breakEvenHits: 0,     // Full future hits needed to recover that premium
+    cost: 0.00011568,     // Total estimated cost in USD
+    costBreakdown: {
+      uncachedInput: 0.0000352,
+      cachedInput: 0.00002048,
+      cacheWrite: 0,
+      cacheWrite5m: 0,
+      cacheWrite1h: 0,
+      output: 0.00006,
+      total: 0.00011568
+    },
+    speed: 42             // Output tokens per second (int)
   }
 }
 ```
@@ -611,10 +630,66 @@ After calling `message()` or `json()`, use `lastRaw` to access the complete resp
 ```javascript
 const text = await model.message();
 console.log(model.lastRaw.tokens);
-// { input: 122, output: 86, total: 208, cached: 41, cost: 0.000319, speed: 38 }
+// Same normalized token and cost structure returned by raw()
 ```
 
-The `cached` field is a single aggregated count of cached input tokens reported by the provider. The `cost` field is the estimated cost in USD based on the model's pricing per 1M tokens (input/output). If the model is not found in the pricing table, `cost` will be `null`. The `speed` field is the generation speed measured in output tokens per second (integer).
+`cached` aggregates cache reads reported by the provider, while `cacheWrite` aggregates cache writes. Anthropic additionally exposes `cacheWrite5m` and `cacheWrite1h` because those writes cost 1.25× and 2× the normal input rate, respectively. `cacheSavings` compares cache reads with the normal input rate, `cacheWritePremium` compares writes with that rate, and `breakEvenHits` estimates how many complete future hits recover the current write premium. For Anthropic, `input` is normalized to include uncached input, cache reads, and cache writes. Missing usage or pricing categories return `0`. The `speed` field is the generation speed measured in output tokens per second (integer).
+
+### GPT-5.6 prompt caching
+
+GPT-5.6 supports implicit or explicit caching through `prompt_cache_options`. Put the explicit breakpoint at the end of the stable prefix; the provider only caches prompts with at least 1,024 tokens.
+
+```javascript
+const model = ModelMix.new()
+  .gpt56luna({
+    options: {
+      prompt_cache_key: 'support-agent-v1',
+      prompt_cache_options: { mode: 'explicit', ttl: '30m' }
+    }
+  })
+  .addText(longStableInstructions, {
+    cache: { breakpoint: true }
+  })
+  .addText('Answer this variable request.');
+
+const result = await model.raw();
+console.log(result.tokens.cached, result.tokens.cacheWrite, result.tokens.cost);
+```
+
+The provider-neutral `cache: { breakpoint: true }` option is accepted by `addTextFromFile()`, `addImage()`, `addImageFromUrl()`, and `addImageFromBuffer()`. Responses-native `input_text`, `input_image`, and `input_file` blocks preserve the native `prompt_cache_breakpoint` field when supplied directly through `options.messages`.
+
+GPT-5.6 uses `prompt_cache_options.ttl`; `prompt_cache_retention` remains available for earlier OpenAI models. ModelMix rejects the incompatible control instead of silently dropping it. For GPT-5.6 requests over 272K input tokens, the cost calculation applies the documented 2× input and 1.5× output multipliers to the complete request, including cache reads and writes.
+
+GPT-5.6 prices per 1M tokens:
+
+| Model | Input | Cached input | Cache write | Output |
+| --- | ---: | ---: | ---: | ---: |
+| `gpt-5.6-sol` | $5.00 | $0.50 | $6.25 | $30.00 |
+| `gpt-5.6-terra` | $2.00 | $0.20 | $2.50 | $12.00 |
+| `gpt-5.6-luna` | $0.20 | $0.02 | $0.25 | $1.20 |
+
+### Cross-provider cache fallback
+
+Neutral breakpoints are translated at the last moment by each provider adapter. Native request policies remain scoped to their model, so they cannot leak into a fallback request:
+
+```javascript
+const model = ModelMix.new()
+  .gpt56luna({
+    options: {
+      prompt_cache_key: 'support-agent-v1',
+      prompt_cache_options: { mode: 'explicit', ttl: '30m' }
+    }
+  })
+  .haiku45({
+    options: {
+      cache_control: { type: 'ephemeral', ttl: '1h' }
+    }
+  })
+  .addText(longStableInstructions, { cache: { breakpoint: true } })
+  .addText('Answer this variable request.');
+```
+
+GPT-5.6 receives `prompt_cache_breakpoint`; Anthropic receives `cache_control`; older OpenAI models and providers without an equivalent omit the marker. When a neutral explicit breakpoint is present for Anthropic, its model-scoped `cache_control` becomes that block's policy instead of adding an automatic breakpoint after the variable suffix.
 
 ## 🐛 Enabling Debug Mode
 
@@ -728,10 +803,10 @@ new ModelMix(args = { options: {}, config: {} })
 
 - `setSystem(text)`: Sets the system prompt.
 - `setSystemFromFile(filePath)`: Sets the system prompt from a file.
-- `addText(text, config = { role: "user" })`: Adds a text message.
-- `addTextFromFile(filePath, config = { role: "user" })`: Adds a text message from a file.
-- `addImage(filePath, config = { role: "user" })`: Adds an image message from a file path.
-- `addImageFromUrl(url, config = { role: "user" })`: Adds an image message from URL.
+- `addText(text, config = { role: "user", cache? })`: Adds a text message.
+- `addTextFromFile(filePath, config = { role: "user", cache? })`: Adds a text message from a file.
+- `addImage(filePath, config = { role: "user", cache? })`: Adds an image message from a file path.
+- `addImageFromUrl(url, config = { role: "user", cache? })`: Adds an image message from URL.
 - `replace(keyValues)`: Adds EJS data for messages and system prompts.
 - `replaceKeyFromFile(key, filePath)`: Adds raw file contents as an EJS data value.
 - `message()`: Sends the message and returns the response.
@@ -739,7 +814,7 @@ new ModelMix(args = { options: {}, config: {} })
   - `message`: The text response from the model
   - `think`: Reasoning/thinking content (if available)
   - `toolCalls`: Array of tool calls made by the model (if any)
-  - `tokens`: Object with `input`, `output`, `total`, and `cached` token counts, plus `cost` (USD) and `speed` (output tokens/sec)
+  - `tokens`: Normalized token counts (`input`, `output`, `total`, `cached`, `cacheWrite`, `cacheWrite5m`, `cacheWrite1h`, `uncachedInput`, `cacheHitRate`), cache economics (`cacheSavings`, `cacheWritePremium`, `breakEvenHits`), plus `cost`, `costBreakdown` (USD), and `speed` (output tokens/sec)
   - `response`: The raw API response
 - `stream(callback)`: Sends the message and streams the response, invoking the callback with each streamed part.
 - `json(schemaExample, descriptions = {}, options = {})`: Forces the model to return a response in a specific JSON format.

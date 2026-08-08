@@ -60,8 +60,8 @@ describe('Live MCP Integration Tests', function () {
 
     describe('Basic MCP Tool Integration', function () {
 
-        it('should use custom MCP tools with GPT-5.4', async function () {
-            const model = ModelMix.new(setup).gpt54();
+        it('should use custom MCP tools with GPT-5.6 Luna', async function () {
+            const model = ModelMix.new(setup).gpt56luna();
 
             // Add custom calculator tool
             model.addTool({
@@ -91,14 +91,14 @@ describe('Live MCP Integration Tests', function () {
             model.addText('What is 15 * 23?');
 
             const response = await model.message();
-            console.log(`GPT-4.1 with MCP tools: ${response}`);
+            console.log(`GPT-5.6 Luna with MCP tools: ${response}`);
 
             expect(response).to.be.a('string');
             expect(response).to.include('345');
         });
 
-        it('should use custom MCP tools with Claude Sonnet 4.6', async function () {
-            const model = ModelMix.new(setup).sonnet46();
+        it('should use custom MCP tools with Claude Sonnet 5', async function () {
+            const model = ModelMix.new(setup).sonnet5();
 
             // Add time tool
             model.addTool({
@@ -141,7 +141,7 @@ describe('Live MCP Integration Tests', function () {
 
         it('should use custom MCP tools with Claude Opus 5', async function () {
             // Opus 5 rejects temperature; MixAnthropic strips it on request.
-            const model = ModelMix.new({ config: setup.config }).opus5();
+            const model = ModelMix.new({ config: setup.config }).opus50();
 
             model.addTool({
                 name: "get_current_time",
@@ -296,8 +296,8 @@ describe('Live MCP Integration Tests', function () {
             expect(response).to.match(/[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}/i);
         });
 
-        it('should use MCP tools with GPT-5 Mini', async function () {
-            const model = ModelMix.new(setup).gpt5mini();
+        it('should use MCP tools with GPT-5.6 Luna', async function () {
+            const model = ModelMix.new(setup).gpt56luna();
 
             // Add data formatting tool
             model.addTool({
@@ -337,7 +337,7 @@ describe('Live MCP Integration Tests', function () {
             model.addText('Format this data as JSON: "apple, banana, cherry, date"');
 
             const response = await model.message();
-            console.log(`GPT-4.1 Mini with MCP tools: ${response}`);
+            console.log(`GPT-5.6 Luna with MCP tools: ${response}`);
 
             expect(response).to.be.a('string');
             expect(response).to.include('apple');
@@ -348,8 +348,8 @@ describe('Live MCP Integration Tests', function () {
 
     describe('MCP Tools with JSON Output', function () {
 
-        it('should combine MCP tools with JSON output using GPT-4.1 Nano', async function () {
-            const model = ModelMix.new(setup).gpt41nano();
+        it('should combine MCP tools with JSON output using GPT-5.6 Luna', async function () {
+            const model = ModelMix.new(setup).gpt56luna();
 
             // Add calculation tool
             model.addTool({
@@ -400,7 +400,7 @@ describe('Live MCP Integration Tests', function () {
                 calculations: []
             });
 
-            console.log(`GPT-4.1 Nano with MCP tools JSON result:`, JSON.stringify(result, null, 2));
+            console.log(`GPT-5.6 Luna with MCP tools JSON result:`, JSON.stringify(result, null, 2));
 
             expect(result).to.be.an('object');
             expect(result.sqrt_result).to.equal(12);
@@ -459,8 +459,8 @@ describe('Live MCP Integration Tests', function () {
 
     describe('MCP Tools Error Handling', function () {
 
-        it('should handle MCP tool errors gracefully with GPT-5 Nano', async function () {
-            const model = ModelMix.new(setup).gpt5nano();
+        it('should handle MCP tool errors gracefully with GPT-5.6 Luna', async function () {
+            const model = ModelMix.new(setup).gpt56luna();
 
             // Add tool that can fail
             model.addTool({
@@ -487,7 +487,7 @@ describe('Live MCP Integration Tests', function () {
             model.addText('Try the risky operation with should_fail set to true, then explain what happened.');
 
             const response = await model.message();
-            console.log(`GPT-5 Nano with error handling: ${response}`);
+            console.log(`GPT-5.6 Luna with error handling: ${response}`);
 
             expect(response).to.be.a('string');
             expect(response.toLowerCase()).to.match(/(error|fail|problem|issue)/);
@@ -534,9 +534,9 @@ describe('Live MCP Integration Tests', function () {
 
         it('should work with same MCP tools across different OpenAI models', async function () {
             const models = [
-                { name: 'GPT-5 Mini', model: ModelMix.new(setup).gpt5mini() },
-                { name: 'GPT-5 Nano', model: ModelMix.new(setup).gpt5nano() },
-                { name: 'GPT-5.2', model: ModelMix.new(setup).gpt52() }
+                { name: 'GPT-5.6 Luna', model: ModelMix.new(setup).gpt56luna() },
+                { name: 'GPT-5.6 Terra', model: ModelMix.new(setup).gpt56terra() },
+                { name: 'GPT-5.6 Sol', model: ModelMix.new(setup).gpt56sol() }
             ];
 
             const results = [];
@@ -559,8 +559,8 @@ describe('Live MCP Integration Tests', function () {
 
         it('should work with same MCP tools across different Anthropic models', async function () {
             const models = [
-                { name: 'Opus 5', model: ModelMix.new({ config: setup.config }).opus5() },
-                { name: 'Sonnet 4.6', model: ModelMix.new(setup).sonnet46() },
+                { name: 'Opus 5', model: ModelMix.new({ config: setup.config }).opus50() },
+                { name: 'Sonnet 5', model: ModelMix.new(setup).sonnet5() },
                 { name: 'Haiku 4.5', model: ModelMix.new(setup).haiku45() }
             ];
 

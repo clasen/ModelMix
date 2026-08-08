@@ -69,6 +69,97 @@ describe('Provider Fallback Chain Tests', () => {
             expect(response).to.include('Hello from Claude Sonnet 4!');
         });
 
+        it('should translate neutral cache breakpoints independently across providers', async () => {
+            let openAIRequest;
+            let anthropicRequest;
+            model
+                .gpt56luna({
+                    options: {
+                        prompt_cache_key: 'shared-prefix',
+                        prompt_cache_options: { mode: 'explicit', ttl: '30m' }
+                    }
+                })
+                .haiku45({
+                    options: {
+                        cache_control: { type: 'ephemeral', ttl: '1h' }
+                    }
+                })
+                .addText('Stable prefix', { cache: { breakpoint: true } })
+                .addText('Variable request');
+
+            nock('https://api.openai.com')
+                .post('/v1/responses', body => {
+                    openAIRequest = body;
+                    return true;
+                })
+                .reply(500, { error: 'Server error' });
+
+            nock('https://api.anthropic.com')
+                .post('/v1/messages', body => {
+                    anthropicRequest = body;
+                    return true;
+                })
+                .reply(200, {
+                    content: [{ type: 'text', text: 'Cached fallback response' }],
+                    usage: { input_tokens: 2, output_tokens: 3 }
+                });
+
+            const response = await model.message();
+
+            expect(response).to.equal('Cached fallback response');
+            expect(openAIRequest.prompt_cache_options).to.deep.equal({ mode: 'explicit', ttl: '30m' });
+            expect(openAIRequest.input[1].content[0].prompt_cache_breakpoint).to.deep.equal({ mode: 'explicit' });
+            expect(openAIRequest.input[1].content[0]).to.not.have.property('cache');
+            expect(anthropicRequest).to.not.have.property('prompt_cache_options');
+            expect(anthropicRequest).to.not.have.property('prompt_cache_key');
+            expect(anthropicRequest).to.not.have.property('cache_control');
+            expect(anthropicRequest.messages[0].content[0]).to.deep.equal({
+                type: 'text',
+                text: 'Stable prefix',
+                cache_control: { type: 'ephemeral', ttl: '1h' }
+            });
+            expect(anthropicRequest.messages[0].content[1]).to.deep.equal({
+                type: 'text',
+                text: 'Variable request'
+            });
+        });
+
+        it('should preserve neutral cache metadata after an older OpenAI fallback attempt', async () => {
+            let openAIRequest;
+            let anthropicRequest;
+            model
+                .gpt5mini()
+                .haiku45({ options: { cache_control: { type: 'ephemeral' } } })
+                .addText('Stable prefix', { cache: { breakpoint: true } })
+                .addText('Variable request');
+
+            nock('https://api.openai.com')
+                .post('/v1/chat/completions', body => {
+                    openAIRequest = body;
+                    return true;
+                })
+                .reply(500, { error: 'Server error' });
+
+            nock('https://api.anthropic.com')
+                .post('/v1/messages', body => {
+                    anthropicRequest = body;
+                    return true;
+                })
+                .reply(200, {
+                    content: [{ type: 'text', text: 'Fallback preserved cache' }],
+                    usage: { input_tokens: 2, output_tokens: 3 }
+                });
+
+            const response = await model.message();
+
+            expect(response).to.equal('Fallback preserved cache');
+            expect(openAIRequest.messages[1].content[0]).to.not.have.property('cache');
+            expect(openAIRequest.messages[1].content[0]).to.not.have.property('cache_control');
+            expect(anthropicRequest.messages[0].content[0].cache_control).to.deep.equal({
+                type: 'ephemeral'
+            });
+        });
+
         it('should cascade through multiple fallbacks', async () => {
             model.gpt5mini().sonnet46().gemini3flash().addText('Hello');
 

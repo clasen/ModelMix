@@ -25,7 +25,9 @@ const {
     normalizeEffort,
     applyUnifiedEffort,
     resolveProviderFamily,
-    resolveGrok420ModelKey
+    resolveGrok420ModelKey,
+    GROK420_REASONING,
+    GROK420_NON_REASONING
 } = require('./effort');
 
 const DEFAULT_RETRYABLE_STATUS_CODES = [408, 425, 429, 500, 502, 503, 504, 529];
@@ -38,12 +40,38 @@ function sleep(ms) {
     return new Promise(resolve => setTimeout(resolve, ms));
 }
 
+function isPlainObject(value) {
+    if (!value || typeof value !== 'object' || Array.isArray(value)) return false;
+    const prototype = Object.getPrototypeOf(value);
+    return prototype === Object.prototype || prototype === null;
+}
+
+function normalizeContentCache(cache) {
+    if (cache !== undefined) {
+        if (!isPlainObject(cache) || cache.breakpoint !== true) {
+            throw new TypeError('cache must be { breakpoint: true }.');
+        }
+        return { breakpoint: true };
+    }
+    return undefined;
+}
+
+function stripContentCacheMetadata(content) {
+    if (!content || typeof content !== 'object') return content;
+    const sanitized = { ...content };
+    delete sanitized.cache;
+    delete sanitized.cache_control;
+    delete sanitized.prompt_cache_breakpoint;
+    return sanitized;
+}
+
+function hasNeutralCacheBreakpoint(messages = []) {
+    return messages.some(message => Array.isArray(message?.content)
+        && message.content.some(block => block?.cache?.breakpoint === true));
+}
+
 function validateTemplateData(value) {
-    const prototype = value && typeof value === 'object'
-        ? Object.getPrototypeOf(value)
-        : null;
-    if (!value || typeof value !== 'object' || Array.isArray(value)
-        || (prototype !== Object.prototype && prototype !== null)) {
+    if (!isPlainObject(value)) {
         throw new TypeError('Template data must be a plain non-null object.');
     }
     if (Object.prototype.hasOwnProperty.call(value, '$mix')) {
@@ -213,102 +241,108 @@ function redactSecret(value, secret, seen = new WeakSet()) {
     );
 }
 
-// Pricing per 1M tokens: [input, output] in USD
+// Pricing per 1M tokens in USD
 // Based on provider pricing pages linked in README
+const GPT56_LONG_CONTEXT_PRICING = Object.freeze({
+    inputThreshold: 272_000,
+    inputMultiplier: 2,
+    outputMultiplier: 1.5
+});
+
 const MODEL_PRICING = {
     // OpenAI
-    'gpt-realtime-mini': [0.60, 2.40],
-    'gpt-realtime': [4.00, 16.00],
-    'gpt-5.6-sol': [5.00, 30.00],
-    'gpt-5.6-terra': [2.00, 12.00],
-    'gpt-5.6-luna': [0.20, 1.20],
-    'gpt-5.5-pro': [30.00, 180.00],
-    'gpt-5.5': [5.00, 30.00],
-    'gpt-5.4': [2.50, 15.00],
-    'gpt-5.4-pro': [30, 180.00],
-    'gpt-5.4-mini': [0.75, 4.50],
-    'gpt-5.4-nano': [0.20, 1.25],
-    'gpt-5.3-codex': [1.75, 14.00],
-    'gpt-5.2': [1.75, 14.00],
-    'gpt-5.2-chat-latest': [1.75, 14.00],
-    'gpt-5.1': [1.25, 10.00],
-    'gpt-5': [1.25, 10.00],
-    'gpt-5-mini': [0.25, 2.00],
-    'gpt-5-nano': [0.05, 0.40],
-    'gpt-4.1': [2.00, 8.00],
-    'gpt-4.1-mini': [0.40, 1.60],
-    'gpt-4.1-nano': [0.10, 0.40],
+    'gpt-realtime-mini': { input: 0.60, cachedInput: 0.06, output: 2.40 },
+    'gpt-realtime': { input: 4.00, cachedInput: 0.40, output: 16.00 },
+    'gpt-5.6-sol': { input: 5.00, cachedInput: 0.50, cacheWrite: 6.25, output: 30.00, longContext: GPT56_LONG_CONTEXT_PRICING },
+    'gpt-5.6-terra': { input: 2.00, cachedInput: 0.20, cacheWrite: 2.50, output: 12.00, longContext: GPT56_LONG_CONTEXT_PRICING },
+    'gpt-5.6-luna': { input: 0.20, cachedInput: 0.02, cacheWrite: 0.25, output: 1.20, longContext: GPT56_LONG_CONTEXT_PRICING },
+    'gpt-5.5-pro': { input: 30.00, output: 180.00 },
+    'gpt-5.5': { input: 5.00, cachedInput: 0.50, output: 30.00 },
+    'gpt-5.4': { input: 2.50, cachedInput: 0.25, output: 15.00 },
+    'gpt-5.4-pro': { input: 30.00, output: 180.00 },
+    'gpt-5.4-mini': { input: 0.75, cachedInput: 0.075, output: 4.50 },
+    'gpt-5.4-nano': { input: 0.20, cachedInput: 0.02, output: 1.25 },
+    'gpt-5.3-codex': { input: 1.75, cachedInput: 0.175, output: 14.00 },
+    'gpt-5.2': { input: 1.75, cachedInput: 0.175, output: 14.00 },
+    'gpt-5.2-chat-latest': { input: 1.75, cachedInput: 0.175, output: 14.00 },
+    'gpt-5.1': { input: 1.25, cachedInput: 0.125, output: 10.00 },
+    'gpt-5': { input: 1.25, cachedInput: 0.125, output: 10.00 },
+    'gpt-5-mini': { input: 0.25, cachedInput: 0.025, output: 2.00 },
+    'gpt-5-nano': { input: 0.05, cachedInput: 0.005, output: 0.40 },
+    'gpt-4.1': { input: 2.00, cachedInput: 0.50, output: 8.00 },
+    'gpt-4.1-mini': { input: 0.40, cachedInput: 0.10, output: 1.60 },
+    'gpt-4.1-nano': { input: 0.10, cachedInput: 0.025, output: 0.40 },
     // gptOss (Together/Groq/Cerebras/OpenRouter)
-    'openai/gpt-oss-120b': [0.15, 0.60],
-    'gpt-oss-120b': [0.15, 0.60],
-    'openai/gpt-oss-120b:free': [0, 0],
+    'openai/gpt-oss-120b': { input: 0.15, output: 0.60 },
+    'gpt-oss-120b': { input: 0.15, output: 0.60 },
+    'openai/gpt-oss-120b:free': { input: 0, output: 0 },
     // Anthropic
-    'claude-fable-5': [10.00, 50.00],
-    'claude-opus-5': [5.00, 25.00],
-    'claude-sonnet-5': [3.00, 15.00],
-    'claude-opus-4-8': [5.00, 25.00],
-    'claude-opus-4-7': [5.00, 25.00],
-    'claude-opus-4-6': [5.00, 25.00],
-    'claude-sonnet-4-6': [3.00, 15.00],
-    'claude-sonnet-4-5-20250929': [3.00, 15.00],
-    'claude-haiku-4-5-20251001': [1.00, 5.00],
+    'claude-fable-5': { input: 10.00, cachedInput: 1.00, cacheWrite: 12.50, cacheWrite1h: 20.00, output: 50.00 },
+    'claude-opus-5': { input: 5.00, cachedInput: 0.50, cacheWrite: 6.25, cacheWrite1h: 10.00, output: 25.00 },
+    'claude-sonnet-5': { input: 3.00, cachedInput: 0.30, cacheWrite: 3.75, cacheWrite1h: 6.00, output: 15.00 },
+    'claude-opus-4-8': { input: 5.00, cachedInput: 0.50, cacheWrite: 6.25, cacheWrite1h: 10.00, output: 25.00 },
+    'claude-opus-4-7': { input: 5.00, cachedInput: 0.50, cacheWrite: 6.25, cacheWrite1h: 10.00, output: 25.00 },
+    'claude-opus-4-6': { input: 5.00, cachedInput: 0.50, cacheWrite: 6.25, cacheWrite1h: 10.00, output: 25.00 },
+    'claude-sonnet-4-6': { input: 3.00, cachedInput: 0.30, cacheWrite: 3.75, cacheWrite1h: 6.00, output: 15.00 },
+    'claude-sonnet-4-5-20250929': { input: 3.00, cachedInput: 0.30, cacheWrite: 3.75, cacheWrite1h: 6.00, output: 15.00 },
+    'claude-haiku-4-5-20251001': { input: 1.00, cachedInput: 0.10, cacheWrite: 1.25, cacheWrite1h: 2.00, output: 5.00 },
     // Google
-    'gemini-3.1-pro-preview':[2.00, 12.00],
-    'gemini-3-pro-preview': [2.00, 12.00],
-    'gemini-3-flash-preview': [0.50, 3.00],
-    'gemini-3.6-flash': [1.50, 7.50],
-    'gemini-3.5-flash': [0.75, 4.50],
-    'gemini-3.5-flash-lite': [0.30, 2.50],
-    'gemini-2.5-pro': [1.25, 10.00],
-    'gemini-2.5-flash': [0.30, 2.50],
-    'gemini-3.1-flash-lite-preview': [0.25, 1.50],
+    'gemini-3.1-pro-preview': { input: 2.00, output: 12.00 },
+    'gemini-3-pro-preview': { input: 2.00, output: 12.00 },
+    'gemini-3-flash-preview': { input: 0.50, output: 3.00 },
+    'gemini-3.6-flash': { input: 1.50, output: 7.50 },
+    'gemini-3.5-flash': { input: 0.75, output: 4.50 },
+    'gemini-3.5-flash-lite': { input: 0.30, output: 2.50 },
+    'gemini-2.5-pro': { input: 1.25, output: 10.00 },
+    'gemini-2.5-flash': { input: 0.30, output: 2.50 },
+    'gemini-3.1-flash-lite-preview': { input: 0.25, output: 1.50 },
     // Grok
-    'grok-4.5': [2.00, 6.00],
-    'grok-4.3': [1.25, 2.50],
-    'grok-4.20-multi-agent-0309': [1.25, 2.50],
-    'grok-4.20-0309': [1.25, 2.50],
-    'grok-4.20-0309-reasoning': [1.25, 2.50],
-    'grok-4.20-0309-non-reasoning': [1.25, 2.50],
+    'grok-4.5': { input: 2.00, output: 6.00 },
+    'grok-4.3': { input: 1.25, output: 2.50 },
+    'grok-4.20-multi-agent-0309': { input: 1.25, output: 2.50 },
+    'grok-4.20-0309': { input: 1.25, output: 2.50 },
+    'grok-4.20-0309-reasoning': { input: 1.25, output: 2.50 },
+    'grok-4.20-0309-non-reasoning': { input: 1.25, output: 2.50 },
     // Fireworks
-    'accounts/fireworks/models/deepseek-v4-flash': [0.14, 0.28],
-    'accounts/fireworks/models/deepseek-v4-pro': [1.74, 3.48],
-    'deepseek-ai/DeepSeek-V4-Flash': [0.14, 0.28],
-    'deepseek-ai/DeepSeek-V4-Pro': [2.10, 4.40],
-    'deepseek/deepseek-v4-flash': [0.09, 0.18],
-    'accounts/fireworks/models/glm-4p7': [0.55, 2.19],
-    'accounts/fireworks/models/glm-5p1': [1.05, 3.50],
-    'zai-org/GLM-5.2': [1.40, 4.40],
-    'accounts/fireworks/models/kimi-k2p5': [0.50, 2.80],
-    'accounts/fireworks/models/qwen3p6-plus': [0.50, 3.00],
-    'Qwen/Qwen3.6-Plus': [0.50, 3.00],
-    'accounts/fireworks/models/qwen3p7-plus': [0.40, 1.60],
-    'qwen/qwen3.7-plus': [0.32, 1.28],
-    'qwen/qwen3.8-max': [2.00, 6.00],
+    'accounts/fireworks/models/deepseek-v4-flash': { input: 0.14, output: 0.28 },
+    'accounts/fireworks/models/deepseek-v4-pro': { input: 1.74, output: 3.48 },
+    'deepseek-ai/DeepSeek-V4-Flash': { input: 0.14, output: 0.28 },
+    'deepseek-ai/DeepSeek-V4-Pro': { input: 2.10, output: 4.40 },
+    'deepseek/deepseek-v4-flash': { input: 0.09, output: 0.18 },
+    'accounts/fireworks/models/glm-4p7': { input: 0.55, output: 2.19 },
+    'accounts/fireworks/models/glm-5p1': { input: 1.05, output: 3.50 },
+    'zai-org/GLM-5.2': { input: 1.40, output: 4.40 },
+    'accounts/fireworks/models/kimi-k2p5': { input: 0.50, output: 2.80 },
+    'accounts/fireworks/models/qwen3p6-plus': { input: 0.50, output: 3.00 },
+    'Qwen/Qwen3.6-Plus': { input: 0.50, output: 3.00 },
+    'accounts/fireworks/models/qwen3p7-plus': { input: 0.40, output: 1.60 },
+    'qwen/qwen3.7-plus': { input: 0.32, output: 1.28 },
+    'qwen/qwen3.8-max': { input: 2.00, output: 6.00 },
     // MiniMax
-    'MiniMax-M2.5': [0.30, 1.20],
-    'MiniMax-M2.7': [0.30, 1.20],
-    'MiniMax-M3': [0.30, 1.20],
-    'minimax/minimax-m2.7': [0.30, 1.20],
-    'minimax/minimax-m3': [0.30, 1.20],
-    'MiniMaxAI/MiniMax-M3': [0.30, 1.20],
+    'MiniMax-M2.5': { input: 0.30, output: 1.20 },
+    'MiniMax-M2.7': { input: 0.30, output: 1.20 },
+    'MiniMax-M3': { input: 0.30, output: 1.20 },
+    'minimax/minimax-m2.7': { input: 0.30, output: 1.20 },
+    'minimax/minimax-m3': { input: 0.30, output: 1.20 },
+    'MiniMaxAI/MiniMax-M3': { input: 0.30, output: 1.20 },
     // Perplexity
-    'sonar': [1.00, 1.00],
-    'sonar-pro': [3.00, 15.00],
+    'sonar': { input: 1.00, output: 1.00 },
+    'sonar-pro': { input: 3.00, output: 15.00 },
     // Hermes3 (Lambda/OpenRouter)
-    'Hermes-3-Llama-3.1-405B-FP8': [0.80, 0.80],
-    'nousresearch/hermes-3-llama-3.1-405b:free': [0, 0],
+    'Hermes-3-Llama-3.1-405B-FP8': { input: 0.80, output: 0.80 },
+    'nousresearch/hermes-3-llama-3.1-405b:free': { input: 0, output: 0 },
     // Qwen3 (Together/Cerebras)
-    'Qwen/Qwen3-235B-A22B-fp8-tput': [0.20, 0.60],
-    'qwen-3-32b': [0.20, 0.60],
+    'Qwen/Qwen3-235B-A22B-fp8-tput': { input: 0.20, output: 0.60 },
+    'qwen-3-32b': { input: 0.20, output: 0.60 },
     // Kimi K2.5 (Together/Fireworks/OpenRouter)
-    'moonshotai/Kimi-K2.5': [0.50, 2.80],
-    'moonshotai/kimi-k2.5': [0.50, 2.80],
+    'moonshotai/Kimi-K2.5': { input: 0.50, output: 2.80 },
+    'moonshotai/kimi-k2.5': { input: 0.50, output: 2.80 },
     // Kimi K3
-    'kimi-k3': [3.00, 15.00],
-    'moonshotai/kimi-k3': [3.00, 15.00],
+    'kimi-k3': { input: 3.00, output: 15.00 },
+    'moonshotai/kimi-k3': { input: 3.00, output: 15.00 },
     // GLM 4.7 (OpenRouter/Cerebras)
-    'z-ai/glm-4.7': [0.55, 2.19],
-    'zai-glm-4.7': [0.55, 2.19],
+    'z-ai/glm-4.7': { input: 0.55, output: 2.19 },
+    'zai-glm-4.7': { input: 0.55, output: 2.19 },
 };
 
 class ModelMix {
@@ -427,20 +461,163 @@ class ModelMix {
         return str.length > maxLen ? str.substring(0, maxLen) + '...' : str;
     }
 
-    static calculateCost(modelKey, tokens) {
+    static normalizeTokenUsage({ input = 0, output = 0, total, cached = 0, cacheWrite = 0, cacheWrite5m = 0, cacheWrite1h = 0 } = {}) {
+        const tokenCount = value => Number.isFinite(value) ? Math.max(0, value) : 0;
+        const normalizedInput = tokenCount(input);
+        const normalizedOutput = tokenCount(output);
+        const normalizedCached = tokenCount(cached);
+        const normalizedCacheWrite5m = tokenCount(cacheWrite5m);
+        const normalizedCacheWrite1h = tokenCount(cacheWrite1h);
+        const normalizedCacheWrite = Math.max(
+            tokenCount(cacheWrite),
+            normalizedCacheWrite5m + normalizedCacheWrite1h
+        );
+        const normalizedTotal = Number.isFinite(total)
+            ? Math.max(0, total)
+            : normalizedInput + normalizedOutput;
+        const uncachedInput = Math.max(0, normalizedInput - normalizedCached - normalizedCacheWrite);
+        const cacheHitRate = normalizedInput > 0
+            ? Number((normalizedCached / normalizedInput).toFixed(4))
+            : 0;
+
+        return {
+            input: normalizedInput,
+            output: normalizedOutput,
+            total: normalizedTotal,
+            cached: normalizedCached,
+            cacheWrite: normalizedCacheWrite,
+            cacheWrite5m: normalizedCacheWrite5m,
+            cacheWrite1h: normalizedCacheWrite1h,
+            uncachedInput,
+            cacheHitRate,
+            cacheSavings: 0,
+            cacheWritePremium: 0,
+            breakEvenHits: 0,
+            cost: 0,
+            costBreakdown: {
+                uncachedInput: 0,
+                cachedInput: 0,
+                cacheWrite: 0,
+                cacheWrite5m: 0,
+                cacheWrite1h: 0,
+                output: 0,
+                total: 0
+            }
+        };
+    }
+
+    static calculateCostBreakdown(modelKey, tokens) {
         const pricing = MODEL_PRICING[modelKey];
-        if (!pricing) return null;
-        const [inputPerMillion, outputPerMillion] = pricing;
-        return (tokens.input * inputPerMillion / 1_000_000) + (tokens.output * outputPerMillion / 1_000_000);
+        if (!pricing) return ModelMix.normalizeTokenUsage().costBreakdown;
+
+        const normalized = ModelMix.normalizeTokenUsage(tokens);
+        const longContext = pricing.longContext;
+        const useLongContextRates = longContext && normalized.input > longContext.inputThreshold;
+        const inputMultiplier = useLongContextRates ? longContext.inputMultiplier : 1;
+        const outputMultiplier = useLongContextRates ? longContext.outputMultiplier : 1;
+        const {
+            input: inputPerMillion,
+            cachedInput: cachedInputPerMillion = inputPerMillion,
+            cacheWrite: cacheWritePerMillion = inputPerMillion,
+            cacheWrite1h: cacheWrite1hPerMillion = cacheWritePerMillion,
+            output: outputPerMillion
+        } = pricing;
+        const roundCost = value => Number(value.toFixed(12));
+        const genericCacheWrite = Math.max(
+            0,
+            normalized.cacheWrite - normalized.cacheWrite5m - normalized.cacheWrite1h
+        );
+        const cacheWrite5mCost = roundCost(
+            normalized.cacheWrite5m * cacheWritePerMillion * inputMultiplier / 1_000_000
+        );
+        const cacheWrite1hCost = roundCost(
+            normalized.cacheWrite1h * cacheWrite1hPerMillion * inputMultiplier / 1_000_000
+        );
+        const genericCacheWriteCost = roundCost(
+            genericCacheWrite * cacheWritePerMillion * inputMultiplier / 1_000_000
+        );
+        const breakdown = {
+            uncachedInput: roundCost(normalized.uncachedInput * inputPerMillion * inputMultiplier / 1_000_000),
+            cachedInput: roundCost(normalized.cached * cachedInputPerMillion * inputMultiplier / 1_000_000),
+            cacheWrite: roundCost(genericCacheWriteCost + cacheWrite5mCost + cacheWrite1hCost),
+            cacheWrite5m: cacheWrite5mCost,
+            cacheWrite1h: cacheWrite1hCost,
+            output: roundCost(normalized.output * outputPerMillion * outputMultiplier / 1_000_000)
+        };
+        breakdown.total = roundCost(
+            breakdown.uncachedInput
+            + breakdown.cachedInput
+            + breakdown.cacheWrite
+            + breakdown.output
+        );
+        return breakdown;
+    }
+
+    static calculateCacheMetrics(modelKey, tokens) {
+        const pricing = MODEL_PRICING[modelKey];
+        const emptyMetrics = {
+            cacheSavings: 0,
+            cacheWritePremium: 0,
+            breakEvenHits: 0
+        };
+        if (!pricing) return emptyMetrics;
+
+        const normalized = ModelMix.normalizeTokenUsage(tokens);
+        const longContext = pricing.longContext;
+        const inputMultiplier = longContext && normalized.input > longContext.inputThreshold
+            ? longContext.inputMultiplier
+            : 1;
+        const cachedInputPerMillion = pricing.cachedInput ?? pricing.input;
+        const cacheWritePerMillion = pricing.cacheWrite ?? pricing.input;
+        const cacheWrite1hPerMillion = pricing.cacheWrite1h ?? cacheWritePerMillion;
+        const readSavingsPerMillion = Math.max(0, pricing.input - cachedInputPerMillion) * inputMultiplier;
+        const writePremiumPerMillion = Math.max(0, cacheWritePerMillion - pricing.input) * inputMultiplier;
+        const write1hPremiumPerMillion = Math.max(0, cacheWrite1hPerMillion - pricing.input) * inputMultiplier;
+        const roundCost = value => Number(value.toFixed(12));
+        const cacheSavings = roundCost(normalized.cached * readSavingsPerMillion / 1_000_000);
+        const genericCacheWrite = Math.max(
+            0,
+            normalized.cacheWrite - normalized.cacheWrite5m - normalized.cacheWrite1h
+        );
+        const cacheWritePremium = roundCost(
+            (
+                (genericCacheWrite + normalized.cacheWrite5m) * writePremiumPerMillion
+                + normalized.cacheWrite1h * write1hPremiumPerMillion
+            ) / 1_000_000
+        );
+        const fullHitSavings = normalized.cacheWrite * readSavingsPerMillion / 1_000_000;
+
+        return {
+            cacheSavings,
+            cacheWritePremium,
+            breakEvenHits: fullHitSavings > 0
+                ? Number((cacheWritePremium / fullHitSavings).toFixed(4))
+                : 0
+        };
+    }
+
+    static calculateCost(modelKey, tokens) {
+        if (!MODEL_PRICING[modelKey]) return null;
+        return ModelMix.calculateCostBreakdown(modelKey, tokens).total;
     }
 
     static extractCacheTokens(usage = {}) {
         return usage.input_tokens_details?.cached_tokens
-            || usage.prompt_tokens_details?.cached_tokens
-            || usage.cache_read_input_tokens
-            || usage.cachedContentTokenCount
-            || usage.cached_content_token_count
-            || 0;
+            ?? usage.prompt_tokens_details?.cached_tokens
+            ?? usage.cache_read_input_tokens
+            ?? usage.cachedContentTokenCount
+            ?? usage.cached_content_token_count
+            ?? 0;
+    }
+
+    static extractCacheWriteTokens(usage = {}) {
+        return usage.input_tokens_details?.cache_write_tokens
+            ?? usage.prompt_tokens_details?.cache_write_tokens
+            ?? usage.cache_creation_input_tokens
+            ?? usage.cache_write_input_tokens
+            ?? usage.cacheWriteTokenCount
+            ?? usage.cache_write_token_count
+            ?? 0;
     }
 
     static formatInputSummary(messages, system, debug = 2) {
@@ -574,11 +751,17 @@ class ModelMix {
         if (mix.openrouter) this.attach('openai/gpt-oss-120b:free', new MixOpenRouter({ options, config }));
         return this;
     }
-    fable5({ options = {}, config = {} } = {}) {
+    fable50({ options = {}, config = {} } = {}) {
         return this.attach('claude-fable-5', new MixAnthropic({ options, config }));
     }
-    opus5({ options = {}, config = {} } = {}) {
+    fable5(args = {}) {
+        return this.fable50(args);
+    }
+    opus50({ options = {}, config = {} } = {}) {
         return this.attach('claude-opus-5', new MixAnthropic({ options, config }));
+    }
+    opus5(args = {}) {
+        return this.opus50(args);
     }
     opus48({ options = {}, config = {} } = {}) {
         return this.attach('claude-opus-4-8', new MixAnthropic({ options, config }));
@@ -786,14 +969,19 @@ class ModelMix {
         return this;
     }
 
-    addText(text, { role = "user" } = {}) {
-        return this._addText(text, { role, template: { source: text, filename: null } });
+    addText(text, { role = "user", cache } = {}) {
+        return this._addText(text, {
+            role,
+            cache: normalizeContentCache(cache),
+            template: { source: text, filename: null }
+        });
     }
 
-    _addText(text, { role = "user", template = null } = {}) {
+    _addText(text, { role = "user", cache, template = null } = {}) {
         const content = [{
             type: "text",
-            text
+            text,
+            ...(cache !== undefined && { cache })
         }];
 
         if (template) {
@@ -803,11 +991,12 @@ class ModelMix {
         return this;
     }
 
-    addTextFromFile(filePath, { role = "user" } = {}) {
+    addTextFromFile(filePath, { role = "user", cache } = {}) {
         const filename = path.resolve(filePath);
         const content = this.readFile(filename);
         return this._addText(content, {
             role,
+            cache: normalizeContentCache(cache),
             template: { source: content, filename }
         });
     }
@@ -826,7 +1015,8 @@ class ModelMix {
         return this;
     }
 
-    addImageFromBuffer(buffer, { role = "user" } = {}) {
+    addImageFromBuffer(buffer, { role = "user", cache } = {}) {
+        const contentCache = normalizeContentCache(cache);
         this.messages.push({
             role,
             content: [{
@@ -834,19 +1024,21 @@ class ModelMix {
                 source: {
                     type: "buffer",
                     data: buffer
-                }
+                },
+                ...(contentCache !== undefined && { cache: contentCache })
             }]
         });
         return this;
     }
 
-    addImage(filePath, { role = "user" } = {}) {
+    addImage(filePath, { role = "user", cache } = {}) {
         const absolutePath = path.resolve(filePath);
 
         if (!fs.existsSync(absolutePath)) {
             throw new Error(`Image file not found: ${filePath}`);
         }
 
+        const contentCache = normalizeContentCache(cache);
         this.messages.push({
             role,
             content: [{
@@ -854,13 +1046,14 @@ class ModelMix {
                 source: {
                     type: "file",
                     data: filePath
-                }
+                },
+                ...(contentCache !== undefined && { cache: contentCache })
             }]
         });
         return this;
     }
 
-    addImageFromUrl(url, { role = "user" } = {}) {
+    addImageFromUrl(url, { role = "user", cache } = {}) {
         let source;
         if (url.startsWith('data:')) {
             // Parse data URL: data:image/jpeg;base64,/9j/4AAQ...
@@ -881,11 +1074,13 @@ class ModelMix {
             };
         }
 
+        const contentCache = normalizeContentCache(cache);
         this.messages.push({
             role,
             content: [{
                 type: "image",
-                source
+                source,
+                ...(contentCache !== undefined && { cache: contentCache })
             }]
         });
 
@@ -934,7 +1129,7 @@ class ModelMix {
 
                     // Update the content with processed image
                     message.content[j] = {
-                        type: "image",
+                        ...content,
                         source: {
                             type: "base64",
                             media_type: mimeType,
@@ -1343,7 +1538,16 @@ class ModelMix {
                     const elapsedMs = Date.now() - startTime;
 
                     if (result.tokens) {
-                        result.tokens.cost = ModelMix.calculateCost(resolvedModelKey, result.tokens);
+                        const normalizedTokens = ModelMix.normalizeTokenUsage(result.tokens);
+                        const costBreakdown = ModelMix.calculateCostBreakdown(resolvedModelKey, normalizedTokens);
+                        const cacheMetrics = ModelMix.calculateCacheMetrics(resolvedModelKey, normalizedTokens);
+                        result.tokens = {
+                            ...result.tokens,
+                            ...normalizedTokens,
+                            ...cacheMetrics,
+                            cost: MODEL_PRICING[resolvedModelKey] ? costBreakdown.total : 0,
+                            costBreakdown
+                        };
                         const elapsedSec = elapsedMs / 1000;
                         result.tokens.speed = elapsedSec > 0 ? Math.round(result.tokens.output / elapsedSec) : 0;
                     }
@@ -1674,6 +1878,13 @@ class MixCustom {
         return MixOpenAI.convertMessages(messages, config);
     }
 
+    sanitizeCacheOptions(options) {
+        delete options.cache_control;
+        delete options.prompt_cache_key;
+        delete options.prompt_cache_options;
+        delete options.prompt_cache_retention;
+    }
+
     static stripContentTypeHeader(headers = {}) {
         return stripContentTypeHeader(headers);
     }
@@ -1688,6 +1899,7 @@ class MixCustom {
 
     async create({ config = {}, options = {} } = {}) {
         try {
+            this.sanitizeCacheOptions(options);
             if (Array.isArray(options.messages)) {
                 options.messages = this.convertMessages(options.messages, config);
             }
@@ -1859,19 +2071,15 @@ class MixCustom {
     static extractTokens(data) {
         // OpenAI/Groq/Together/Lambda/Cerebras/Fireworks format
         if (data.usage) {
-            return {
+            return ModelMix.normalizeTokenUsage({
                 input: data.usage.prompt_tokens || 0,
                 output: data.usage.completion_tokens || 0,
-                total: data.usage.total_tokens || 0,
-                cached: ModelMix.extractCacheTokens(data.usage)
-            };
+                total: data.usage.total_tokens,
+                cached: ModelMix.extractCacheTokens(data.usage),
+                cacheWrite: ModelMix.extractCacheWriteTokens(data.usage)
+            });
         }
-        return {
-            input: 0,
-            output: 0,
-            total: 0,
-            cached: 0
-        };
+        return ModelMix.normalizeTokenUsage();
     }
 
     processResponse(response) {
@@ -1890,6 +2098,11 @@ class MixCustom {
 }
 
 class MixOpenAI extends MixCustom {
+    sanitizeCacheOptions(options) {
+        delete options.cache_control;
+        delete options.prompt_cache_options;
+    }
+
     getDefaultConfig(customConfig) {
 
         if (!process.env.OPENAI_API_KEY) {
@@ -1963,22 +2176,26 @@ class MixOpenAI extends MixCustom {
                 continue;
             }
 
+            let convertedMessage = { ...message };
             if (Array.isArray(message.content)) {
-                message.content = message.content.filter(content => content !== null && content !== undefined).map(content => {
-                    if (content && content.type === 'image') {
-                        const { media_type, data } = content.source;
-                        return {
-                            type: 'image_url',
-                            image_url: {
-                                url: `data:${media_type};base64,${data}`
-                            }
-                        };
-                    }
-                    return content;
-                });
+                convertedMessage = {
+                    ...message,
+                    content: message.content.filter(content => content !== null && content !== undefined).map(content => {
+                        if (content && content.type === 'image') {
+                            const { media_type, data } = content.source;
+                            return {
+                                type: 'image_url',
+                                image_url: {
+                                    url: `data:${media_type};base64,${data}`
+                                }
+                            };
+                        }
+                        return stripContentCacheMetadata(content);
+                    })
+                };
             }
 
-            results.push(message);
+            results.push(convertedMessage);
         }
 
         return results;
@@ -2038,10 +2255,14 @@ class MixOpenAIResponses extends MixOpenAI {
     }
 
     static buildResponsesRequest(options = {}, config = {}) {
-        const input = MixOpenAIResponses.messagesToResponsesInput(options.messages);
+        const isGPT56 = typeof options.model === 'string' && options.model.startsWith('gpt-5.6');
+        const input = MixOpenAIResponses.messagesToResponsesInput(options.messages, {
+            translateNeutralCache: isGPT56
+        });
         if (config.system) {
             input.unshift({ role: 'developer', content: [{ type: 'input_text', text: config.system }] });
         }
+        MixOpenAIResponses.validatePromptCaching(options, input);
         const request = {
             model: options.model,
             input,
@@ -2085,8 +2306,50 @@ class MixOpenAIResponses extends MixOpenAI {
         if (options.user !== undefined) request.user = options.user;
         if (options.prompt_cache_key !== undefined) request.prompt_cache_key = options.prompt_cache_key;
         if (options.prompt_cache_retention !== undefined) request.prompt_cache_retention = options.prompt_cache_retention;
+        if (options.prompt_cache_options !== undefined) request.prompt_cache_options = options.prompt_cache_options;
 
         return request;
+    }
+
+    static validatePromptCaching(options, input) {
+        const isGPT56 = typeof options.model === 'string' && options.model.startsWith('gpt-5.6');
+        const cacheOptions = options.prompt_cache_options;
+        const breakpoints = input.flatMap(message => Array.isArray(message.content)
+            ? message.content
+                .filter(block => block?.prompt_cache_breakpoint !== undefined)
+                .map(block => block.prompt_cache_breakpoint)
+            : []);
+
+        if (isGPT56 && options.prompt_cache_retention !== undefined) {
+            throw new Error('GPT-5.6 does not support prompt_cache_retention; use prompt_cache_options.ttl instead.');
+        }
+        if (!isGPT56 && cacheOptions !== undefined) {
+            throw new Error('prompt_cache_options is only supported by GPT-5.6 models.');
+        }
+        if (!isGPT56 && breakpoints.length > 0) {
+            throw new Error('prompt_cache_breakpoint is only supported by GPT-5.6 models.');
+        }
+        if (cacheOptions !== undefined) {
+            if (!isPlainObject(cacheOptions)) {
+                throw new TypeError('prompt_cache_options must be a plain non-null object.');
+            }
+            if (cacheOptions.mode !== undefined
+                && cacheOptions.mode !== 'implicit'
+                && cacheOptions.mode !== 'explicit') {
+                throw new TypeError('prompt_cache_options.mode must be "implicit" or "explicit".');
+            }
+            if (cacheOptions.ttl !== undefined && cacheOptions.ttl !== '30m') {
+                throw new TypeError('prompt_cache_options.ttl must be "30m".');
+            }
+        }
+        for (const breakpoint of breakpoints) {
+            if (!isPlainObject(breakpoint)) {
+                throw new TypeError('prompt_cache_breakpoint must be a plain non-null object.');
+            }
+            if (breakpoint.mode !== 'explicit') {
+                throw new TypeError('prompt_cache_breakpoint mode must be "explicit".');
+            }
+        }
     }
 
     static processResponsesResponse(response) {
@@ -2102,19 +2365,15 @@ class MixOpenAIResponses extends MixOpenAI {
 
     static extractResponsesTokens(data) {
         if (data.usage) {
-            return {
+            return ModelMix.normalizeTokenUsage({
                 input: data.usage.input_tokens || 0,
                 output: data.usage.output_tokens || 0,
-                total: data.usage.total_tokens || ((data.usage.input_tokens || 0) + (data.usage.output_tokens || 0)),
-                cached: ModelMix.extractCacheTokens(data.usage)
-            };
+                total: data.usage.total_tokens,
+                cached: ModelMix.extractCacheTokens(data.usage),
+                cacheWrite: ModelMix.extractCacheWriteTokens(data.usage)
+            });
         }
-        return {
-            input: 0,
-            output: 0,
-            total: 0,
-            cached: 0
-        };
+        return ModelMix.normalizeTokenUsage();
     }
 
     static extractResponsesMessage(data) {
@@ -2128,27 +2387,70 @@ class MixOpenAIResponses extends MixOpenAI {
             .trim();
     }
 
-    static messagesToResponsesInput(messages = []) {
+    static messagesToResponsesInput(messages = [], { translateNeutralCache = false } = {}) {
         const mapped = [];
 
         for (const message of messages) {
             if (!message || !message.role) continue;
             if (message.tool_calls || message.role === 'tool') continue;
 
-            let text = '';
+            const content = [];
+            const isAssistant = message.role === 'assistant';
+            const textType = isAssistant ? 'output_text' : 'input_text';
             if (typeof message.content === 'string') {
-                text = message.content;
+                if (message.content) content.push({ type: textType, text: message.content });
             } else if (Array.isArray(message.content)) {
-                text = message.content
-                    .filter(item => item && item.type === 'text' && typeof item.text === 'string')
-                    .map(item => item.text)
-                    .join('\n');
+                for (const item of message.content) {
+                    if (!item || typeof item !== 'object') continue;
+                    const neutralCache = item.cache !== undefined
+                        ? normalizeContentCache(item.cache)
+                        : undefined;
+                    const promptCacheBreakpoint = item.prompt_cache_breakpoint !== undefined
+                        ? item.prompt_cache_breakpoint
+                        : (translateNeutralCache && neutralCache?.breakpoint
+                            ? { mode: 'explicit' }
+                            : undefined);
+                    const breakpoint = !isAssistant && promptCacheBreakpoint !== undefined
+                        ? { prompt_cache_breakpoint: promptCacheBreakpoint }
+                        : {};
+
+                    if ((item.type === 'text' || item.type === 'input_text' || item.type === 'output_text')
+                        && typeof item.text === 'string') {
+                        content.push({ type: textType, text: item.text, ...breakpoint });
+                        continue;
+                    }
+                    if (item.type === 'image' && item.source) {
+                        let imageUrl;
+                        if (item.source.type === 'base64') {
+                            if (!item.source.media_type || typeof item.source.data !== 'string') {
+                                throw new TypeError('Responses base64 images require source.media_type and string source.data.');
+                            }
+                            imageUrl = `data:${item.source.media_type};base64,${item.source.data}`;
+                        } else if (item.source.type === 'url' && typeof item.source.data === 'string') {
+                            imageUrl = item.source.data;
+                        } else {
+                            throw new TypeError('Responses images must be processed to base64 or use a URL source.');
+                        }
+                        content.push({ type: 'input_image', image_url: imageUrl, ...breakpoint });
+                        continue;
+                    }
+                    if (item.type === 'image_url' && typeof item.image_url?.url === 'string') {
+                        content.push({ type: 'input_image', image_url: item.image_url.url, ...breakpoint });
+                        continue;
+                    }
+                    if (item.type === 'input_image' || item.type === 'input_file') {
+                        content.push({
+                            ...stripContentCacheMetadata(item),
+                            ...breakpoint
+                        });
+                    }
+                }
             }
 
-            if (!text) continue;
+            if (content.length === 0) continue;
             mapped.push({
                 role: message.role,
-                content: [{ type: 'input_text', text }]
+                content
             });
         }
 
@@ -2420,6 +2722,23 @@ class MixKimi extends MixOpenAI {
 
 class MixAnthropic extends MixCustom {
 
+    sanitizeCacheOptions(options) {
+        delete options.prompt_cache_key;
+        delete options.prompt_cache_options;
+        delete options.prompt_cache_retention;
+    }
+
+    static validateCacheControl(cacheControl) {
+        if (!isPlainObject(cacheControl) || cacheControl.type !== 'ephemeral') {
+            throw new TypeError('Anthropic cache_control must have type "ephemeral".');
+        }
+        if (cacheControl.ttl !== undefined
+            && cacheControl.ttl !== '5m'
+            && cacheControl.ttl !== '1h') {
+            throw new TypeError('Anthropic cache_control.ttl must be "5m" or "1h".');
+        }
+    }
+
     /**
      * Opus 4.7+ and Claude 5 family reject sampling params (temperature/top_p/top_k).
      * See: https://platform.claude.com/docs/en/about-claude/models/migration-guide
@@ -2465,10 +2784,20 @@ class MixAnthropic extends MixCustom {
             delete options.top_k;
         }
 
+        const requestConfig = { ...config };
+        if (hasNeutralCacheBreakpoint(options.messages)) {
+            const contentCacheControl = options.cache_control ?? { type: 'ephemeral' };
+            MixAnthropic.validateCacheControl(contentCacheControl);
+            requestConfig._contentCacheControl = { ...contentCacheControl };
+            delete options.cache_control;
+        } else if (options.cache_control !== undefined) {
+            MixAnthropic.validateCacheControl(options.cache_control);
+        }
+
         options.system = config.system;
 
         try {
-            return await super.create({ config, options });
+            return await super.create({ config: requestConfig, options });
         } catch (error) {
             // Log the error details for debugging
             if (error.response && error.response.data) {
@@ -2540,20 +2869,37 @@ class MixAnthropic extends MixCustom {
 
             // Handle content conversion for other messages
             if (message.content && Array.isArray(message.content)) {
-                message.content = message.content.filter(content => content !== null && content !== undefined).map(content => {
+                const content = message.content.filter(content => content !== null && content !== undefined).map(content => {
+                    const neutralCache = content?.cache !== undefined
+                        ? normalizeContentCache(content.cache)
+                        : undefined;
+                    if (neutralCache && content.cache_control !== undefined) {
+                        throw new TypeError('Use either cache or cache_control on an Anthropic content block, not both.');
+                    }
+                    let converted = content;
                     if (content && content.type === 'function') {
-                        return {
+                        converted = {
                             type: 'tool_use',
                             id: content.id,
                             name: content.function.name,
                             input: JSON.parse(content.function.arguments)
-                        }
+                        };
                     }
-                    return content;
+                    const sanitized = stripContentCacheMetadata(converted);
+                    if (content.cache_control !== undefined) {
+                        MixAnthropic.validateCacheControl(content.cache_control);
+                        sanitized.cache_control = { ...content.cache_control };
+                    } else if (neutralCache?.breakpoint) {
+                        sanitized.cache_control = {
+                            ...(config?._contentCacheControl || { type: 'ephemeral' })
+                        };
+                    }
+                    return sanitized;
                 });
+                return { ...message, content };
             }
 
-            return message;
+            return { ...message };
         });
     }
 
@@ -2635,19 +2981,26 @@ class MixAnthropic extends MixCustom {
     static extractTokens(data) {
         // Anthropic format
         if (data.usage) {
-            return {
-                input: data.usage.input_tokens || 0,
-                output: data.usage.output_tokens || 0,
-                total: (data.usage.input_tokens || 0) + (data.usage.output_tokens || 0),
-                cached: ModelMix.extractCacheTokens(data.usage)
-            };
+            const cached = ModelMix.extractCacheTokens(data.usage);
+            const cacheWrite5m = data.usage.cache_creation?.ephemeral_5m_input_tokens ?? 0;
+            const cacheWrite1h = data.usage.cache_creation?.ephemeral_1h_input_tokens ?? 0;
+            const cacheWrite = Math.max(
+                ModelMix.extractCacheWriteTokens(data.usage),
+                cacheWrite5m + cacheWrite1h
+            );
+            const input = (data.usage.input_tokens || 0) + cached + cacheWrite;
+            const output = data.usage.output_tokens || 0;
+            return ModelMix.normalizeTokenUsage({
+                input,
+                output,
+                total: input + output,
+                cached,
+                cacheWrite,
+                cacheWrite5m,
+                cacheWrite1h
+            });
         }
-        return {
-            input: 0,
-            output: 0,
-            total: 0,
-            cached: 0
-        };
+        return ModelMix.normalizeTokenUsage();
     }
 
     processResponse(response) {
@@ -2830,6 +3183,13 @@ class MixGrok extends MixOpenAI {
             apiKey: process.env.XAI_API_KEY,
             ...customConfig
         });
+    }
+
+    async create({ config = {}, options = {} } = {}) {
+        if (options.model === GROK420_REASONING || options.model === GROK420_NON_REASONING) {
+            delete options.reasoning_effort;
+        }
+        return super.create({ config, options });
     }
 }
 
@@ -3229,19 +3589,15 @@ class MixGoogle extends MixCustom {
     static extractTokens(data) {
         // Google Gemini format
         if (data.usageMetadata) {
-            return {
+            return ModelMix.normalizeTokenUsage({
                 input: data.usageMetadata.promptTokenCount || 0,
                 output: data.usageMetadata.candidatesTokenCount || 0,
-                total: data.usageMetadata.totalTokenCount || 0,
-                cached: ModelMix.extractCacheTokens(data.usageMetadata)
-            };
+                total: data.usageMetadata.totalTokenCount,
+                cached: ModelMix.extractCacheTokens(data.usageMetadata),
+                cacheWrite: ModelMix.extractCacheWriteTokens(data.usageMetadata)
+            });
         }
-        return {
-            input: 0,
-            output: 0,
-            total: 0,
-            cached: 0
-        };
+        return ModelMix.normalizeTokenUsage();
     }
 
     static stripUnsupportedSchemaProps(schema) {

@@ -10,6 +10,20 @@ export type DebugLevel = 0 | 1 | 2 | 3 | 4;
 /** Unified effort: -1 = adaptive, 0–100 = intensity. */
 export type EffortValue = number;
 
+export interface PromptCacheOptions {
+  mode?: 'implicit' | 'explicit';
+  ttl?: '30m';
+}
+
+export interface CacheBreakpoint {
+  breakpoint: true;
+}
+
+export interface AnthropicCacheControl {
+  type: 'ephemeral';
+  ttl?: '5m' | '1h';
+}
+
 export interface BottleneckConfig {
   maxConcurrent?: number;
   minTime?: number;
@@ -35,6 +49,13 @@ export interface ModelMixOptions {
   model?: string;
   messages?: ChatMessage[];
   response_format?: { type: string; [key: string]: unknown };
+  prompt_cache_key?: string;
+  /** OpenAI models before GPT-5.6. GPT-5.6 uses prompt_cache_options.ttl. */
+  prompt_cache_retention?: string;
+  /** GPT-5.6 Responses API prompt caching controls. */
+  prompt_cache_options?: PromptCacheOptions;
+  /** Anthropic automatic caching, or the policy used by neutral explicit breakpoints. */
+  cache_control?: AnthropicCacheControl;
   [key: string]: unknown;
 }
 
@@ -82,11 +103,15 @@ export interface ModelAttachArgs {
 
 export interface RoleOptions {
   role?: MessageRole;
+  /** Provider-neutral explicit cache breakpoint, translated by each adapter. */
+  cache?: CacheBreakpoint;
 }
 
 export interface TextContentPart {
   type: 'text';
   text: string;
+  cache?: CacheBreakpoint;
+  cache_control?: AnthropicCacheControl;
 }
 
 export interface ImageContentPart {
@@ -96,6 +121,8 @@ export interface ImageContentPart {
     media_type?: string;
     data: string | Buffer;
   };
+  cache?: CacheBreakpoint;
+  cache_control?: AnthropicCacheControl;
 }
 
 export type ContentPart = TextContentPart | ImageContentPart | Record<string, unknown>;
@@ -121,12 +148,34 @@ export interface ToolCall {
   };
 }
 
+export interface TokenCostBreakdown {
+  uncachedInput: number;
+  cachedInput: number;
+  cacheWrite: number;
+  cacheWrite5m: number;
+  cacheWrite1h: number;
+  output: number;
+  total: number;
+}
+
 export interface TokenUsage {
   input: number;
   output: number;
   total: number;
   cached: number;
-  cost?: number | null;
+  cacheWrite: number;
+  cacheWrite5m: number;
+  cacheWrite1h: number;
+  uncachedInput: number;
+  cacheHitRate: number;
+  /** USD avoided versus billing cache reads at the uncached input rate. */
+  cacheSavings: number;
+  /** Extra USD paid for cache writes versus ordinary uncached input. */
+  cacheWritePremium: number;
+  /** Full future cache hits needed to recover the current write premium. */
+  breakEvenHits: number;
+  cost: number;
+  costBreakdown: TokenCostBreakdown;
   speed?: number;
 }
 
@@ -244,9 +293,51 @@ export declare class ModelMix {
   static truncate(str: string, maxLen?: number): string;
   static calculateCost(
     modelKey: string,
-    tokens: { input: number; output: number }
+    tokens: {
+      input: number;
+      output: number;
+      total?: number;
+      cached?: number;
+      cacheWrite?: number;
+      cacheWrite5m?: number;
+      cacheWrite1h?: number;
+    }
   ): number | null;
+  static calculateCostBreakdown(
+    modelKey: string,
+    tokens: {
+      input: number;
+      output: number;
+      total?: number;
+      cached?: number;
+      cacheWrite?: number;
+      cacheWrite5m?: number;
+      cacheWrite1h?: number;
+    }
+  ): TokenCostBreakdown;
+  static calculateCacheMetrics(
+    modelKey: string,
+    tokens: {
+      input: number;
+      output: number;
+      total?: number;
+      cached?: number;
+      cacheWrite?: number;
+      cacheWrite5m?: number;
+      cacheWrite1h?: number;
+    }
+  ): Pick<TokenUsage, 'cacheSavings' | 'cacheWritePremium' | 'breakEvenHits'>;
+  static normalizeTokenUsage(tokens?: {
+    input?: number;
+    output?: number;
+    total?: number;
+    cached?: number;
+    cacheWrite?: number;
+    cacheWrite5m?: number;
+    cacheWrite1h?: number;
+  }): TokenUsage;
   static extractCacheTokens(usage?: Record<string, unknown>): number;
+  static extractCacheWriteTokens(usage?: Record<string, unknown>): number;
   static formatInputSummary(
     messages: ChatMessage[],
     system: string,
@@ -285,7 +376,9 @@ export declare class ModelMix {
   gptOss(args?: ModelAttachArgs): this;
 
   // Anthropic
+  fable50(args?: ModelAttachArgs): this;
   fable5(args?: ModelAttachArgs): this;
+  opus50(args?: ModelAttachArgs): this;
   opus5(args?: ModelAttachArgs): this;
   opus48(args?: ModelAttachArgs): this;
   opus47(args?: ModelAttachArgs): this;
@@ -385,6 +478,7 @@ export declare class MixCustom {
   getDefaultConfig(customConfig?: Record<string, unknown>): Record<string, unknown>;
   getDefaultHeaders(customHeaders?: Record<string, string>): Record<string, string>;
   convertMessages(messages: ChatMessage[], config?: ModelMixConfig): ChatMessage[];
+  sanitizeCacheOptions(options: ModelMixOptions): void;
 
   static stripContentTypeHeader(headers?: Record<string, string>): Record<string, string>;
   static createMultipartFormData(args?: {
