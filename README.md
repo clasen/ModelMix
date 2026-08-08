@@ -226,11 +226,6 @@ Here's a comprehensive list of available methods:
 [12]: https://openrouter.ai/qwen/qwen3.8-max "OpenRouter Pricing"
 
 Each method accepts optional `options`, `config`, and (for multi-provider methods) `mix` parameters to customize behavior.  
-† `grok420()` resolves to `grok-4.20-0309-non-reasoning` by default, or `grok-4.20-0309-reasoning` when `.effort(20+)` / `-1` (or native non-`none` `reasoning_effort`) is set.  
-For NVIDIA on DeepSeek V4 Flash/Pro, use `deepseekV4Flash({ mix: { nvidia: true } })` or `deepseekV4Pro({ mix: { nvidia: true } })`.
-For Together on Qwen 3.6 Plus, use `qwen36plus({ mix: { fireworks: false, together: true } })`.
-For OpenRouter on Qwen 3.7 Plus, use `qwen37plus({ mix: { fireworks: false, openrouter: true } })`.
-For OpenRouter instead of Moonshot's native API, use `kimiK3({ mix: { moonshot: false, openrouter: true } })`.
 
 ```javascript
 const result = await ModelMix.new({ 
