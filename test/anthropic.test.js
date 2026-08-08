@@ -277,15 +277,29 @@ describe('Anthropic Model Registration Tests', () => {
 
     it('should register Claude Sonnet 5', () => {
         const model = ModelMix.new();
-        model.sonnet5();
+        model.sonnet50();
 
         expect(model.models).to.have.length(1);
         expect(model.models[0].key).to.equal('claude-sonnet-5');
         expect(model.models[0].provider).to.be.instanceOf(MixAnthropic);
     });
 
-    it('should apply adaptive thinking via .effort(100).sonnet5()', () => {
-        const model = ModelMix.new().effort(100).sonnet5();
+    it('should keep sonnet5() as an alias for sonnet50()', () => {
+        const model = ModelMix.new();
+
+        expect(model.sonnet5({
+            options: { max_tokens: 123 },
+            config: { url: 'https://anthropic.example.test' }
+        })).to.equal(model);
+        expect(model.models).to.have.length(1);
+        expect(model.models[0].key).to.equal('claude-sonnet-5');
+        expect(model.models[0].provider).to.be.instanceOf(MixAnthropic);
+        expect(model.models[0].provider.options.max_tokens).to.equal(123);
+        expect(model.models[0].provider.config.url).to.equal('https://anthropic.example.test');
+    });
+
+    it('should apply adaptive thinking via .effort(100).sonnet50()', () => {
+        const model = ModelMix.new().effort(100).sonnet50();
         const { applyUnifiedEffort } = require('../effort.js');
 
         const options = { model: 'claude-sonnet-5' };

@@ -772,8 +772,11 @@ class ModelMix {
     opus46({ options = {}, config = {} } = {}) {
         return this.attach('claude-opus-4-6', new MixAnthropic({ options, config }));
     }
-    sonnet5({ options = {}, config = {} } = {}) {
+    sonnet50({ options = {}, config = {} } = {}) {
         return this.attach('claude-sonnet-5', new MixAnthropic({ options, config }));
+    }
+    sonnet5(args = {}) {
+        return this.sonnet50(args);
     }
     sonnet46({ options = {}, config = {} } = {}) {
         return this.attach('claude-sonnet-4-6', new MixAnthropic({ options, config }));

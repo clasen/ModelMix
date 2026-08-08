@@ -46,7 +46,7 @@ describe('Live Integration Tests', function () {
         });
 
         it('should process images with Anthropic Sonnet 5', async function () {
-            const model = ModelMix.new(setup).sonnet5();
+            const model = ModelMix.new(setup).sonnet50();
 
             model.addImageFromUrl(blueSquareBase64)
                 .addText('What color is this image? Answer in one word only.');
@@ -98,7 +98,7 @@ describe('Live Integration Tests', function () {
         });
 
         it('should return structured JSON with Sonnet 5 thinking', async function () {
-            const model = ModelMix.new(setup).effort(100).sonnet5();
+            const model = ModelMix.new(setup).effort(100).sonnet50();
 
             model.addText('Generate information about a fictional city.');
 
@@ -150,7 +150,7 @@ describe('Live Integration Tests', function () {
             // Create a model chain: non-existent model -> Claude
             const model = ModelMix.new(setup)
                 .attach('non-existent-model', new MixOpenAI())
-                .sonnet5();
+                .sonnet50();
 
             model.addText('Say "fallback test successful" and nothing else.');
 

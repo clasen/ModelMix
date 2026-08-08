@@ -383,6 +383,7 @@ export declare class ModelMix {
   opus48(args?: ModelAttachArgs): this;
   opus47(args?: ModelAttachArgs): this;
   opus46(args?: ModelAttachArgs): this;
+  sonnet50(args?: ModelAttachArgs): this;
   sonnet5(args?: ModelAttachArgs): this;
   sonnet46(args?: ModelAttachArgs): this;
   sonnet45(args?: ModelAttachArgs): this;

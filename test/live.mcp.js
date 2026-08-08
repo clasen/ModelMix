@@ -98,7 +98,7 @@ describe('Live MCP Integration Tests', function () {
         });
 
         it('should use custom MCP tools with Claude Sonnet 5', async function () {
-            const model = ModelMix.new(setup).sonnet5();
+            const model = ModelMix.new(setup).sonnet50();
 
             // Add time tool
             model.addTool({
@@ -560,7 +560,7 @@ describe('Live MCP Integration Tests', function () {
         it('should work with same MCP tools across different Anthropic models', async function () {
             const models = [
                 { name: 'Opus 5', model: ModelMix.new({ config: setup.config }).opus50() },
-                { name: 'Sonnet 5', model: ModelMix.new(setup).sonnet5() },
+                { name: 'Sonnet 5', model: ModelMix.new(setup).sonnet50() },
                 { name: 'Haiku 4.5', model: ModelMix.new(setup).haiku45() }
             ];
 
