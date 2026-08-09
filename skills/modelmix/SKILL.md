@@ -365,14 +365,16 @@ All image methods accept an optional second argument `{ role }` (default `"user"
 const model = ModelMix.new().gpt5mini();
 model.setSystemFromFile('./prompts/system.md');
 model.addTextFromFile('./prompts/task.md');
-model.replace({
+model.assign({
     role: 'data analyst',
     language: 'Spanish'
 });
 console.log(await model.message());
 ```
 
-Templates use standard EJS syntax. Use `<%- value %>` for raw prompt content and `<%= value %>` only when XML escaping is intentional. Missing variables and files throw. Templates may contain JavaScript, so the template source must be developer-controlled; untrusted content belongs only in `replace()` data.
+Templates use standard EJS syntax. Use `<%- value %>` for raw prompt content and `<%= value %>` only when XML escaping is intentional. Missing variables and files throw. Templates may contain JavaScript, so the template source must be developer-controlled; untrusted content belongs only in `assign()` data.
+
+Use `assignKey(key, value)` for one value and `assign({ ... })` for several values.
 
 Start with a static include. Paths are resolved relative to the containing template:
 
@@ -389,10 +391,10 @@ Analyze the following source:
 ```
 
 ```javascript
-model.replace({ sourceFile: '../src/utils.js' });
+model.assign({ sourceFile: '../src/utils.js' });
 ```
 
-Included files are EJS source, so the path and file must be developer-controlled. Untrusted runtime content belongs in ordinary `replace()` values, not include paths. For recursive data, a template may include itself with an explicit stopping condition:
+Included files are EJS source, so the path and file must be developer-controlled. Untrusted runtime content belongs in ordinary `assign()` values, not include paths. To expose a rendered file as a data key, call `assignKeyFromFile(key, filePath)`; it uses EJS `include`, supports includes relative to that file, and renders once per request. For recursive data, a template may include itself with an explicit stopping condition:
 
 ```ejs
 <%- node.text %>
@@ -403,7 +405,7 @@ Included files are EJS source, so the path and file must be developer-controlled
 <% } %>
 ```
 
-Initialize it with `replace({ node, depth: 0, maxDepth: 10 })`. Values supplied through `replace()` remain data and are never interpreted recursively as EJS.
+Initialize it with `assign({ node, depth: 0, maxDepth: 10 })`. Values supplied through `assign()` remain data and are never interpreted recursively as EJS.
 
 Use ModelMix choice directives for random prompt variants:
 
@@ -570,7 +572,9 @@ const model = ModelMix.new({
 | `.addImage(path, {role?, cache?})` | `this` | Add image from file |
 | `.addImageFromUrl(url, {role?, cache?})` | `this` | Add image from URL or data URI |
 | `.addImageFromBuffer(buffer, {role?, cache?})` | `this` | Add image from Buffer |
-| `.replace({})` | `this` | Add EJS template data |
+| `.assign({})` | `this` | Assign EJS template data |
+| `.assignKey(key, value)` | `this` | Assign one EJS template-data value |
+| `.assignKeyFromFile(key, path)` | `this` | Assign the rendered output of an EJS file to one key |
 | `.message()` | `Promise<string>` | Get text response |
 | `.json(example, desc?, opts?)` | `Promise<object\|array>` | Get structured JSON |
 | `.raw()` | `Promise<{message, think, toolCalls, tokens, response}>` | Full response |

@@ -79,6 +79,15 @@ function validateTemplateData(value) {
     }
 }
 
+function validateTemplateDataKey(key) {
+    if (typeof key !== 'string' || key.length === 0) {
+        throw new TypeError('Template data key must be a non-empty string.');
+    }
+    if (key === '$mix') {
+        throw new TypeError('Template data key "$mix" is reserved.');
+    }
+}
+
 function templateLocation({ filename, label }, lineNumber) {
     return `${filename || label} at line ${lineNumber}`;
 }
@@ -214,6 +223,7 @@ function createTemplateRenderContext(random = Math.random) {
 
     return {
         helpers: Object.freeze({ choice }),
+        renderedTemplateData: new Map(),
         renderedMessages: new Map(),
         renderedSystems: new Map()
     };
@@ -354,6 +364,7 @@ class ModelMix {
         this.toolClient = {};
         this.mcp = {};
         this.mcpToolsManager = new MCPToolsManager();
+        this.templateFileAssignments = new Map();
         this.messageTemplates = new WeakMap();
         this.lastRaw = null;
         this.options = {
@@ -387,8 +398,8 @@ class ModelMix {
             source: this.config.system,
             filename: null
         };
-        if (this.config.replace !== undefined) {
-            validateTemplateData(this.config.replace);
+        if (this.config.templateData !== undefined) {
+            validateTemplateData(this.config.templateData);
         }
         // Unified effort is ModelMix policy (config.effort / .effort()), not a native option.
         if (this.config.effort !== undefined && this.config.effort !== null) {
@@ -401,10 +412,18 @@ class ModelMix {
 
     }
 
-    replace(keyValues) {
+    assign(keyValues) {
         validateTemplateData(keyValues);
-        this.config.replace = { ...this.config.replace, ...keyValues };
+        for (const key of Object.keys(keyValues)) {
+            this.templateFileAssignments.delete(key);
+        }
+        this.config.templateData = { ...this.config.templateData, ...keyValues };
         return this;
+    }
+
+    assignKey(key, value) {
+        validateTemplateDataKey(key);
+        return this.assign({ [key]: value });
     }
 
     /**
@@ -430,6 +449,10 @@ class ModelMix {
         });
         if (!hasSystemOverride) {
             instance.systemTemplate = { ...this.systemTemplate };
+        }
+        instance.templateFileAssignments = new Map(this.templateFileAssignments);
+        for (const key of Object.keys(config.templateData || {})) {
+            instance.templateFileAssignments.delete(key);
         }
         instance.models = this.models; // Share models array for round-robin rotation
         return instance;
@@ -1217,13 +1240,50 @@ class ModelMix {
         return this.execute({ options: { stream: true } });
     }
 
-    replaceKeyFromFile(key, filePath) {
-        const content = this.readFile(filePath);
-        return this.replace({ [key]: content });
+    assignKeyFromFile(key, filePath) {
+        validateTemplateDataKey(key);
+        this.readFile(filePath);
+
+        const templateData = { ...this.config.templateData };
+        delete templateData[key];
+        this.config.templateData = templateData;
+        this.templateFileAssignments.set(key, Object.freeze({
+            key,
+            filename: path.resolve(filePath)
+        }));
+        return this;
     }
 
     _choiceRandom() {
         return Math.random();
+    }
+
+    _templateData(renderContext) {
+        const assigned = { ...(this.config.templateData || {}), $mix: renderContext.helpers };
+        const data = { ...assigned };
+
+        for (const [key, assignment] of this.templateFileAssignments) {
+            data[key] = this._renderAssignedTemplate(assignment, assigned, renderContext);
+        }
+
+        return data;
+    }
+
+    _renderAssignedTemplate(assignment, data, renderContext) {
+        if (renderContext.renderedTemplateData.has(assignment)) {
+            return renderContext.renderedTemplateData.get(assignment);
+        }
+
+        const rendered = this._renderTemplateWithData(
+            `<%- include(${JSON.stringify(assignment.filename)}) %>`,
+            {
+                filename: assignment.filename,
+                label: `template data "${assignment.key}"`
+            },
+            data
+        );
+        renderContext.renderedTemplateData.set(assignment, rendered);
+        return rendered;
     }
 
     _renderTemplate(
@@ -1231,13 +1291,20 @@ class ModelMix {
         { filename = null, label = 'template' } = {},
         renderContext = createTemplateRenderContext(() => this._choiceRandom())
     ) {
+        return this._renderTemplateWithData(
+            source,
+            { filename, label },
+            this._templateData(renderContext)
+        );
+    }
+
+    _renderTemplateWithData(source, { filename = null, label = 'template' }, data) {
         if (typeof source !== 'string') {
             throw new TypeError(`${label} source must be a string.`);
         }
 
         try {
             const template = preprocessChoiceDirectives(source, { filename, label });
-            const data = { ...(this.config.replace || {}), $mix: renderContext.helpers };
             return ejs.render(template, data, {
                 ...(filename && { filename }),
                 async: false,

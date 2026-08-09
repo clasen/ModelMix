@@ -22,12 +22,12 @@ const pplxSettings = {
 };
 
 
-mmix.replace({ name: 'ALF' });
+mmix.assign({ name: 'ALF' });
 
 console.log("\n" + '--------| gpt51() |--------');
 const gptArgs = { options: { reasoning_effort: "none", verbosity: "low" } };
 const gpt = mmix.gpt51(gptArgs).addText("Have you ever eaten a <%- animal %>?");
-gpt.replace({ animal: 'cat' });
+gpt.assignKey('animal', 'cat');
 await gpt.json({ time: '24:00:00', message: 'Hello' }, { time: 'Time in format HH:MM:SS' });
 
 console.log("\n" + '--------| sonnet45() |--------');

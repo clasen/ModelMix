@@ -249,17 +249,25 @@ Templates are executable JavaScript and must be controlled by the developer. Pas
 | --- | --- |
 | `setSystemFromFile(path)` | Load the system prompt from a file |
 | `addTextFromFile(path)` | Load a user message from a file |
-| `replace({ key: value })` | Add EJS template data |
+| `assign({ key: value })` | Assign EJS template data |
+| `assignKey(key, value)` | Assign one EJS template-data value |
+| `assignKeyFromFile(key, path)` | Assign an EJS-rendered file to one template-data key |
 
-### Basic example with `replace`
+### Basic example with `assign`
 
 ```javascript
 const gpt = ModelMix.new().gpt52();
 
 gpt.addText('Write a short story about a <%- animal %> that lives in <%- place %>.');
-gpt.replace({ animal: 'cat', place: 'a haunted castle' });
+gpt.assign({ animal: 'cat', place: 'a haunted castle' });
 
 console.log(await gpt.message());
+```
+
+Use `assignKey()` when assigning a single value:
+
+```javascript
+gpt.assignKey('animal', 'cat');
 ```
 
 ### Loading prompts from `.md` files
@@ -286,7 +294,7 @@ const gpt = ModelMix.new().gpt56luna();
 gpt.setSystemFromFile('./prompts/system.md');
 gpt.addTextFromFile('./prompts/task.md');
 
-gpt.replace({
+gpt.assign({
     role: 'a senior analyst',
     topic: 'market trends',
     language: 'Spanish',
@@ -335,12 +343,28 @@ Summarize the following article in 3 bullet points:
 const gpt = ModelMix.new().gpt5mini();
 
 gpt.addTextFromFile('./prompts/summarize.md');
-gpt.replace({ articleFile: '../data/article.md' });
+gpt.assign({ articleFile: '../data/article.md' });
 
 console.log(await gpt.message());
 ```
 
-Static and dynamic include paths are resolved relative to the containing template. Included files are EJS template source, so both the path and file must be controlled by the developer. Pass untrusted runtime content through ordinary `replace()` values instead of using it as an include path.
+Static and dynamic include paths are resolved relative to the containing template. Included files are EJS template source, so both the path and file must be controlled by the developer. Pass untrusted runtime content through ordinary `assign()` values instead of using it as an include path.
+
+### Assigning a rendered file to a key
+
+Use `assignKeyFromFile()` when the outer template needs the rendered contents of a file as one data value:
+
+```javascript
+const gpt = ModelMix.new().gpt5mini();
+
+gpt.assign({ language: 'Spanish' });
+gpt.assignKeyFromFile('rules', './prompts/rules.md');
+gpt.addText('Follow these rules:\n<%- rules %>');
+
+console.log(await gpt.message());
+```
+
+`assignKeyFromFile()` uses EJS `include` internally. The assigned file can access ordinary `assign()` data and use includes relative to its own path. It is rendered once per request and reused across the system prompt and messages in that request. The file is template source and must be developer-controlled.
 
 ### Full template workflow
 
@@ -373,7 +397,7 @@ const gpt = ModelMix.new().gpt5mini();
 gpt.setSystemFromFile('./prompts/system.md');
 gpt.addTextFromFile('./prompts/review.md');
 
-gpt.replace({ role: 'a senior code reviewer', language: 'English' });
+gpt.assign({ role: 'a senior code reviewer', language: 'English' });
 
 console.log(await gpt.message());
 ```
@@ -439,12 +463,12 @@ An included template can include itself to render recursive data. Always define 
 const gpt = ModelMix.new().gpt5mini();
 
 gpt.addTextFromFile('./prompts/tree.ejs');
-gpt.replace({ node: promptTree, depth: 0, maxDepth: 10 });
+gpt.assign({ node: promptTree, depth: 0, maxDepth: 10 });
 
 console.log(await gpt.message());
 ```
 
-Content supplied through `replace()` is rendered once as data. EJS tags inside that content are not executed recursively.
+Content supplied through `assign()` remains data. EJS tags inside that content are not executed recursively; use `assignKeyFromFile()` only for developer-controlled EJS files that should be rendered.
 
 ## 🧩 JSON Structured Output
 
@@ -845,7 +869,9 @@ new ModelMix(args = { options: {}, config: {} })
 - `addTextFromFile(filePath, config = { role: "user", cache? })`: Adds a text message from a file.
 - `addImage(filePath, config = { role: "user", cache? })`: Adds an image message from a file path.
 - `addImageFromUrl(url, config = { role: "user", cache? })`: Adds an image message from URL.
-- `replace(keyValues)`: Adds EJS data for messages and system prompts.
+- `assign(keyValues)`: Assigns EJS data for messages and system prompts.
+- `assignKey(key, value)`: Assigns one EJS data value.
+- `assignKeyFromFile(key, filePath)`: Renders an EJS file through `include` and assigns its output to one key.
 - `message()`: Sends the message and returns the response.
 - `raw()`: Sends the message and returns the complete response data including:
   - `message`: The text response from the model

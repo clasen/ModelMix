@@ -70,7 +70,7 @@ export interface ModelMixConfig {
   roundRobin?: boolean;
   /** Unified effort (-1 adaptive, or 0–100). Not a native provider field. */
   effort?: EffortValue | null;
-  replace?: Record<string, unknown>;
+  templateData?: Record<string, unknown>;
   schema?: Record<string, unknown>;
   [key: string]: unknown;
 }
@@ -347,7 +347,8 @@ export declare class ModelMix {
   static hasToolInteraction(message: ChatMessage | null | undefined): boolean;
 
   new(setup?: ModelMixSetup): ModelMix;
-  replace(keyValues: Record<string, unknown>): this;
+  assign(keyValues: Record<string, unknown>): this;
+  assignKey(key: string, value: unknown): this;
   effort(value: EffortValue): this;
   attach(key: string, provider: MixCustom): this;
 
@@ -451,7 +452,7 @@ export declare class ModelMix {
   raw(): Promise<ModelMixResult>;
   stream(callback: StreamCallback): Promise<ModelMixResult>;
 
-  replaceKeyFromFile(key: string, filePath: string): this;
+  assignKeyFromFile(key: string, filePath: string): this;
   groupByRoles(messages: ChatMessage[]): ChatMessage[];
   prepareMessages(): Promise<void>;
   readFile(filePath: string, options?: { encoding?: BufferEncoding | null }): string | Buffer;
