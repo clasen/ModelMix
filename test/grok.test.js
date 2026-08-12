@@ -2,6 +2,7 @@ const { expect } = require('chai');
 const nock = require('nock');
 const { ModelMix, MixGrok } = require('../index.js');
 const {
+    mapEffort,
     resolveGrok420ModelKey,
     GROK420_ALIAS,
     GROK420_REASONING,
@@ -10,6 +11,7 @@ const {
 
 describe('Grok Model Registration Tests', () => {
     const grokModels = [
+        { method: 'grok46', key: 'grok-4.6' },
         { method: 'grok45', key: 'grok-4.5' },
         { method: 'grok43', key: 'grok-4.3' },
         { method: 'grok420multiAgent', key: 'grok-4.20-multi-agent-0309' },
@@ -25,6 +27,78 @@ describe('Grok Model Registration Tests', () => {
             expect(model.models[0].key).to.equal(grokModel.key);
         });
     }
+
+    it('forwards options and config through grok46()', () => {
+        const options = { reasoning_effort: 'xhigh' };
+        const config = { max_history: 3 };
+        const model = ModelMix.new().grok46({ options, config });
+
+        expect(model.models[0].provider).to.be.instanceOf(MixGrok);
+        expect(model.models[0].provider.options).to.deep.equal(options);
+        expect(model.models[0].provider.config).to.include(config);
+    });
+
+    it('maps unified effort to Grok 4.6 supported levels', () => {
+        expect(mapEffort('openai', 0, 'grok-4.6')).to.deep.equal({ reasoning_effort: 'low' });
+        expect(mapEffort('openai', 39, 'grok-4.6')).to.deep.equal({ reasoning_effort: 'low' });
+        expect(mapEffort('openai', 40, 'grok-4.6')).to.deep.equal({ reasoning_effort: 'medium' });
+        expect(mapEffort('openai', 60, 'grok-4.6')).to.deep.equal({ reasoning_effort: 'high' });
+        expect(mapEffort('openai', 100, 'grok-4.6')).to.deep.equal({ reasoning_effort: 'xhigh' });
+        expect(mapEffort('openai', -1, 'grok-4.6')).to.equal(null);
+    });
+
+    it('sends a supported Grok 4.6 reasoning effort', async () => {
+        const originalApiKey = process.env.XAI_API_KEY;
+        process.env.XAI_API_KEY = 'test-key';
+        const api = nock('https://api.x.ai')
+            .post('/v1/chat/completions', body => {
+                expect(body.model).to.equal('grok-4.6');
+                expect(body.reasoning_effort).to.equal('low');
+                return true;
+            })
+            .reply(200, {
+                choices: [{ message: { content: 'ok' } }],
+                usage: { prompt_tokens: 1, completion_tokens: 1, total_tokens: 2 }
+            });
+
+        try {
+            const response = await ModelMix.new()
+                .effort(0)
+                .grok46({ config: { apiKey: 'test-key' } })
+                .addText('Hi')
+                .message();
+
+            expect(response).to.equal('ok');
+            api.done();
+        } finally {
+            if (originalApiKey === undefined) delete process.env.XAI_API_KEY;
+            else process.env.XAI_API_KEY = originalApiKey;
+        }
+    });
+
+    it('calculates Grok 4.6 cache and long-context costs', () => {
+        expect(ModelMix.calculateCostBreakdown('grok-4.6', {
+            input: 1_000_000,
+            output: 1_000_000,
+            cached: 1_000_000
+        })).to.deep.equal({
+            uncachedInput: 0,
+            cachedInput: 1,
+            cacheWrite: 0,
+            cacheWrite5m: 0,
+            cacheWrite1h: 0,
+            output: 12,
+            total: 13
+        });
+        expect(ModelMix.calculateCost('grok-4.6', {
+            input: 199_999,
+            output: 1_000_000
+        })).to.equal(6.399998);
+        expect(ModelMix.calculateCost('grok-4.6', {
+            input: 200_000,
+            output: 1_000_000
+        })).to.equal(12.8);
+    });
 });
 
 describe('Grok 4.20 effort → model resolution', () => {

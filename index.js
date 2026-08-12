@@ -259,6 +259,21 @@ const GPT56_LONG_CONTEXT_PRICING = Object.freeze({
     outputMultiplier: 1.5
 });
 
+const GROK46_LONG_CONTEXT_PRICING = Object.freeze({
+    inputThreshold: 200_000,
+    inputMultiplier: 2,
+    outputMultiplier: 2,
+    inclusive: true
+});
+
+function usesLongContextRates(pricing, inputTokens) {
+    const longContext = pricing.longContext;
+    if (!longContext) return false;
+    return longContext.inclusive
+        ? inputTokens >= longContext.inputThreshold
+        : inputTokens > longContext.inputThreshold;
+}
+
 const MODEL_PRICING = {
     // OpenAI
     'gpt-realtime-mini': { input: 0.60, cachedInput: 0.06, output: 2.40 },
@@ -307,6 +322,7 @@ const MODEL_PRICING = {
     'gemini-2.5-flash': { input: 0.30, output: 2.50 },
     'gemini-3.1-flash-lite-preview': { input: 0.25, output: 1.50 },
     // Grok
+    'grok-4.6': { input: 2.00, cachedInput: 0.50, output: 6.00, longContext: GROK46_LONG_CONTEXT_PRICING },
     'grok-4.5': { input: 2.00, output: 6.00 },
     'grok-4.3': { input: 1.25, output: 2.50 },
     'grok-4.20-multi-agent-0309': { input: 1.25, output: 2.50 },
@@ -535,7 +551,7 @@ class ModelMix {
 
         const normalized = ModelMix.normalizeTokenUsage(tokens);
         const longContext = pricing.longContext;
-        const useLongContextRates = longContext && normalized.input > longContext.inputThreshold;
+        const useLongContextRates = usesLongContextRates(pricing, normalized.input);
         const inputMultiplier = useLongContextRates ? longContext.inputMultiplier : 1;
         const outputMultiplier = useLongContextRates ? longContext.outputMultiplier : 1;
         const {
@@ -587,9 +603,8 @@ class ModelMix {
 
         const normalized = ModelMix.normalizeTokenUsage(tokens);
         const longContext = pricing.longContext;
-        const inputMultiplier = longContext && normalized.input > longContext.inputThreshold
-            ? longContext.inputMultiplier
-            : 1;
+        const useLongContextRates = usesLongContextRates(pricing, normalized.input);
+        const inputMultiplier = useLongContextRates ? longContext.inputMultiplier : 1;
         const cachedInputPerMillion = pricing.cachedInput ?? pricing.input;
         const cacheWritePerMillion = pricing.cacheWrite ?? pricing.input;
         const cacheWrite1hPerMillion = pricing.cacheWrite1h ?? cacheWritePerMillion;
@@ -844,6 +859,9 @@ class ModelMix {
         return this.attach('sonar', new MixPerplexity({ options, config }));
     }
 
+    grok46({ options = {}, config = {} } = {}) {
+        return this.attach('grok-4.6', new MixGrok({ options, config }));
+    }
     grok45({ options = {}, config = {} } = {}) {
         return this.attach('grok-4.5', new MixGrok({ options, config }));
     }

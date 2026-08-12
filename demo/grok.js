@@ -13,7 +13,7 @@ const mmix = new ModelMix({
 });
 
 
-const r = await mmix.grok43()
+const r = await mmix.grok46()
     .addText('hi there!')
     .addText('do you like cats?')
     .raw();

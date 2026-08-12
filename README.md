@@ -70,7 +70,7 @@ const model = await ModelMix.new(setup)
     .sonnet5() // (main model) Anthropic claude-sonnet-5
     .gpt56luna() // (fallback 2) OpenAI gpt-5.6-luna
     .gemini36flash({ config: { temperature: 0 } }) // (fallback 3) Google gemini-36-flash
-    .grok43() // (fallback 4) Grok grok-4.3
+    .grok46() // (fallback 4) Grok grok-4.6
     .addText("What's your name?");
 
 console.log(await model.message());
@@ -124,7 +124,7 @@ ModelMix.new().effort(-1).minimaxM3().addText('...').message();
 | DeepSeek V4 | off | `low`↑ | `high`↑ | `high`↑ | `max`↑ | — |
 | MiniMax M3 | off | adaptive | adaptive | adaptive | adaptive | adaptive |
 
-\* Gemini bands: 0–24 / 25–49 / 50–74 / 75–100. DeepSeek `↑` = thinking on; `off` = thinking disabled. MiniMax `off`/`adaptive` = `thinking.disabled` / `thinking.type=adaptive`. Gemini 2.5 maps 0–100 to `thinkingBudget`. Anthropic maps adaptive thinking + `output_config.effort` on Claude 5 / Fable / Opus 4.6+ / Sonnet 4.6+; older models (Sonnet 4.5, Haiku 4.5) get `thinking.type=enabled` + `budget_tokens`. `-1` = provider adaptive/dynamic when available, else no-op. Levels clamp to what each model supports.
+\* Gemini bands: 0–24 / 25–49 / 50–74 / 75–100. DeepSeek `↑` = thinking on; `off` = thinking disabled. MiniMax `off`/`adaptive` = `thinking.disabled` / `thinking.type=adaptive`. Gemini 2.5 maps 0–100 to `thinkingBudget`. Anthropic maps adaptive thinking + `output_config.effort` on Claude 5 / Fable / Opus 4.6+ / Sonnet 4.6+; older models (Sonnet 4.5, Haiku 4.5) get `thinking.type=enabled` + `budget_tokens`. Grok 4.6 clamps 0–39 / 40–59 / 60–79 / 80–100 to `low` / `medium` / `high` / `xhigh`; without effort it uses the native `high` default. `-1` = provider adaptive/dynamic when available, else no-op. Levels clamp to what each model supports.
 
 Migration: former `*think()` shorthands are removed — use `.effort(n).<model>()` (or any 0–100 / `-1`). Kimi: `kimiK25()` / `kimiK26()`. Grok 4.20: `.grok420()` is non-reasoning; `.effort(20+).grok420()` (or `-1`) selects the reasoning model.
 
@@ -192,6 +192,7 @@ Here's a comprehensive list of available methods:
 | `gemini35flash()`    | Google     | gemini-3.5-flash              | [\$0.75/\$4.50][3]       |
 | `gemini35flashLite()`| Google     | gemini-3.5-flash-lite          | [\$0.30/\$2.50][3]       |
 | `gemini31flashLite()`| Google     | gemini-3.1-flash-lite-preview | [\$0.25/\$1.50][3]       |
+| `grok46()`          | Grok       | grok-4.6                     | [\$2.00/\$6.00][6]       |
 | `grok45()`          | Grok       | grok-4.5                     | [\$2.00/\$6.00][6]       |
 | `grok43()`          | Grok       | grok-4.3                     | [\$1.25/\$2.50][6]       |
 | `grok420multiAgent()`| Grok      | grok-4.20-multi-agent-0309   | [\$1.25/\$2.50][6]       |

@@ -193,7 +193,7 @@ describe('Live Integration Tests', function () {
         });
 
         const grokSeriesTests = [
-            { name: 'Grok 4.3', factory: (m) => m.grok43(), token: 'grok43' },
+            { name: 'Grok 4.6', factory: (m) => m.grok46(), token: 'grok46' },
             { name: 'Grok 4.20 reasoning', factory: (m) => m.effort(50).grok420(), token: 'grok420' },
             { name: 'Grok 4.20 non-reasoning', factory: (m) => m.grok420(), token: 'grok420nr' }
         ];
@@ -216,8 +216,8 @@ describe('Live Integration Tests', function () {
 
     describe('Image Processing with JSON Output', function () {
 
-        it('should process images and return JSON with Grok 4.3', async function () {
-            const model = ModelMix.new(setup).grok43();
+        it('should process images and return JSON with Grok 4.6', async function () {
+            const model = ModelMix.new(setup).grok46();
 
             model.addImageFromUrl(blueSquareBase64)
                 .addText('Analyze this image and provide details in JSON format.');
@@ -228,7 +228,7 @@ describe('Live Integration Tests', function () {
                 description: "string"
             });
 
-            console.log(`Grok 4.3 image JSON result:`, result);
+            console.log(`Grok 4.6 image JSON result:`, result);
 
             expect(result).to.be.an('object');
             expect(result).to.have.property('color');
@@ -263,8 +263,8 @@ describe('Live Integration Tests', function () {
             expect(result.features).to.be.an('array');
         });
 
-        it('should return structured JSON with Grok 4.3', async function () {
-            const model = ModelMix.new(setup).grok43();
+        it('should return structured JSON with Grok 4.6', async function () {
+            const model = ModelMix.new(setup).grok46();
 
             model.addText('Generate information about a fictional technology.');
 
@@ -275,7 +275,7 @@ describe('Live Integration Tests', function () {
                 power: "1000 qubits"
             });
 
-            console.log(`Grok 4.3 JSON result:`, result);
+            console.log(`Grok 4.6 JSON result:`, result);
 
             expect(result).to.be.an('object');
             expect(result).to.have.property('name');
