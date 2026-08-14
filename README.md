@@ -69,7 +69,7 @@ const setup = {
 const model = await ModelMix.new(setup)
     .sonnet5() // (main model) Anthropic claude-sonnet-5
     .gpt56luna() // (fallback 2) OpenAI gpt-5.6-luna
-    .gemini36flash({ config: { temperature: 0 } }) // (fallback 3) Google gemini-36-flash
+    .gemini37flash() // (fallback 3) Google gemini-3.7-flash
     .grok46() // (fallback 4) Grok grok-4.6
     .addText("What's your name?");
 
@@ -211,7 +211,7 @@ ModelMix.new().effort(-1).minimaxM3().addText('...').message();
 
 ### Provider-specific behavior
 
-- **Gemini:** Gemini 3+ uses bands 0–24 / 25–49 / 50–74 / 75–100. Gemini 2.5 maps 0–100 to `thinkingBudget`.
+- **Gemini:** Gemini 3+ uses bands 0–24 / 25–49 / 50–74 / 75–100. Gemini 3.7 Flash clamps these bands to `low` / `low` / `medium` / `high`; `-1` leaves its native `medium` default unchanged. Gemini 2.5 maps 0–100 to `thinkingBudget`.
 - **DeepSeek:** `↑` means thinking is enabled; `off` means it is disabled.
 - **MiniMax:** `off` maps to `thinking.disabled`; `adaptive` maps to `thinking.type=adaptive`.
 - **Anthropic:** Claude 5, Fable, Opus 4.6+, and Sonnet 4.6+ use adaptive thinking with `output_config.effort`. Sonnet 4.5 and Haiku 4.5 use `thinking.type=enabled` with `budget_tokens`.
@@ -286,7 +286,8 @@ Here's a comprehensive list of available methods:
 | `sonnet46()`        | Anthropic  | claude-sonnet-4-6            | [\$3.00/\$15.00][2]      |
 | `haiku45()`         | Anthropic  | claude-haiku-4-5-20251001    | [\$1.00/\$5.00][2]       |
 | `gemini31pro()`     | Google     | gemini-3.1-pro-preview       | [\$2.00/\$12.00][3]      |
-| `gemini36flash()`    | Google     | gemini-3.6-flash              | [\$1.50/\$7.50][3]       |
+| `gemini37flash()`   | Google     | gemini-3.7-flash             | [\$0.75/\$3.75][3]       |
+| `gemini36flash()`   | Google     | gemini-3.6-flash             | [\$0.75/\$3.75][3]       |
 | `gemini35flash()`    | Google     | gemini-3.5-flash              | [\$0.75/\$4.50][3]       |
 | `gemini35flashLite()`| Google     | gemini-3.5-flash-lite          | [\$0.30/\$2.50][3]       |
 | `gemini31flashLite()`| Google     | gemini-3.1-flash-lite-preview | [\$0.25/\$1.50][3]       |
@@ -310,6 +311,8 @@ Here's a comprehensive list of available methods:
 | `kimiK3()`          | Moonshot   | kimi-k3                      | [\$3.00/\$15.00][11]     |
 | `kimiK25()`         | Together   | Kimi-K2.5                    | [\$0.50/\$2.80][7]       |
 | `kimiK26()`         | Fireworks  | models/kimi-k2p6             | [\$0.95/\$4.00][10]      |
+
+Gemini 3.7 Flash and 3.6 Flash use Google's introductory standard pricing through December 31, 2026; standard rates double on January 1, 2027.
 
 [1]: https://platform.openai.com/docs/pricing "Pricing | OpenAI"
 [2]: https://docs.anthropic.com/en/docs/about-claude/pricing "Pricing - Anthropic"
@@ -759,6 +762,7 @@ Every response from `raw()` now includes a `tokens` object with the following st
   tokens: {
     input: 1200,          // Total input tokens, including cache reads and writes
     output: 50,           // Number of output tokens
+    thinking: 0,          // Internal reasoning tokens reported separately
     total: 1250,          // Total tokens used
     cached: 1024,         // Input tokens read from cache
     cacheWrite: 0,        // Input tokens written to cache
@@ -794,7 +798,7 @@ console.log(model.lastRaw.tokens);
 // Same normalized token and cost structure returned by raw()
 ```
 
-`cached` aggregates cache reads reported by the provider, while `cacheWrite` aggregates cache writes. Anthropic additionally exposes `cacheWrite5m` and `cacheWrite1h` because those writes cost 1.25× and 2× the normal input rate, respectively. `cacheSavings` compares cache reads with the normal input rate, `cacheWritePremium` compares writes with that rate, and `breakEvenHits` estimates how many complete future hits recover the current write premium. For Anthropic, `input` is normalized to include uncached input, cache reads, and cache writes. Missing usage or pricing categories return `0`. The `speed` field is the generation speed measured in output tokens per second (integer).
+`thinking` contains internal reasoning tokens when a provider reports them separately; cost calculation bills them at the output rate. `cached` aggregates cache reads reported by the provider, while `cacheWrite` aggregates cache writes. Anthropic additionally exposes `cacheWrite5m` and `cacheWrite1h` because those writes cost 1.25× and 2× the normal input rate, respectively. `cacheSavings` compares cache reads with the normal input rate, `cacheWritePremium` compares writes with that rate, and `breakEvenHits` estimates how many complete future hits recover the current write premium. For Anthropic, `input` is normalized to include uncached input, cache reads, and cache writes. Missing usage or pricing categories return `0`. The `speed` field is the generation speed measured in output tokens per second (integer).
 
 ### GPT-5.6 prompt caching
 
@@ -976,7 +980,7 @@ new ModelMix(args = { options: {}, config: {} })
   - `message`: The text response from the model
   - `think`: Reasoning/thinking content (if available)
   - `toolCalls`: Array of tool calls made by the model (if any)
-  - `tokens`: Normalized token counts (`input`, `output`, `total`, `cached`, `cacheWrite`, `cacheWrite5m`, `cacheWrite1h`, `uncachedInput`, `cacheHitRate`), cache economics (`cacheSavings`, `cacheWritePremium`, `breakEvenHits`), plus `cost`, `costBreakdown` (USD), and `speed` (output tokens/sec)
+  - `tokens`: Normalized token counts (`input`, `output`, `thinking`, `total`, `cached`, `cacheWrite`, `cacheWrite5m`, `cacheWrite1h`, `uncachedInput`, `cacheHitRate`), cache economics (`cacheSavings`, `cacheWritePremium`, `breakEvenHits`), plus `cost`, `costBreakdown` (USD), and `speed` (output tokens/sec)
   - `response`: The raw API response
 - `stream(callback)`: Sends the message and streams the response, invoking the callback with each streamed part.
 - `json(schemaExample, descriptions = {}, options = {})`: Forces the model to return a response in a specific JSON format.

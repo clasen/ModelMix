@@ -53,7 +53,8 @@ describe('Token Usage Tracking', () => {
             usageMetadata: {
                 promptTokenCount: 70,
                 candidatesTokenCount: 10,
-                totalTokenCount: 80,
+                thoughtsTokenCount: 5,
+                totalTokenCount: 85,
                 cachedContentTokenCount: 35
             }
         });
@@ -88,7 +89,8 @@ describe('Token Usage Tracking', () => {
         expect(googleTokens).to.include({
             input: 70,
             output: 10,
-            total: 80,
+            thinking: 5,
+            total: 85,
             cached: 35,
             cacheWrite: 0,
             uncachedInput: 35,
@@ -500,19 +502,49 @@ describe('Token Usage Tracking', () => {
 
     it('should register Gemini Flash shortcuts with Google provider', function () {
         const model = ModelMix.new()
+            .gemini37flash()
             .gemini36flash()
             .gemini35flash()
             .gemini35flashLite();
 
         expect(model.models.map(({ key }) => key)).to.deep.equal([
+            'gemini-3.7-flash',
             'gemini-3.6-flash',
             'gemini-3.5-flash',
             'gemini-3.5-flash-lite'
         ]);
         expect(model.models.every(({ provider }) => provider instanceof MixGoogle)).to.equal(true);
-        expect(ModelMix.calculateCost('gemini-3.6-flash', { input: 1_000_000, output: 1_000_000 })).to.equal(9);
+        expect(ModelMix.calculateCost('gemini-3.7-flash', { input: 1_000_000, output: 1_000_000 })).to.equal(4.5);
+        expect(ModelMix.calculateCost('gemini-3.6-flash', { input: 1_000_000, output: 1_000_000 })).to.equal(4.5);
         expect(ModelMix.calculateCost('gemini-3.5-flash', { input: 1_000_000, output: 1_000_000 })).to.equal(5.25);
         expect(ModelMix.calculateCost('gemini-3.5-flash-lite', { input: 1_000_000, output: 1_000_000 })).to.equal(2.8);
+    });
+
+    it('should calculate Gemini 3.7 Flash cache reads at the introductory rate', function () {
+        expect(ModelMix.calculateCostBreakdown('gemini-3.7-flash', {
+            input: 1_000_000,
+            output: 1_000_000,
+            thinking: 500_000,
+            cached: 1_000_000
+        })).to.deep.equal({
+            uncachedInput: 0,
+            cachedInput: 0.075,
+            cacheWrite: 0,
+            cacheWrite5m: 0,
+            cacheWrite1h: 0,
+            output: 5.625,
+            total: 5.7
+        });
+    });
+
+    it('should forward options and config through gemini37flash()', function () {
+        const options = { thinkingLevel: 'high' };
+        const config = { max_history: 3 };
+        const model = ModelMix.new().gemini37flash({ options, config });
+
+        expect(model.models[0].provider).to.be.instanceOf(MixGoogle);
+        expect(model.models[0].provider.options).to.deep.equal(options);
+        expect(model.models[0].provider.config).to.include(config);
     });
 
     it('should register MiMo shortcuts with native and OpenRouter providers', function () {
@@ -620,7 +652,7 @@ describe('Token Usage Tracking', () => {
         this.timeout(30000);
 
         const model = ModelMix.new()
-            .gemini3flash()
+            .gemini37flash()
             .addText('Say hi');
 
         const result = await model.raw();
@@ -683,7 +715,7 @@ describe('Token Usage Tracking', () => {
         const providers = [
             { name: 'OpenAI', create: (m) => m.gpt56luna() },
             { name: 'Anthropic', create: (m) => m.haiku45() },
-            { name: 'Google', create: (m) => m.gemini3flash() }
+            { name: 'Google', create: (m) => m.gemini37flash() }
         ];
 
         for (const provider of providers) {

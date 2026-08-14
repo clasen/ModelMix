@@ -12,9 +12,9 @@ const mmix = new ModelMix({
     }
 });
 
-// Using gemini3flash (Gemini 3 Flash) with built-in method
-console.log("\n" + '--------| gemini25flash() |--------');
-const flash = await mmix.gemini3flash()
+// Using Gemini 3.7 Flash with the built-in method
+console.log("\n" + '--------| gemini37flash() |--------');
+const flash = await mmix.gemini37flash()
     .addText('Hi there! Do you like cats?')
     .message();
 
@@ -41,4 +41,3 @@ const customModel = mmix.new().attach('gemini-2.5-flash', new MixGoogle());
 
 const custom = await customModel.addText('Tell me a short joke about cats.').message();
 console.log(custom);
-

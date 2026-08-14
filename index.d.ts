@@ -161,6 +161,8 @@ export interface TokenCostBreakdown {
 export interface TokenUsage {
   input: number;
   output: number;
+  /** Internal reasoning tokens billed at the output rate when reported separately. */
+  thinking: number;
   total: number;
   cached: number;
   cacheWrite: number;
@@ -349,6 +351,7 @@ export declare class ModelMix {
     tokens: {
       input: number;
       output: number;
+      thinking?: number;
       total?: number;
       cached?: number;
       cacheWrite?: number;
@@ -361,6 +364,7 @@ export declare class ModelMix {
     tokens: {
       input: number;
       output: number;
+      thinking?: number;
       total?: number;
       cached?: number;
       cacheWrite?: number;
@@ -373,6 +377,7 @@ export declare class ModelMix {
     tokens: {
       input: number;
       output: number;
+      thinking?: number;
       total?: number;
       cached?: number;
       cacheWrite?: number;
@@ -383,6 +388,7 @@ export declare class ModelMix {
   static normalizeTokenUsage(tokens?: {
     input?: number;
     output?: number;
+    thinking?: number;
     total?: number;
     cached?: number;
     cacheWrite?: number;
@@ -448,6 +454,7 @@ export declare class ModelMix {
   gemini31pro(args?: ModelAttachArgs): this;
   gemini3pro(args?: ModelAttachArgs): this;
   gemini3flash(args?: ModelAttachArgs): this;
+  gemini37flash(args?: ModelAttachArgs): this;
   gemini36flash(args?: ModelAttachArgs): this;
   gemini35flash(args?: ModelAttachArgs): this;
   gemini35flashLite(args?: ModelAttachArgs): this;

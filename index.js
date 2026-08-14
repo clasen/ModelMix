@@ -344,7 +344,8 @@ const MODEL_PRICING = {
     'gemini-3.1-pro-preview': { input: 2.00, output: 12.00 },
     'gemini-3-pro-preview': { input: 2.00, output: 12.00 },
     'gemini-3-flash-preview': { input: 0.50, output: 3.00 },
-    'gemini-3.6-flash': { input: 1.50, output: 7.50 },
+    'gemini-3.7-flash': { input: 0.75, cachedInput: 0.075, output: 3.75 },
+    'gemini-3.6-flash': { input: 0.75, cachedInput: 0.075, output: 3.75 },
     'gemini-3.5-flash': { input: 0.75, output: 4.50 },
     'gemini-3.5-flash-lite': { input: 0.30, output: 2.50 },
     'gemini-2.5-pro': { input: 1.25, output: 10.00 },
@@ -644,10 +645,11 @@ class ModelMix {
         return str.length > maxLen ? str.substring(0, maxLen) + '...' : str;
     }
 
-    static normalizeTokenUsage({ input = 0, output = 0, total, cached = 0, cacheWrite = 0, cacheWrite5m = 0, cacheWrite1h = 0 } = {}) {
+    static normalizeTokenUsage({ input = 0, output = 0, thinking = 0, total, cached = 0, cacheWrite = 0, cacheWrite5m = 0, cacheWrite1h = 0 } = {}) {
         const tokenCount = value => Number.isFinite(value) ? Math.max(0, value) : 0;
         const normalizedInput = tokenCount(input);
         const normalizedOutput = tokenCount(output);
+        const normalizedThinking = tokenCount(thinking);
         const normalizedCached = tokenCount(cached);
         const normalizedCacheWrite5m = tokenCount(cacheWrite5m);
         const normalizedCacheWrite1h = tokenCount(cacheWrite1h);
@@ -657,7 +659,7 @@ class ModelMix {
         );
         const normalizedTotal = Number.isFinite(total)
             ? Math.max(0, total)
-            : normalizedInput + normalizedOutput;
+            : normalizedInput + normalizedOutput + normalizedThinking;
         const uncachedInput = Math.max(0, normalizedInput - normalizedCached - normalizedCacheWrite);
         const cacheHitRate = normalizedInput > 0
             ? Number((normalizedCached / normalizedInput).toFixed(4))
@@ -666,6 +668,7 @@ class ModelMix {
         return {
             input: normalizedInput,
             output: normalizedOutput,
+            thinking: normalizedThinking,
             total: normalizedTotal,
             cached: normalizedCached,
             cacheWrite: normalizedCacheWrite,
@@ -725,7 +728,9 @@ class ModelMix {
             cacheWrite: roundCost(genericCacheWriteCost + cacheWrite5mCost + cacheWrite1hCost),
             cacheWrite5m: cacheWrite5mCost,
             cacheWrite1h: cacheWrite1hCost,
-            output: roundCost(normalized.output * outputPerMillion * outputMultiplier / 1_000_000)
+            output: roundCost(
+                (normalized.output + normalized.thinking) * outputPerMillion * outputMultiplier / 1_000_000
+            )
         };
         breakdown.total = roundCost(
             breakdown.uncachedInput
@@ -980,6 +985,9 @@ class ModelMix {
     }
     gemini3flash({ options = {}, config = {} } = {}) {
         return this.attach('gemini-3-flash-preview', new MixGoogle({ options, config }));
+    }
+    gemini37flash({ options = {}, config = {} } = {}) {
+        return this.attach('gemini-3.7-flash', new MixGoogle({ options, config }));
     }
     gemini36flash({ options = {}, config = {} } = {}) {
         return this.attach('gemini-3.6-flash', new MixGoogle({ options, config }));
@@ -3959,6 +3967,7 @@ class MixGoogle extends MixCustom {
             return ModelMix.normalizeTokenUsage({
                 input: data.usageMetadata.promptTokenCount || 0,
                 output: data.usageMetadata.candidatesTokenCount || 0,
+                thinking: data.usageMetadata.thoughtsTokenCount || 0,
                 total: data.usageMetadata.totalTokenCount,
                 cached: ModelMix.extractCacheTokens(data.usageMetadata),
                 cacheWrite: ModelMix.extractCacheWriteTokens(data.usageMetadata)

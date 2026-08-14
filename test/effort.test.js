@@ -121,6 +121,19 @@ describe('Unified effort scale', () => {
             });
         });
 
+        it('clamps Gemini 3.7 Flash to low, medium, and high', () => {
+            expect(mapEffort('google', 0, 'gemini-3.7-flash')).to.deep.equal({
+                thinkingConfig: { thinkingLevel: 'low' }
+            });
+            expect(mapEffort('google', 50, 'gemini-3.7-flash')).to.deep.equal({
+                thinkingConfig: { thinkingLevel: 'medium' }
+            });
+            expect(mapEffort('google', 100, 'gemini-3.7-flash')).to.deep.equal({
+                thinkingConfig: { thinkingLevel: 'high' }
+            });
+            expect(mapEffort('google', -1, 'gemini-3.7-flash')).to.equal(null);
+        });
+
         it('clamps Gemini levels for models with fewer steps', () => {
             expect(mapEffort('google', 10, 'gemini-3-pro-preview')).to.deep.equal({
                 thinkingConfig: { thinkingLevel: 'low' }
@@ -384,7 +397,7 @@ describe('Unified effort scale', () => {
                 await google.create({
                     config: { system: 'sys' },
                     options: {
-                        model: 'gemini-3.6-flash',
+                        model: 'gemini-3.7-flash',
                         max_tokens: 100,
                         messages: [{ role: 'user', content: [{ type: 'text', text: 'hi' }] }],
                         thinkingConfig: { thinkingLevel: 'low' }
