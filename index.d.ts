@@ -187,7 +187,57 @@ export interface ModelMixResult {
   tokens?: TokenUsage;
   response?: unknown;
   assistantMessage?: ChatMessage;
+  execution?: PluginExecutionMetadata;
   [key: string]: unknown;
+}
+
+export type ModelMixOutputMode = 'message' | 'json' | 'block' | 'raw' | 'stream';
+
+export interface PluginExecutionMetadata {
+  executionId: string;
+  parentExecutionId: string | null;
+  depth: number;
+}
+
+export type PluginInheritancePolicy =
+  | 'inherit'
+  | 'none'
+  | { include: string[] }
+  | { exclude: string[] };
+
+export interface ChildInvocation {
+  system?: string;
+  systemFile?: string;
+  assign?: Record<string, unknown>;
+  messages: ChatMessage[];
+  tools?: ToolWithCallback[];
+  options?: ModelMixOptions;
+  config?: ModelMixConfig;
+  mix?: ModelMixMixFlags;
+  model?: ModelMix;
+  plugins?: PluginInheritancePolicy;
+  history?: false;
+  outputMode?: ModelMixOutputMode;
+}
+
+export interface PluginExecutionContext {
+  request: {
+    system: string;
+    messages: ChatMessage[];
+    options: ModelMixOptions;
+    config: ModelMixConfig;
+    outputMode: ModelMixOutputMode;
+  };
+  execution: Readonly<PluginExecutionMetadata>;
+  invoke(input: ChildInvocation): Promise<ModelMixResult>;
+}
+
+export interface ModelMixPlugin {
+  name: string;
+  execute(
+    context: PluginExecutionContext,
+    next: () => Promise<ModelMixResult>
+  ): Promise<ModelMixResult>;
 }
 
 export interface StreamChunk {
@@ -263,6 +313,7 @@ export interface ProviderConstructorArgs {
 export interface CreateArgs {
   config?: ModelMixConfig;
   options?: ModelMixOptions;
+  outputMode?: ModelMixOutputMode;
 }
 
 export type ProviderFamily =
@@ -279,6 +330,7 @@ export declare class ModelMix {
   tools: Record<string, ToolDefinition[]>;
   toolClient: Record<string, unknown>;
   mcp: Record<string, unknown>;
+  plugins: ModelMixPlugin[];
   options: ModelMixOptions;
   config: ModelMixConfig;
   mix: ModelMixMixFlags;
@@ -288,6 +340,7 @@ export declare class ModelMix {
   constructor(setup?: ModelMixSetup);
 
   static new(setup?: ModelMixSetup): ModelMix;
+  use(plugin: ModelMixPlugin): this;
   static formatJSON(obj: unknown): string;
   static formatMessage(message: unknown): unknown;
   static truncate(str: string, maxLen?: number): string;
@@ -455,7 +508,7 @@ export declare class ModelMix {
 
   assignKeyFromFile(key: string, filePath: string): this;
   groupByRoles(messages: ChatMessage[]): ChatMessage[];
-  prepareMessages(): Promise<void>;
+  prepareMessages(): Promise<ChatMessage[]>;
   readFile(filePath: string, options?: { encoding?: BufferEncoding | null }): string | Buffer;
   execute(args?: CreateArgs): Promise<ModelMixResult>;
   processToolCalls(toolCalls: ToolCall[]): Promise<

@@ -1,0 +1,32 @@
+{
+  "name": "@modelmix/rlm",
+  "version": "0.0.0",
+  "description": "Recursive Language Model plugin for ModelMix.",
+  "main": "index.js",
+  "types": "index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./index.d.ts",
+      "require": "./index.js",
+      "default": "./index.js"
+    }
+  },
+  "files": [
+    "index.js",
+    "index.d.ts",
+    "lib/",
+    "prompts/"
+  ],
+  "license": "MIT",
+  "type": "commonjs",
+  "engines": {
+    "node": ">=22"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "dependencies": {
+    "isolated-vm": "6.0.2",
+    "mdast-util-from-markdown": "2.0.3"
+  }
+}

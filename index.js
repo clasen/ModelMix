@@ -1,4 +1,5 @@
 const fs = require('fs');
+const { randomUUID } = require('crypto');
 const ejs = require('ejs');
 const fileType = require('file-type');
 const detectFileTypeFromBuffer = fileType.fileTypeFromBuffer || fileType.fromBuffer;
@@ -44,6 +45,34 @@ function isPlainObject(value) {
     if (!value || typeof value !== 'object' || Array.isArray(value)) return false;
     const prototype = Object.getPrototypeOf(value);
     return prototype === Object.prototype || prototype === null;
+}
+
+function clonePluginValue(value, seen = new WeakMap()) {
+    if (value === null || typeof value !== 'object') return value;
+    if (Buffer.isBuffer(value)) return Buffer.from(value);
+    if (seen.has(value)) return seen.get(value);
+
+    if (Array.isArray(value)) {
+        const clone = [];
+        seen.set(value, clone);
+        for (const item of value) clone.push(clonePluginValue(item, seen));
+        return clone;
+    }
+
+    if (!isPlainObject(value)) return value;
+    const clone = {};
+    seen.set(value, clone);
+    for (const [key, item] of Object.entries(value)) {
+        clone[key] = clonePluginValue(item, seen);
+    }
+    return clone;
+}
+
+function validatePluginResult(result, pluginName) {
+    if (!isPlainObject(result)) {
+        throw new TypeError(`Plugin "${pluginName}" must return a ModelMixResult object.`);
+    }
+    return result;
 }
 
 function normalizeContentCache(cache) {
@@ -380,6 +409,7 @@ class ModelMix {
         this.toolClient = {};
         this.mcp = {};
         this.mcpToolsManager = new MCPToolsManager();
+        this.plugins = [];
         this.templateFileAssignments = new Map();
         this.messageTemplates = new WeakMap();
         this.lastRaw = null;
@@ -452,6 +482,23 @@ class ModelMix {
         return this;
     }
 
+    use(plugin) {
+        if (!isPlainObject(plugin)) {
+            throw new TypeError('plugin must be a plain object.');
+        }
+        if (typeof plugin.name !== 'string' || plugin.name.trim().length === 0) {
+            throw new TypeError('plugin.name must be a non-empty string.');
+        }
+        if (typeof plugin.execute !== 'function') {
+            throw new TypeError(`Plugin "${plugin.name}" must define execute(context, next).`);
+        }
+        if (this.plugins.some(current => current.name === plugin.name)) {
+            throw new Error(`Plugin "${plugin.name}" is already registered on this instance.`);
+        }
+        this.plugins.push(plugin);
+        return this;
+    }
+
     static new({ options = {}, config = {}, mix = {} } = {}) {
         return new ModelMix({ options, config, mix });
     }
@@ -467,11 +514,108 @@ class ModelMix {
             instance.systemTemplate = { ...this.systemTemplate };
         }
         instance.templateFileAssignments = new Map(this.templateFileAssignments);
+        instance.plugins = [...this.plugins];
         for (const key of Object.keys(config.templateData || {})) {
             instance.templateFileAssignments.delete(key);
         }
         instance.models = this.models; // Share models array for round-robin rotation
         return instance;
+    }
+
+    _pluginsForPolicy(policy = 'inherit') {
+        if (policy === 'inherit') return [...this.plugins];
+        if (policy === 'none') return [];
+        if (!isPlainObject(policy)) {
+            throw new TypeError('plugins must be "inherit", "none", { include }, or { exclude }.');
+        }
+
+        const hasInclude = Object.prototype.hasOwnProperty.call(policy, 'include');
+        const hasExclude = Object.prototype.hasOwnProperty.call(policy, 'exclude');
+        if (hasInclude === hasExclude) {
+            throw new TypeError('plugins policy must define exactly one of include or exclude.');
+        }
+        const names = hasInclude ? policy.include : policy.exclude;
+        if (!Array.isArray(names) || names.some(name => typeof name !== 'string' || name.length === 0)) {
+            throw new TypeError('plugin include/exclude names must be non-empty strings.');
+        }
+        const uniqueNames = new Set(names);
+        const knownNames = new Set(this.plugins.map(plugin => plugin.name));
+        for (const name of uniqueNames) {
+            if (!knownNames.has(name)) {
+                throw new Error(`Plugin "${name}" is not registered on this instance.`);
+            }
+        }
+        return hasInclude
+            ? this.plugins.filter(plugin => uniqueNames.has(plugin.name))
+            : this.plugins.filter(plugin => !uniqueNames.has(plugin.name));
+    }
+
+    async _invokeChild(input, parentExecution) {
+        if (!isPlainObject(input)) {
+            throw new TypeError('Child invocation must be a plain object.');
+        }
+        if (input.history !== undefined && input.history !== false) {
+            throw new TypeError('Child invocations currently require history: false.');
+        }
+
+        const {
+            system,
+            systemFile,
+            assign,
+            messages = [],
+            tools = [],
+            options = {},
+            config = {},
+            mix = {},
+            model = this,
+            plugins = 'inherit',
+            outputMode = 'raw'
+        } = input;
+        if (!Array.isArray(messages)) {
+            throw new TypeError('Child invocation messages must be an array.');
+        }
+        if (system !== undefined && systemFile !== undefined) {
+            throw new TypeError('Child invocation must define only one of system or systemFile.');
+        }
+        if (systemFile !== undefined && (typeof systemFile !== 'string' || systemFile.length === 0)) {
+            throw new TypeError('Child invocation systemFile must be a non-empty string.');
+        }
+        if (assign !== undefined && !isPlainObject(assign)) {
+            throw new TypeError('Child invocation assign must be a plain object.');
+        }
+        if (!Array.isArray(tools)) {
+            throw new TypeError('Child invocation tools must be an array.');
+        }
+        if (!(model instanceof ModelMix)) {
+            throw new TypeError('Child invocation model must be a ModelMix instance.');
+        }
+
+        const child = model === this
+            ? ModelMix.new({ options, config, mix })
+            : model.new({ options, config, mix });
+        child.models = model.models;
+        child.plugins = this._pluginsForPolicy(plugins);
+        if (assign !== undefined) child.assign(assign);
+        if (system !== undefined) child.setSystem(system);
+        if (systemFile !== undefined) child.setSystemFromFile(systemFile);
+        child.messages = clonePluginValue(messages);
+        for (const tool of tools) {
+            if (!isPlainObject(tool) || !isPlainObject(tool.tool) || typeof tool.callback !== 'function') {
+                throw new TypeError('Child invocation tools must contain { tool, callback }.');
+            }
+            child.addTool(tool.tool, tool.callback);
+        }
+
+        const execution = {
+            executionId: randomUUID(),
+            parentExecutionId: parentExecution.executionId,
+            depth: parentExecution.depth + 1
+        };
+        const result = await child.execute({
+            outputMode,
+            _executionMetadata: execution
+        });
+        return { ...result, execution };
     }
 
     static formatJSON(obj) {
@@ -1192,7 +1336,7 @@ class ModelMix {
     }
 
     async message() {
-        let raw = await this.execute({ options: { stream: false } });
+        let raw = await this.execute({ options: { stream: false }, outputMode: 'message' });
         return raw.message;
     }
 
@@ -1228,7 +1372,7 @@ class ModelMix {
                 systemSuffix += "\n\nOutput JSON Escape: double quotes, backslashes, and control characters inside JSON strings.\nEnsure the output contains no comments.";
             }
         }
-        const { message } = await this.execute({ options, config, systemSuffix });
+        const { message } = await this.execute({ options, config, systemSuffix, outputMode: 'json' });
         const parsed = JSON.parse(this._extractBlock(message));
         return isArrayWrap ? parsed.out : parsed;
     }
@@ -1244,18 +1388,19 @@ class ModelMix {
             : '';
         const { message } = await this.execute({
             options: { stream: false },
-            systemSuffix
+            systemSuffix,
+            outputMode: 'block'
         });
         return this._extractBlock(message);
     }
 
     async raw() {
-        return this.execute({ options: { stream: false } });
+        return this.execute({ options: { stream: false }, outputMode: 'raw' });
     }
 
     async stream(callback) {
         this.streamCallback = callback;
-        return this.execute({ options: { stream: true } });
+        return this.execute({ options: { stream: true }, outputMode: 'stream' });
     }
 
     assignKeyFromFile(key, filePath) {
@@ -1474,22 +1619,25 @@ class ModelMix {
         return this.systemTemplate;
     }
 
-    async execute({ config = {}, options = {}, systemSuffix = '', _templateContext = null } = {}) {
-        if (!this.models || this.models.length === 0) {
-            throw new Error("No models specified. Use methods like .gpt5(), .sonnet46() first.");
-        }
-
+    async execute({
+        config = {},
+        options = {},
+        systemSuffix = '',
+        outputMode = 'raw',
+        _templateContext = null,
+        _pluginRequest = null,
+        _executionMetadata = null,
+        _pluginsApplied = false
+    } = {}) {
         const isRootExecution = _templateContext === null;
         const templateContext = _templateContext || createTemplateRenderContext(() => this._choiceRandom());
-        const execution = this.limiter.schedule(async () => {
-            const preparedMessages = await this.prepareMessages(templateContext);
 
+        if (!_pluginsApplied && this.plugins.length > 0) {
+            const preparedMessages = await this.prepareMessages(templateContext);
             if (preparedMessages.length === 0) {
                 throw new Error("No user messages have been added. Use addText(prompt), addTextFromFile(filePath), addImage(filePath), or addImageFromUrl(url) to add a prompt.");
             }
-
-            // Merge config to get final roundRobin value and retry settings
-            const finalConfig = {
+            const requestConfig = {
                 ...this.config,
                 ...config,
                 retry: {
@@ -1497,6 +1645,101 @@ class ModelMix {
                     ...(config.retry || {})
                 }
             };
+            const systemTemplate = this._resolveSystemTemplate(config, {});
+            const systemCacheKey = JSON.stringify([systemTemplate.filename, systemTemplate.source]);
+            if (!templateContext.renderedSystems.has(systemCacheKey)) {
+                templateContext.renderedSystems.set(
+                    systemCacheKey,
+                    this._renderTemplate(systemTemplate.source, {
+                        filename: systemTemplate.filename,
+                        label: 'system template'
+                    }, templateContext)
+                );
+            }
+            const request = {
+                system: templateContext.renderedSystems.get(systemCacheKey) + systemSuffix,
+                messages: clonePluginValue(preparedMessages),
+                options: clonePluginValue({ ...this.options, ...options }),
+                config: clonePluginValue(requestConfig),
+                outputMode
+            };
+            const executionMetadata = _executionMetadata || {
+                executionId: randomUUID(),
+                parentExecutionId: null,
+                depth: 0
+            };
+            let providerInvoked = false;
+
+            const dispatch = async index => {
+                if (index === this.plugins.length) {
+                    providerInvoked = true;
+                    return this.execute({
+                        config,
+                        options,
+                        systemSuffix,
+                        outputMode,
+                        _templateContext: templateContext,
+                        _pluginRequest: request,
+                        _executionMetadata: executionMetadata,
+                        _pluginsApplied: true
+                    });
+                }
+
+                const plugin = this.plugins[index];
+                let nextCalled = false;
+                const next = () => {
+                    if (nextCalled) {
+                        throw new Error(`Plugin "${plugin.name}" called next() multiple times.`);
+                    }
+                    nextCalled = true;
+                    return dispatch(index + 1);
+                };
+                const context = {
+                    request,
+                    execution: Object.freeze({ ...executionMetadata }),
+                    invoke: input => this._invokeChild(input, executionMetadata)
+                };
+                const result = await plugin.execute(context, next);
+                return validatePluginResult(result, plugin.name);
+            };
+
+            const result = await dispatch(0);
+            this.lastRaw = result;
+            if (!providerInvoked) {
+                if (this.config.max_history === 0) {
+                    this.messages = [];
+                } else if (result.message) {
+                    this._addText(result.message, { role: 'assistant' });
+                }
+            }
+            if (isRootExecution) this._commitTemplateRenderContext(templateContext);
+            return result;
+        }
+
+        if (!this.models || this.models.length === 0) {
+            throw new Error("No models specified. Use methods like .gpt5(), .sonnet46() first.");
+        }
+
+        const execution = this.limiter.schedule(async () => {
+            const preparedMessages = _pluginRequest
+                ? _pluginRequest.messages
+                : await this.prepareMessages(templateContext);
+
+            if (preparedMessages.length === 0) {
+                throw new Error("No user messages have been added. Use addText(prompt), addTextFromFile(filePath), addImage(filePath), or addImageFromUrl(url) to add a prompt.");
+            }
+
+            // Merge config to get final roundRobin value and retry settings
+            const finalConfig = _pluginRequest
+                ? _pluginRequest.config
+                : {
+                    ...this.config,
+                    ...config,
+                    retry: {
+                        ...(this.config.retry || {}),
+                        ...(config.retry || {})
+                    }
+                };
 
             // Try all models in order (first is primary, rest are fallbacks)
             const modelsToTry = this.models.map((model, index) => ({ model, index }));
@@ -1523,31 +1766,45 @@ class ModelMix {
                     ...providerInstance.options,
                     ...optionsTools,
                     ...options,
+                    ...(_pluginRequest?.options || {}),
                     model: currentModelKey
                 };
 
-                const currentConfig = {
-                    ...finalConfig,
-                    ...providerInstance.config,
-                    ...config,
-                    retry: {
-                        ...(finalConfig.retry || {}),
-                        ...(providerInstance.config?.retry || {}),
-                        ...(config.retry || {})
+                const currentConfig = _pluginRequest
+                    ? {
+                        ...providerInstance.config,
+                        ..._pluginRequest.config,
+                        retry: {
+                            ...(providerInstance.config?.retry || {}),
+                            ...(_pluginRequest.config.retry || {})
+                        }
                     }
-                };
-                const systemTemplate = this._resolveSystemTemplate(config, providerInstance.config);
-                const systemCacheKey = JSON.stringify([systemTemplate.filename, systemTemplate.source]);
-                if (!templateContext.renderedSystems.has(systemCacheKey)) {
-                    templateContext.renderedSystems.set(
-                        systemCacheKey,
-                        this._renderTemplate(systemTemplate.source, {
-                            filename: systemTemplate.filename,
-                            label: 'system template'
-                        }, templateContext)
-                    );
+                    : {
+                        ...finalConfig,
+                        ...providerInstance.config,
+                        ...config,
+                        retry: {
+                            ...(finalConfig.retry || {}),
+                            ...(providerInstance.config?.retry || {}),
+                            ...(config.retry || {})
+                        }
+                    };
+                if (_pluginRequest) {
+                    currentConfig.system = _pluginRequest.system;
+                } else {
+                    const systemTemplate = this._resolveSystemTemplate(config, providerInstance.config);
+                    const systemCacheKey = JSON.stringify([systemTemplate.filename, systemTemplate.source]);
+                    if (!templateContext.renderedSystems.has(systemCacheKey)) {
+                        templateContext.renderedSystems.set(
+                            systemCacheKey,
+                            this._renderTemplate(systemTemplate.source, {
+                                filename: systemTemplate.filename,
+                                label: 'system template'
+                            }, templateContext)
+                        );
+                    }
+                    currentConfig.system = templateContext.renderedSystems.get(systemCacheKey) + systemSuffix;
                 }
-                currentConfig.system = templateContext.renderedSystems.get(systemCacheKey) + systemSuffix;
 
                 // Grok 4.20 alias → reasoning / non-reasoning from unified effort
                 const resolvedModelKey = resolveGrok420ModelKey(
@@ -1641,11 +1898,14 @@ class ModelMix {
                     }
 
                     if (result.toolCalls && result.toolCalls.length > 0) {
+                        const toolMessages = _pluginRequest
+                            ? clonePluginValue(_pluginRequest.messages)
+                            : this.messages;
                         if (result.assistantMessage) {
-                            this.messages.push(result.assistantMessage);
+                            toolMessages.push(result.assistantMessage);
                         } else if (result.message) {
                             if (result.signature) {
-                                this.messages.push({
+                                toolMessages.push({
                                     role: "assistant", content: [{
                                         type: "thinking",
                                         // Empty string is valid (Anthropic display: "omitted").
@@ -1654,25 +1914,44 @@ class ModelMix {
                                     }]
                                 });
                             } else {
-                                this._addText(result.message, { role: "assistant" });
+                                toolMessages.push({
+                                    role: 'assistant',
+                                    content: [{ type: 'text', text: result.message }]
+                                });
                             }
                         }
 
                         if (!result.assistantMessage) {
-                            this.messages.push({ role: "assistant", content: null, tool_calls: result.toolCalls });
+                            toolMessages.push({ role: "assistant", content: null, tool_calls: result.toolCalls });
                         }
 
                         const toolResults = await this.processToolCalls(result.toolCalls);
                         for (const toolResult of toolResults) {
-                            this.messages.push({
+                            toolMessages.push({
                                 role: 'tool',
                                 tool_call_id: toolResult.tool_call_id,
                                 name: toolResult.name,
                                 content: toolResult.content
                             });
                         }
+                        this.messages = toolMessages;
 
-                        return this.execute({ options, config, systemSuffix, _templateContext: templateContext });
+                        const nextPluginRequest = _pluginRequest
+                            ? {
+                                ..._pluginRequest,
+                                messages: toolMessages
+                            }
+                            : null;
+                        return this.execute({
+                            options,
+                            config,
+                            systemSuffix,
+                            outputMode,
+                            _templateContext: templateContext,
+                            _pluginRequest: nextPluginRequest,
+                            _executionMetadata,
+                            _pluginsApplied
+                        });
                     }
 
                     // debug level 1: Just success indicator

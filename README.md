@@ -101,6 +101,91 @@ This pattern allows you to:
 - Track token usage across all providers
 - Keep your code clean and maintainable
 
+## 🔌 Instance Plugins
+
+Plugins wrap one ModelMix instance without changing global behavior. They run in registration order after templates are rendered and before provider-specific request conversion:
+
+```javascript
+const metrics = {
+    name: 'metrics',
+    async execute(context, next) {
+        const startedAt = Date.now();
+        const result = await next();
+        return { ...result, elapsedMs: Date.now() - startedAt };
+    }
+};
+
+const model = ModelMix.new()
+    .gpt56luna()
+    .use(metrics)
+    .addText('Summarize this request.');
+```
+
+A plugin may edit `context.request`, call `next()`, or return a complete ModelMix result itself. It can also create history-free child executions with `context.invoke()` and choose plugin inheritance:
+
+```javascript
+const child = await context.invoke({
+    systemFile: './prompts/extract-entities.md',
+    assign: { outputLanguage: 'Spanish' },
+    messages: [{ role: 'user', content: section }],
+    plugins: { exclude: ['recursive-plugin'] },
+    history: false
+});
+```
+
+Supported policies are `'inherit'`, `'none'`, `{ include: [...] }`, and `{ exclude: [...] }`. Child metadata exposes `executionId`, `parentExecutionId`, and `depth` to middleware. `.new()` inherits registered plugins but not message history.
+
+Child `systemFile` templates use the same EJS engine, `assign()` data contract, and relative Markdown includes as ordinary ModelMix templates. Use either `system` or `systemFile`, not both.
+
+### Recursive Language Model plugin
+
+The separately publishable `@modelmix/rlm` workspace package keeps document parsing, planner prompts, and `isolated-vm` out of the core `modelmix` dependency tree. It requires Node.js 22 or newer.
+
+```javascript
+const { ModelMix } = require('modelmix');
+const { rlm } = require('@modelmix/rlm');
+
+const fast = ModelMix.new().gpt41mini();
+
+const result = await ModelMix.new()
+    .gpt56luna()
+    .use(rlm({
+        maxDepth: 2,
+        documents: {
+            book: {
+                format: 'markdown',
+                content: markdownBook
+            }
+        },
+        workers: {
+            fast: {
+                model: fast,
+                intelligence: 2,
+                cost: 1,
+                speed: 4,
+                description: 'Translation, extraction, and simple transformations'
+            }
+        },
+        limits: {
+            maxQueryBytes: 64 * 1024,
+            sandboxMemoryBytes: 64 * 1024 * 1024,
+            maxConcurrentQueries: 4,
+            maxCalls: 100,
+            maxOutputBytes: 8 * 1024 * 1024,
+            maxGeneratedTokens: 100000,
+            maxWallTimeMs: 120000
+        }
+    }))
+    .addText('Translate this book to neutral Latin American Spanish.')
+    .message();
+```
+
+Markdown headings become stable nested sections, lists expose item arrays, and the original source order remains reconstructable. The planner receives only a content-free variable manifest: paths, types, array item counts, serialized UTF-8 byte estimates, string lengths, line and paragraph counts, structural summaries, and partition hints. The document values enter only the isolated sandbox, where generated JavaScript can inspect `variables` and call registered workers through `query()`.
+
+A worker normally supplies `model: anotherModelMixInstance`. To offer the current parent chain under a name, register it with `useParent: true` instead; defining both is rejected.
+
+Planner instructions live in Markdown templates under `plugins/rlm/prompts/`. The plugin supplies manifests and limits through ModelMix `assign()` and loads the system prompt through `systemFile`, so relative includes work and runtime values are rendered exactly once.
+
 ## 🎛️ Unified Effort Scale
 
 Control reasoning depth with one ModelMix policy value (`-1` adaptive, or `0`–`100`). It lives **outside** native `options` and is mapped to each provider’s effort API at request time.
@@ -120,13 +205,26 @@ ModelMix.new().effort(-1).minimaxM3().addText('...').message();
 |--|------|-------|-------|-------|--------|------|
 | OpenAI | `none` | `low` | `medium` | `high` | `xhigh` | — |
 | Anthropic | `low` | `medium` | `high` | `xhigh` | `max` | adaptive |
-| Gemini 3+\* | `minimal` | `low` | `medium` | `high` | — | dynamic |
+| Gemini 3+ | `minimal` | `low` | `medium` | `high` | — | dynamic |
 | DeepSeek V4 | off | `low`↑ | `high`↑ | `high`↑ | `max`↑ | — |
 | MiniMax M3 | off | adaptive | adaptive | adaptive | adaptive | adaptive |
 
-\* Gemini bands: 0–24 / 25–49 / 50–74 / 75–100. DeepSeek `↑` = thinking on; `off` = thinking disabled. MiniMax `off`/`adaptive` = `thinking.disabled` / `thinking.type=adaptive`. Gemini 2.5 maps 0–100 to `thinkingBudget`. Anthropic maps adaptive thinking + `output_config.effort` on Claude 5 / Fable / Opus 4.6+ / Sonnet 4.6+; older models (Sonnet 4.5, Haiku 4.5) get `thinking.type=enabled` + `budget_tokens`. Grok 4.6 clamps 0–39 / 40–59 / 60–79 / 80–100 to `low` / `medium` / `high` / `xhigh`; without effort it uses the native `high` default. `-1` = provider adaptive/dynamic when available, else no-op. Levels clamp to what each model supports.
+### Provider-specific behavior
 
-Migration: former `*think()` shorthands are removed — use `.effort(n).<model>()` (or any 0–100 / `-1`). Kimi: `kimiK25()` / `kimiK26()`. Grok 4.20: `.grok420()` is non-reasoning; `.effort(20+).grok420()` (or `-1`) selects the reasoning model.
+- **Gemini:** Gemini 3+ uses bands 0–24 / 25–49 / 50–74 / 75–100. Gemini 2.5 maps 0–100 to `thinkingBudget`.
+- **DeepSeek:** `↑` means thinking is enabled; `off` means it is disabled.
+- **MiniMax:** `off` maps to `thinking.disabled`; `adaptive` maps to `thinking.type=adaptive`.
+- **Anthropic:** Claude 5, Fable, Opus 4.6+, and Sonnet 4.6+ use adaptive thinking with `output_config.effort`. Sonnet 4.5 and Haiku 4.5 use `thinking.type=enabled` with `budget_tokens`.
+- **Grok 4.6:** 0–39 / 40–59 / 60–79 / 80–100 map to `low` / `medium` / `high` / `xhigh`. Without effort, Grok uses its native `high` default.
+
+`-1` uses the provider's adaptive or dynamic mode when available; otherwise it is a no-op. Effort levels are clamped to each model's supported range.
+
+### Migrating from thinking shorthands
+
+The former `*think()` methods were removed. Use `.effort(n).<model>()` with `0`–`100` or `-1` instead.
+
+- **Kimi:** use `kimiK25()` or `kimiK26()`.
+- **Grok 4.20:** `.grok420()` selects the non-reasoning model. Use `.effort(20+).grok420()` or `.effort(-1).grok420()` to select the reasoning model.
 
 ## 🔧 Model Context Protocol (MCP) Integration
 

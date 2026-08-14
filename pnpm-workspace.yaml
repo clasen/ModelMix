@@ -1,3 +1,9 @@
+packages:
+  - plugins/*
+
+allowBuilds:
+  isolated-vm: true
+
 minimumReleaseAgeExclude:
   - ws@8.21.0
   - hono@4.12.25

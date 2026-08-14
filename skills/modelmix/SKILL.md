@@ -92,6 +92,24 @@ const model = ModelMix.new()
 
 If `sonnet46` fails, it automatically tries `gpt52`, then `gemini3flash`.
 
+### Instance plugins
+
+Register middleware with `.use({ name, execute })`. Plugins are scoped to the instance, run in registration order, and receive the rendered provider-neutral request. They may edit `context.request`, call `next()`, or return a complete ModelMix result.
+
+```javascript
+model.use({
+    name: 'metrics',
+    async execute(context, next) {
+        const result = await next();
+        return { ...result, executionId: context.execution.executionId };
+    }
+});
+```
+
+`context.invoke()` starts a child without conversation history. Its `plugins` policy is `'inherit'`, `'none'`, `{ include: [...] }`, or `{ exclude: [...] }`. Passing `model` routes the child through another ModelMix worker chain while preserving execution-tree metadata. Child invocations may pass `assign` with either `system` or `systemFile`; `systemFile` uses the ordinary ModelMix EJS renderer and relative includes.
+
+The optional `@modelmix/rlm` package is a separate workspace/npm package for recursive processing of large structured inputs. Pass Markdown through `documents: { name: { format: 'markdown', content } }`, register named ModelMix worker chains, and provide every runtime limit explicitly. A worker uses either `model: anotherModelMixInstance` or `useParent: true`. Its planner sees content-free variable size/shape metadata, while document values and generated orchestration code stay inside an `isolated-vm` sandbox. RLM planner prompts are Markdown files rendered with the normal child `assign` plus `systemFile` path.
+
 ### Unified effort
 
 Provider-agnostic reasoning intensity. **Not** an `options` field — use `config.effort` or `.effort(n)`.
@@ -586,6 +604,7 @@ const model = ModelMix.new({
 | `.addTools([{tool, callback}])` | `this` | Register multiple tools |
 | `.removeTool(name)` | `this` | Remove a tool |
 | `.listTools()` | `{local, mcp}` | List registered tools |
+| `.use(plugin)` | `this` | Register instance-scoped execution middleware |
 | `.new()` | `ModelMix` | Clone instance sharing models |
 | `.attach(key, provider)` | `this` | Attach custom provider |
 
