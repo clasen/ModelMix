@@ -982,6 +982,18 @@ new ModelMix(args = { options: {}, config: {} })
   - `toolCalls`: Array of tool calls made by the model (if any)
   - `tokens`: Normalized token counts (`input`, `output`, `thinking`, `total`, `cached`, `cacheWrite`, `cacheWrite5m`, `cacheWrite1h`, `uncachedInput`, `cacheHitRate`), cache economics (`cacheSavings`, `cacheWritePremium`, `breakEvenHits`), plus `cost`, `costBreakdown` (USD), and `speed` (output tokens/sec)
   - `response`: The raw API response
+- `ModerationMix` owns moderation-only provider chains. Use `openai()` to attach OpenAI's current `omni-moderation-latest`; `raw()` exposes the results under `moderation` (`flagged`, `categories`, `category_scores`, and `category_applied_input_types`). It uses `/v1/moderations`, rejects generative providers, does not generate text, and does not support streaming. Future moderation providers can be appended as fallbacks.
+  ```javascript
+  const { ModerationMix } = require('modelmix');
+
+  const { moderation: [profile] } = await ModerationMix.new()
+      .openai()
+      .addText(username)
+      .addImageFromUrl(avatarUrl)
+      .raw();
+
+  if (profile.flagged) throw new Error('Profile rejected by moderation');
+  ```
 - `stream(callback)`: Sends the message and streams the response, invoking the callback with each streamed part.
 - `json(schemaExample, descriptions = {}, options = {})`: Forces the model to return a response in a specific JSON format.
   - `schemaExample`: Example of the JSON structure to be returned. Top-level arrays are auto-wrapped for better LLM compatibility.

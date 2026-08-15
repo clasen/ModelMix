@@ -190,7 +190,34 @@ export interface ModelMixResult {
   response?: unknown;
   assistantMessage?: ChatMessage;
   execution?: PluginExecutionMetadata;
+  moderation?: ModerationResult[];
   [key: string]: unknown;
+}
+
+export interface ModerationCategories {
+  harassment: boolean;
+  'harassment/threatening': boolean;
+  hate: boolean;
+  'hate/threatening': boolean;
+  illicit: boolean | null;
+  'illicit/violent': boolean | null;
+  'self-harm': boolean;
+  'self-harm/instructions': boolean;
+  'self-harm/intent': boolean;
+  sexual: boolean;
+  'sexual/minors': boolean;
+  violence: boolean;
+  'violence/graphic': boolean;
+}
+
+export type ModerationCategoryScores = Record<keyof ModerationCategories, number>;
+export type ModerationAppliedInputTypes = Record<keyof ModerationCategories, Array<'text' | 'image'>>;
+
+export interface ModerationResult {
+  flagged: boolean;
+  categories: ModerationCategories;
+  category_scores: ModerationCategoryScores;
+  category_applied_input_types: ModerationAppliedInputTypes;
 }
 
 export type ModelMixOutputMode = 'message' | 'json' | 'block' | 'raw' | 'stream';
@@ -571,7 +598,14 @@ export declare class MixCustom {
 }
 
 export declare class MixOpenAI extends MixCustom {}
+export declare class MixModeration extends MixCustom {}
 export declare class MixOpenAIResponses extends MixOpenAI {}
+export declare class MixOpenAIModeration extends MixModeration {
+  static messagesToModerationInput(messages?: ChatMessage[]): Array<
+    | { type: 'text'; text: string }
+    | { type: 'image_url'; image_url: { url: string } }
+  >;
+}
 export declare class MixOpenAIWebSocket extends MixOpenAIResponses {}
 export declare class MixOpenRouter extends MixOpenAI {}
 export declare class MixKimi extends MixOpenAI {}
@@ -589,6 +623,18 @@ export declare class MixCerebras extends MixCustom {}
 export declare class MixFireworks extends MixCustom {}
 export declare class MixNVIDIA extends MixCustom {}
 export declare class MixGoogle extends MixCustom {}
+
+export declare class ModerationMix extends ModelMix {
+  constructor(setup?: Omit<ModelMixSetup, 'mix'>);
+  static new(setup?: Omit<ModelMixSetup, 'mix'>): ModerationMix;
+  new(setup?: Omit<ModelMixSetup, 'mix'>): ModerationMix;
+  attach(key: string, provider: MixModeration): this;
+  openai(args?: ModelAttachArgs): this;
+  message(): Promise<never>;
+  json(): Promise<never>;
+  block(): Promise<never>;
+  stream(): Promise<never>;
+}
 
 /** Normalize unified effort to integer -1 or 0..100. */
 export function normalizeEffort(value: unknown): EffortValue;

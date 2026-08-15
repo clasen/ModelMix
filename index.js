@@ -2602,6 +2602,12 @@ class MixOpenAI extends MixCustom {
     }
 }
 
+class MixModeration extends MixCustom {
+    getOptionsTools() {
+        return {};
+    }
+}
+
 class MixOpenAIResponses extends MixOpenAI {
     async create({ config = {}, options = {} } = {}) {
 
@@ -2830,6 +2836,109 @@ class MixOpenAIResponses extends MixOpenAI {
         }
 
         return mapped;
+    }
+}
+
+class MixOpenAIModeration extends MixModeration {
+    getDefaultConfig(customConfig) {
+        const apiKey = customConfig.apiKey || process.env.OPENAI_API_KEY;
+        if (!apiKey) {
+            throw new Error('OpenAI API key not found. Please provide it in config or set OPENAI_API_KEY environment variable.');
+        }
+
+        return super.getDefaultConfig({
+            url: 'https://api.openai.com/v1/moderations',
+            apiKey,
+            ...customConfig
+        });
+    }
+
+    async create({ config = {}, options = {} } = {}) {
+        if (options.stream) {
+            throw new Error('Stream is not supported for OpenAI moderation');
+        }
+
+        const input = MixOpenAIModeration.messagesToModerationInput(options.messages);
+        const response = await fetchJsonResponse(this.config.url, {
+            method: 'POST',
+            headers: this.headers,
+            body: JSON.stringify({ model: options.model, input })
+        });
+
+        return {
+            moderation: response.data.results,
+            tokens: ModelMix.normalizeTokenUsage(),
+            response: response.data
+        };
+    }
+
+    static messagesToModerationInput(messages = []) {
+        const input = [];
+
+        for (const message of messages) {
+            if (typeof message.content === 'string') {
+                input.push({ type: 'text', text: message.content });
+                continue;
+            }
+            if (!Array.isArray(message.content)) continue;
+
+            for (const content of message.content) {
+                if (content?.type === 'text') {
+                    input.push({ type: 'text', text: content.text });
+                } else if (content?.type === 'image') {
+                    const { media_type: mediaType, data } = content.source || {};
+                    if (!mediaType || !data) {
+                        throw new Error('OpenAI moderation images must be prepared as base64 data URLs');
+                    }
+                    input.push({
+                        type: 'image_url',
+                        image_url: { url: `data:${mediaType};base64,${data}` }
+                    });
+                }
+            }
+        }
+
+        return input;
+    }
+}
+
+class ModerationMix extends ModelMix {
+    static new(setup = {}) {
+        return new ModerationMix(setup);
+    }
+
+    new({ options = {}, config = {} } = {}) {
+        return new ModerationMix({
+            options: { ...this.options, ...options },
+            config: { ...this.config, ...config }
+        });
+    }
+
+    attach(key, provider) {
+        if (!(provider instanceof MixModeration)) {
+            throw new Error('ModerationMix only accepts moderation providers.');
+        }
+        return super.attach(key, provider);
+    }
+
+    openai({ options = {}, config = {} } = {}) {
+        return this.attach('omni-moderation-latest', new MixOpenAIModeration({ options, config }));
+    }
+
+    async message() {
+        throw new Error('ModerationMix does not generate messages. Use raw() and read result.moderation.');
+    }
+
+    async json() {
+        throw new Error('ModerationMix does not generate JSON. Use raw() and read result.moderation.');
+    }
+
+    async block() {
+        throw new Error('ModerationMix does not generate blocks. Use raw() and read result.moderation.');
+    }
+
+    async stream() {
+        throw new Error('ModerationMix does not support streaming. Use raw().');
     }
 }
 
@@ -4020,4 +4129,4 @@ class MixGoogle extends MixCustom {
     }
 }
 
-module.exports = { MixCustom, ModelMix, MixAnthropic, MixKimi, MixMiniMax, MixMiMo, MixOpenAI, MixOpenAIResponses, MixOpenAIWebSocket, MixOpenRouter, MixPerplexity, MixOllama, MixLMStudio, MixGroq, MixTogether, MixGrok, MixCerebras, MixGoogle, MixFireworks, MixNVIDIA, normalizeEffort, applyUnifiedEffort, resolveProviderFamily };
+module.exports = { MixCustom, ModelMix, ModerationMix, MixModeration, MixAnthropic, MixKimi, MixMiniMax, MixMiMo, MixOpenAI, MixOpenAIResponses, MixOpenAIModeration, MixOpenAIWebSocket, MixOpenRouter, MixPerplexity, MixOllama, MixLMStudio, MixGroq, MixTogether, MixGrok, MixCerebras, MixGoogle, MixFireworks, MixNVIDIA, normalizeEffort, applyUnifiedEffort, resolveProviderFamily };

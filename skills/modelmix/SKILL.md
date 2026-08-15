@@ -137,6 +137,9 @@ ModelMix.new({ config: { effort: 80 } })
 ## Available Model Shorthands
 
 ### OpenAI
+
+Use `ModerationMix.new().openai()` with `.raw()` to classify text and images through OpenAI's Moderations endpoint. Read the results from `raw.moderation`. `ModerationMix` accepts moderation providers as ordered fallbacks, rejects generative providers, and does not generate text or support streaming.
+
 `gpt52()` `gpt52chat()` `gpt51()` `gpt5()` `gpt5mini()` `gpt5nano()` `gpt45()` `gpt41()` `gpt41mini()` `gpt41nano()` `o3()` `o4mini()`
 
 ### Anthropic
@@ -610,7 +613,7 @@ const model = ModelMix.new({
 
 ## Available Provider Classes
 
-`MixOpenAI` `MixAnthropic` `MixGoogle` `MixPerplexity` `MixGroq` `MixTogether` `MixGrok` `MixOpenRouter` `MixOllama` `MixLMStudio` `MixCustom` `MixCerebras` `MixFireworks` `MixKimi` `MixMiniMax` `MixLambda`
+`ModerationMix` `MixModeration` `MixOpenAI` `MixOpenAIResponses` `MixOpenAIModeration` `MixAnthropic` `MixGoogle` `MixPerplexity` `MixGroq` `MixTogether` `MixGrok` `MixOpenRouter` `MixOllama` `MixLMStudio` `MixCustom` `MixCerebras` `MixFireworks` `MixKimi` `MixMiniMax` `MixLambda`
 
 ## Troubleshooting
 
