@@ -4,6 +4,25 @@
 
 Ever found yourself wanting to integrate AI models into your projects but worried about reliability? ModelMix helps you build resilient AI applications by chaining multiple models together. If one model fails, it automatically switches to the next one, ensuring your application keeps running smoothly.
 
+## 📑 Table of Contents
+
+- [Features](#-features)
+- [Usage](#-usage)
+- [Shorthand Methods](#-shorthand-methods)
+- [Unified Effort Scale](#-unified-effort-scale)
+- [Templates](#-templates)
+- [JSON Structured Output](#-json-structured-output)
+- [Token Usage Tracking](#-token-usage-tracking)
+- [Prompt Caching](#-prompt-caching)
+- [Model Context Protocol (MCP) Integration](#-model-context-protocol-mcp-integration)
+- [Enabling Debug Mode](#-enabling-debug-mode)
+- [Bottleneck Integration](#-bottleneck-integration)
+- [Retry (Opt-In)](#-retry-optin)
+- [Instance Plugins](#-instance-plugins)
+- [ModelMix Class Overview](#-modelmix-class-overview)
+- [Contributing](#-contributing)
+- [License](#-license)
+
 ## ✨ Features
 
 - **Unified Interface**: Interact with multiple AI models through a single, coherent API.
@@ -225,34 +244,6 @@ The former `*think()` methods were removed. Use `.effort(n).<model>()` with `0`�
 
 - **Kimi:** use `kimiK25()` or `kimiK26()`.
 - **Grok 4.20:** `.grok420()` selects the non-reasoning model. Use `.effort(20+).grok420()` or `.effort(-1).grok420()` to select the reasoning model.
-
-## 🔧 Model Context Protocol (MCP) Integration
-
-ModelMix makes it incredibly easy to enhance your AI models with powerful capabilities through the Model Context Protocol. With just a few lines of code, you can add features like web search, code execution, or any custom functionality to your models.
-
-### Example: Adding Web Search Capability
-
-Include the API key for Brave Search in your .env file.
-```
-BRAVE_API_KEY="BSA0..._fm"
-```
-
-```javascript
-const mmix = ModelMix.new({ config: { max_history: 10 } }).gpt56sol();
-mmix.setSystem('You are an assistant and today is ' + new Date().toISOString());
-
-// Add web search capability through MCP
-await mmix.addMCP('@modelcontextprotocol/server-brave-search');
-mmix.addText('Use Internet: When did the last Christian pope die?');
-console.log(await mmix.message());
-```
-
-This simple integration allows your model to:
-- Search the web in real-time
-- Access up-to-date information
-- Combine AI reasoning with external data
-
-The Model Context Protocol makes it easy to add any capability to your models, from web search to code execution, database queries, or custom functions. All with just a few lines of code!
 
 ## 🔄 Templates
 
@@ -715,6 +706,39 @@ console.log(model.lastRaw.tokens);
 
 `thinking` contains internal reasoning tokens when a provider reports them separately; cost calculation bills them at the output rate. `cached` aggregates cache reads reported by the provider, while `cacheWrite` aggregates cache writes. Anthropic additionally exposes `cacheWrite5m` and `cacheWrite1h` because those writes cost 1.25× and 2× the normal input rate, respectively. `cacheSavings` compares cache reads with the normal input rate, `cacheWritePremium` compares writes with that rate, and `breakEvenHits` estimates how many complete future hits recover the current write premium. For Anthropic, `input` is normalized to include uncached input, cache reads, and cache writes. Missing usage or pricing categories return `0`. The `speed` field is the generation speed measured in output tokens per second (integer).
 
+## 🧠 Prompt Caching
+
+Prompt caching reuses the stable beginning of a prompt at the provider level. It does not cache the answer: every call still generates a new response.
+
+For GPT-5.6, keep the long, reusable instructions first, mark the end of that stable prefix, and add the changing request afterward:
+
+```javascript
+async function ask(question) {
+    const model = ModelMix.new()
+        .gpt56luna({
+            options: {
+                prompt_cache_key: 'support-rules-v1',
+                prompt_cache_options: { mode: 'explicit', ttl: '30m' }
+            }
+        })
+        .addTextFromFile('./prompts/support.md', {
+            role: 'developer',
+            cache: { breakpoint: true }
+        })
+        .addText(question);
+
+    const answer = await model.message();
+    const { cached, cacheWrite, cacheHitRate } = model.lastRaw.tokens;
+    console.log({ cached, cacheWrite, cacheHitRate });
+    return answer;
+}
+
+await ask('Summarize support ticket 123.');
+await ask('Summarize support ticket 456.');
+```
+
+The contents of `support.md` and the cache key stay the same between calls; only the final question changes. The first request may report `cacheWrite > 0`, while later requests confirm reuse with `cached > 0`. For GPT-5.6, the stable prefix must contain at least 1,024 tokens. Keep all variable content after the breakpoint, and change `prompt_cache_key` when the stable instructions change.
+
 ### GPT-5.6 prompt caching
 
 GPT-5.6 supports implicit or explicit caching through `prompt_cache_options`. Put the explicit breakpoint at the end of the stable prefix; the provider only caches prompts with at least 1,024 tokens.
@@ -770,6 +794,34 @@ const model = ModelMix.new()
 ```
 
 GPT-5.6 receives `prompt_cache_breakpoint`; Anthropic receives `cache_control`; older OpenAI models and providers without an equivalent omit the marker. When a neutral explicit breakpoint is present for Anthropic, its model-scoped `cache_control` becomes that block's policy instead of adding an automatic breakpoint after the variable suffix.
+
+## 🔧 Model Context Protocol (MCP) Integration
+
+ModelMix makes it incredibly easy to enhance your AI models with powerful capabilities through the Model Context Protocol. With just a few lines of code, you can add features like web search, code execution, or any custom functionality to your models.
+
+### Example: Adding Web Search Capability
+
+Include the API key for Brave Search in your .env file.
+```
+BRAVE_API_KEY="BSA0..._fm"
+```
+
+```javascript
+const mmix = ModelMix.new({ config: { max_history: 10 } }).gpt56sol();
+mmix.setSystem('You are an assistant and today is ' + new Date().toISOString());
+
+// Add web search capability through MCP
+await mmix.addMCP('@modelcontextprotocol/server-brave-search');
+mmix.addText('Use Internet: When did the last Christian pope die?');
+console.log(await mmix.message());
+```
+
+This simple integration allows your model to:
+- Search the web in real-time
+- Access up-to-date information
+- Combine AI reasoning with external data
+
+The Model Context Protocol makes it easy to add any capability to your models, from web search to code execution, database queries, or custom functions. All with just a few lines of code!
 
 ## 🐛 Enabling Debug Mode
 
