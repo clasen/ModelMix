@@ -95,6 +95,19 @@ const model = await ModelMix.new(setup)
 console.log(await model.message());
 ```
 
+The same ordered chain can be attached by passing model shortcuts directly to
+`chain()`. Add `@effort` to override unified effort for one model; entries
+without it inherit the chain effort, or use the provider default when the chain
+has no configured effort:
+
+```javascript
+const model = ModelMix.new(setup)
+    .chain('sonnet5', 'gpt56luna@20', 'gemini37flash@-1')
+    .addText("What's your name?");
+
+console.log(await model.message());
+```
+
 **Use Perplexity to get the price of ETH**
 ```javascript
 const ETH = ModelMix.new()

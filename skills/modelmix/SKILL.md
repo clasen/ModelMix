@@ -92,6 +92,17 @@ const model = ModelMix.new()
 
 If `sonnet46` fails, it automatically tries `gpt52`, then `gemini3flash`.
 
+The equivalent `chain()` form accepts public shortcut names directly in the
+same order. Append `@effort` for a per-model unified effort override (`-1` or
+`0`–`100`). Without the suffix, the entry inherits `config.effort`, or keeps the
+provider default when no chain effort is configured:
+
+```javascript
+const model = ModelMix.new()
+    .chain('sonnet46', 'gpt52@20', 'gemini3flash@-1')
+    .addText('Hello!');
+```
+
 ### Instance plugins
 
 Register middleware with `.use({ name, execute })`. Plugins are scoped to the instance, run in registration order, and receive the rendered provider-neutral request. They may edit `context.request`, call `next()`, or return a complete ModelMix result.

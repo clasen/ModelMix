@@ -26,6 +26,40 @@ describe('Provider Fallback Chain Tests', () => {
             });
         });
 
+        it('should attach chain shortcuts from arguments with optional per-model effort', () => {
+            model.chain('sonnet5', 'gpt56luna@20', 'gemini37flash@-1');
+
+            expect(model.models.map(({ key }) => key)).to.deep.equal([
+                'claude-sonnet-5',
+                'gpt-5.6-luna',
+                'gemini-3.7-flash'
+            ]);
+            expect(model.models[0].provider.config).to.not.have.property('effort');
+            expect(model.models[1].provider.config.effort).to.equal(20);
+            expect(model.models[2].provider.config.effort).to.equal(-1);
+        });
+
+        it('should keep the chain default effort when an entry omits it', () => {
+            model.effort(60).chain('gpt56luna', 'sonnet5@20');
+
+            expect(model.config.effort).to.equal(60);
+            expect(model.models[0].provider.config).to.not.have.property('effort');
+            expect(model.models[1].provider.config.effort).to.equal(20);
+        });
+
+        it('should reject invalid chains before attaching any model', () => {
+            expect(() => model.chain('gpt56luna', 'unknownModel'))
+                .to.throw('Unknown model shortcut "unknownModel" in chain().');
+            expect(model.models).to.have.length(0);
+
+            expect(() => model.chain('gpt56luna@101'))
+                .to.throw(/Invalid effort/);
+            expect(() => model.chain())
+                .to.throw('chain() requires at least one model shortcut string.');
+            expect(() => model.chain(['gpt56luna']))
+                .to.throw('Invalid chain model at index 0: expected a model shortcut string.');
+        });
+
         it('should use primary provider when available', async () => {
             model.gpt5mini().sonnet46().addText('Hello');
 

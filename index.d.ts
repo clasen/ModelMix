@@ -436,6 +436,8 @@ export declare class ModelMix {
   assign(keyValues: Record<string, unknown>): this;
   assignKey(key: string, value: unknown): this;
   effort(value: EffortValue): this;
+  /** Attach an ordered model chain. Use `shortcut@effort` for a per-model override. */
+  chain(...modelSpecs: string[]): this;
   attach(key: string, provider: MixCustom): this;
 
   // OpenAI
