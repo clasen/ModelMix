@@ -86,11 +86,11 @@ Chain shorthand methods to attach providers. First model is primary; others are 
 const model = ModelMix.new()
     .sonnet46()        // primary
     .gpt52()           // fallback 1
-    .gemini3flash()    // fallback 2
+    .gemini37flash()   // fallback 2
     .addText("Hello!")
 ```
 
-If `sonnet46` fails, it automatically tries `gpt52`, then `gemini3flash`.
+If `sonnet46` fails, it automatically tries `gpt52`, then `gemini37flash`.
 
 The equivalent `chain()` form accepts public shortcut names directly in the
 same order. Append `@effort` for a per-model unified effort override (`-1` or
@@ -99,7 +99,7 @@ provider default when no chain effort is configured:
 
 ```javascript
 const model = ModelMix.new()
-    .chain('sonnet46', 'gpt52@20', 'gemini3flash@-1')
+    .chain('sonnet46', 'gpt52@20', 'gemini37flash@-1')
     .addText('Hello!');
 ```
 
@@ -151,7 +151,7 @@ ModelMix.new({ config: { effort: 80 } })
 
 Use `ModerationMix.new().openai()` with `.raw()` to classify text and images through OpenAI's Moderations endpoint. Read the results from `raw.moderation`. `ModerationMix` accepts moderation providers as ordered fallbacks, rejects generative providers, and does not generate text or support streaming.
 
-`gpt52()` `gpt52chat()` `gpt51()` `gpt5()` `gpt5mini()` `gpt5nano()` `gpt45()` `gpt41()` `gpt41mini()` `gpt41nano()` `o3()` `o4mini()`
+`gpt52()` `gpt52chat()` `gpt51()` `gpt5()` `gpt5mini()` `gpt5nano()` `gpt45()` `o3()` `o4mini()`
 
 ### Anthropic
 `fable50()` `opus50()` `opus48()` `opus47()` `opus46()` `sonnet5()` `sonnet46()` `sonnet45()` `haiku45()`
@@ -159,7 +159,7 @@ Use `ModerationMix.new().openai()` with `.raw()` to classify text and images thr
 Use `.effort(n)` (or `config.effort`) to enable Anthropic thinking — e.g. `.effort(100).opus50()`. `fable5()` and `opus5()` remain available as compatibility aliases.
 
 ### Google
-`gemini3pro()` `gemini3flash()` `gemini37flash()` `gemini36flash()` `gemini35flash()` `gemini35flashLite()` `gemini31flashLite()` `gemini25pro()` `gemini25flash()`
+`gemini31pro()` `gemini37flash()` `gemini36flash()` `gemini35flash()` `gemini35flashLite()` `gemini31flashLite()`
 
 ### Grok
 `grok46()` `grok45()` `grok43()` `grok420multiAgent()` `grok420()`
@@ -174,7 +174,7 @@ Use `.effort(n)` (or `config.effort`) to enable Anthropic thinking — e.g. `.ef
 `kimiK3()` — requires `MOONSHOT_API_KEY`; use `{ mix: { moonshot: false, openrouter: true } }` for OpenRouter.
 
 ### MiniMax
-`minimaxM25()` `minimaxM27()` `minimaxM3()`
+`minimaxM27()` `minimaxM3()`
 
 ### Fireworks
 `qwen36plus()` `qwen37plus()` `qwen38max()` `deepseekV4Flash()` `deepseekV4Pro()` `kimiK26()`
@@ -460,7 +460,7 @@ Omit all weights for equal probabilities. Otherwise every option needs a positiv
 const pool = ModelMix.new({ config: { roundRobin: true } })
     .gpt5mini()
     .sonnet45()
-    .gemini3flash();
+    .gemini37flash();
 
 const r1 = await pool.new().addText("Request 1").message();
 const r2 = await pool.new().addText("Request 2").message();

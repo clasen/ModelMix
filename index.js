@@ -408,20 +408,19 @@ const MODEL_PRICING = {
 };
 
 const CHAIN_MODEL_SHORTCUTS = new Set([
-    'gpt41', 'gpt41mini', 'gpt41nano', 'gpt5', 'gpt5mini', 'gpt5nano',
+    'gpt5', 'gpt5mini', 'gpt5nano',
     'gpt51', 'gpt52', 'gpt54', 'gpt54mini', 'gpt54nano', 'gpt54pro',
     'gpt55', 'gpt55pro', 'gpt56sol', 'gpt56terra', 'gpt56luna',
     'gptRealtime', 'gptRealtimeMini', 'gpt53codex', 'gpt53chat', 'gptOss',
     'fable50', 'fable5', 'opus50', 'opus5', 'opus48', 'opus47', 'opus46',
     'sonnet50', 'sonnet5', 'sonnet46', 'sonnet45', 'haiku45',
-    'gemini25flash', 'gemini31pro', 'gemini3pro', 'gemini3flash',
-    'gemini37flash', 'gemini36flash', 'gemini35flash', 'gemini35flashLite',
-    'gemini31flashLite', 'gemini25pro', 'sonarPro', 'sonar',
+    'gemini31pro', 'gemini37flash', 'gemini36flash', 'gemini35flash',
+    'gemini35flashLite', 'gemini31flashLite', 'sonarPro', 'sonar',
     'grok46', 'grok45', 'grok43', 'grok420multiAgent', 'grok420',
     'qwen3', 'qwen35397b', 'qwen36plus', 'qwen37plus', 'qwen38max',
     'hermes470b', 'hermes4405b', 'hermes3',
     'kimiK26', 'kimiK27Code', 'kimiK3', 'kimiK25',
-    'minimaxM25', 'minimaxM27', 'minimaxM3', 'mimo25', 'mimo25pro',
+    'minimaxM27', 'minimaxM3', 'mimo25', 'mimo25pro',
     'deepseekV4Pro', 'deepseekV4Flash', 'GLM51', 'GLM52'
 ]);
 
@@ -930,15 +929,6 @@ class ModelMix {
         return this;
     }
 
-    gpt41({ options = {}, config = {} } = {}) {
-        return this.attach('gpt-4.1', new MixOpenAI({ options, config }));
-    }
-    gpt41mini({ options = {}, config = {} } = {}) {
-        return this.attach('gpt-4.1-mini', new MixOpenAI({ options, config }));
-    }
-    gpt41nano({ options = {}, config = {} } = {}) {
-        return this.attach('gpt-4.1-nano', new MixOpenAI({ options, config }));
-    }
     gpt5({ options = {}, config = {} } = {}) {
         return this.attach('gpt-5', new MixOpenAI({ options, config }));
     }
@@ -1037,18 +1027,9 @@ class ModelMix {
     haiku45({ options = {}, config = {} } = {}) {
         return this.attach('claude-haiku-4-5-20251001', new MixAnthropic({ options, config }));
     }
-    gemini25flash({ options = {}, config = {} } = {}) {
-        return this.attach('gemini-2.5-flash', new MixGoogle({ options, config }));
-    }
     gemini31pro({ options = {}, config = {} } = {}) {
         return this.attach('gemini-3.1-pro-preview', new MixGoogle({ options, config }));
     }    
-    gemini3pro({ options = {}, config = {} } = {}) {
-        return this.attach('gemini-3-pro-preview', new MixGoogle({ options, config }));
-    }
-    gemini3flash({ options = {}, config = {} } = {}) {
-        return this.attach('gemini-3-flash-preview', new MixGoogle({ options, config }));
-    }
     gemini37flash({ options = {}, config = {} } = {}) {
         return this.attach('gemini-3.7-flash', new MixGoogle({ options, config }));
     }
@@ -1063,9 +1044,6 @@ class ModelMix {
     }
     gemini31flashLite({ options = {}, config = {} } = {}) {
         return this.attach('gemini-3.1-flash-lite-preview', new MixGoogle({ options, config }));
-    }
-    gemini25pro({ options = {}, config = {} } = {}) {
-        return this.attach('gemini-2.5-pro', new MixGoogle({ options, config }));
     }
     sonarPro({ options = {}, config = {} } = {}) {
         return this.attach('sonar-pro', new MixPerplexity({ options, config }));
@@ -1170,12 +1148,6 @@ class ModelMix {
         return this.attach(model, new MixLMStudio({ options, config }));
     }
 
-
-    minimaxM25({ options = {}, config = {}, mix = { minimax: true } } = {}) {
-        mix = { ...this.mix, ...mix };
-        if (mix.minimax) this.attach('MiniMax-M2.5', new MixMiniMax({ options, config }));
-        return this;
-    }
 
     minimaxM27({ options = {}, config = {}, mix = { openrouter: true, minimax: true } } = {}) {
         mix = { ...this.mix, ...mix };

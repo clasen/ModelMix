@@ -105,9 +105,9 @@ async function rlmExample() {
 
     const gptArgs = { options: { reasoning_effort: "none", verbosity: null } };
     const mmix = ModelMix.new({ config: { debug: false, max_history: 15 } })
-        .gpt41nano()
+        .gpt5nano()
         .gpt52(gptArgs)
-        .gemini3flash()
+        .gemini37flash()
         .setSystem(`You are an RLM (Recursive Language Model) agent. 
         
 KEY PRINCIPLE: Instead of processing the entire document directly, you can:
@@ -216,7 +216,7 @@ Current recursion depth: ${recursionDepth}/${maxDepth}`);
 
         // Crear una nueva instancia para la llamada recursiva
         const recursiveMmix = ModelMix.new({ config: { debug: false } })
-            .gpt41nano()
+            .gpt5nano()
             .setSystem(`You are processing a sub-task. Be concise and direct.
 Recursion depth: ${recursionDepth}/${maxDepth}
 ${document_chunk ? 'Document chunk provided.' : 'No document chunk provided.'}`);

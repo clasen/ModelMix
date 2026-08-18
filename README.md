@@ -15,9 +15,9 @@ Ever found yourself wanting to integrate AI models into your projects but worrie
 - [Token Usage Tracking](#-token-usage-tracking)
 - [Prompt Caching](#-prompt-caching)
 - [Model Context Protocol (MCP) Integration](#-model-context-protocol-mcp-integration)
-- [Enabling Debug Mode](#-enabling-debug-mode)
-- [Bottleneck Integration](#-bottleneck-integration)
 - [Retry (Opt-In)](#-retry-optin)
+- [Bottleneck Integration](#-bottleneck-integration)
+- [Enabling Debug Mode](#-enabling-debug-mode)
 - [Instance Plugins](#-instance-plugins)
 - [ModelMix Class Overview](#-modelmix-class-overview)
 - [Contributing](#-contributing)
@@ -136,7 +136,6 @@ This pattern allows you to:
 ## ⚡️ Shorthand Methods
 
 ModelMix provides convenient shorthand methods for quickly accessing different AI models.
-Here's a comprehensive list of available methods:
 
 | Method              | Provider   | Model                        | Price (I/O) per 1 M tokens |
 | ------------------- | ---------- | ---------------------------- | -------------------------- |
@@ -152,9 +151,6 @@ Here's a comprehensive list of available methods:
 | `gpt51()`           | OpenAI     | gpt-5.1                      | [\$1.25/\$10.00][1]      |
 | `gpt5mini()`        | OpenAI     | gpt-5-mini                   | [\$0.25/\$2.00][1]       |
 | `gpt5nano()`        | OpenAI     | gpt-5-nano                   | [\$0.05/\$0.40][1]       |
-| `gpt41()`           | OpenAI     | gpt-4.1                      | [\$2.00/\$8.00][1]       |
-| `gpt41mini()`       | OpenAI     | gpt-4.1-mini                 | [\$0.40/\$1.60][1]       |
-| `gpt41nano()`       | OpenAI     | gpt-4.1-nano                 | [\$0.10/\$0.40][1]       |
 | `gptOss()`          | Together   | gpt-oss-120B                 | [\$0.15/\$0.60][7]       |
 | `fable5()`          | Anthropic  | claude-fable-5               | [\$10.00/\$50.00][2]     |
 | `opus5()`           | Anthropic  | claude-opus-5                | [\$5.00/\$25.00][2]      |
@@ -841,56 +837,6 @@ This simple integration allows your model to:
 
 The Model Context Protocol makes it easy to add any capability to your models, from web search to code execution, database queries, or custom functions. All with just a few lines of code!
 
-## 🐛 Enabling Debug Mode
-
-To activate debug mode in ModelMix and view detailed request information, follow these two steps:
-
-1. In the ModelMix constructor, include a `debug` level in the configuration:
-
-   ```javascript
-   const mix = ModelMix.new({
-     config: {
-       debug: 4 // 0=silent, 1=minimal, 2=summary, 3=full (no truncate), 4=verbose (raw details)
-       // ... other configuration options ...
-     }
-   });
-   ```
-
-2. When running your script from the command line, use the `DEBUG=ModelMix*` prefix:
-
-   ```
-   DEBUG=ModelMix* node your_script.js
-   ```
-
-When you run your script this way, you'll see detailed information about the requests in the console, including the configuration and options used for each AI model request.
-
-This information is valuable for debugging and understanding how ModelMix is processing your requests.
-
-## 🚦 Bottleneck Integration
-
-ModelMix now uses Bottleneck for efficient rate limiting of API requests. This integration helps prevent exceeding API rate limits and ensures smooth operation when working with multiple models or high request volumes.
-
-### How it works:
-
-1. **Configuration**: Bottleneck is configured in the ModelMix constructor. You can customize the settings or use the default configuration:
-
-```javascript
-const setup = {
-    config: {
-        bottleneck: {
-            maxConcurrent: 8,     // Maximum number of concurrent requests
-            minTime: 500          // Minimum time between requests (in ms)
-        }
-    }
-};
-```
-
-2. **Rate Limiting**: When you make a request using any of the attached models, Bottleneck automatically manages the request flow based on the configured settings.
-
-3. **Automatic Queueing**: If the rate limit is reached, Bottleneck will automatically queue subsequent requests and process them as capacity becomes available.
-
-This integration ensures that your application respects API rate limits while maximizing throughput, providing a robust solution for managing multiple AI model interactions.
-
 ## 🔁 Retry (Opt-In)
 
 ModelMix supports optional intra-model retries for transient HTTP failures. When enabled, it retries the same provider before moving to fallback models.
@@ -913,6 +859,35 @@ Behavior summary:
 - If retry is disabled (default), ModelMix keeps current behavior: immediate fallback to next model on failure.
 - If retry is enabled, ModelMix retries the same model only for configured transient status codes.
 - After retries are exhausted (or for non-retryable errors), ModelMix continues with normal fallback chain.
+
+## 🚦 Bottleneck Integration
+
+ModelMix uses Bottleneck for efficient rate limiting of API requests.
+
+```javascript
+const setup = {
+    config: {
+        bottleneck: {
+            maxConcurrent: 8,
+            minTime: 500
+        }
+    }
+};
+```
+
+Attached models share this limiter, which queues requests when capacity is exhausted.
+
+## 🐛 Enabling Debug Mode
+
+Set `config.debug` to `0` (silent), `1` (minimal), `2` (summary), `3` (full), or `4` (verbose raw details), then run with `DEBUG=ModelMix*`:
+
+```javascript
+const mix = ModelMix.new({ config: { debug: 4 } });
+```
+
+```bash
+DEBUG=ModelMix* node your-script.js
+```
 
 ## 🔌 Instance Plugins
 
@@ -958,7 +933,7 @@ The separately publishable `@modelmix/rlm` workspace package keeps document pars
 const { ModelMix } = require('modelmix');
 const { rlm } = require('@modelmix/rlm');
 
-const fast = ModelMix.new().gpt41mini();
+const fast = ModelMix.new().gpt5nano();
 
 const result = await ModelMix.new()
     .gpt56luna()

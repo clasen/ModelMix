@@ -1,7 +1,7 @@
 import { ModelMix } from '../index.js';
 try { process.loadEnvFile(); } catch {}
 
-const mmix = ModelMix.new({ config: { max_history: 10 } }).gpt41nano();
+const mmix = ModelMix.new({ config: { max_history: 10 } }).gpt5nano();
 mmix.setSystem('You are an assistant and today is ' + new Date().toISOString());
 
 // Add web search capability through MCP

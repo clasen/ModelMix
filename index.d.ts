@@ -441,9 +441,6 @@ export declare class ModelMix {
   attach(key: string, provider: MixCustom): this;
 
   // OpenAI
-  gpt41(args?: ModelAttachArgs): this;
-  gpt41mini(args?: ModelAttachArgs): this;
-  gpt41nano(args?: ModelAttachArgs): this;
   gpt5(args?: ModelAttachArgs): this;
   gpt5mini(args?: ModelAttachArgs): this;
   gpt5nano(args?: ModelAttachArgs): this;
@@ -479,16 +476,12 @@ export declare class ModelMix {
   haiku45(args?: ModelAttachArgs): this;
 
   // Google
-  gemini25flash(args?: ModelAttachArgs): this;
   gemini31pro(args?: ModelAttachArgs): this;
-  gemini3pro(args?: ModelAttachArgs): this;
-  gemini3flash(args?: ModelAttachArgs): this;
   gemini37flash(args?: ModelAttachArgs): this;
   gemini36flash(args?: ModelAttachArgs): this;
   gemini35flash(args?: ModelAttachArgs): this;
   gemini35flashLite(args?: ModelAttachArgs): this;
   gemini31flashLite(args?: ModelAttachArgs): this;
-  gemini25pro(args?: ModelAttachArgs): this;
 
   // Perplexity
   sonarPro(args?: ModelAttachArgs): this;
@@ -516,7 +509,6 @@ export declare class ModelMix {
   kimiK3(args?: ModelAttachArgs): this;
   kimiK25(args?: ModelAttachArgs): this;
   lmstudio(model?: string, args?: ModelAttachArgs): this;
-  minimaxM25(args?: ModelAttachArgs): this;
   minimaxM27(args?: ModelAttachArgs): this;
   minimaxM3(args?: ModelAttachArgs): this;
   mimo25(args?: ModelAttachArgs): this;

@@ -1,7 +1,7 @@
 import { ModelMix } from '../index.js';
 try { process.loadEnvFile(); } catch {}
 
-await ModelMix.new().gpt41nano()
+await ModelMix.new().gpt5nano()
     .addImageFromUrl('https://pbs.twimg.com/media/F6-GsjraAAADDGy?format=jpg')
     .addText('describe')
     .stream((data) => { console.log(data.message); });

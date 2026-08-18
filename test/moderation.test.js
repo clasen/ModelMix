@@ -100,7 +100,7 @@ describe('OpenAI moderation', () => {
     it('rejects generative providers from the moderation chain', () => {
         const model = ModerationMix.new();
 
-        expect(() => model.gpt41nano()).to.throw(
+        expect(() => model.gpt5nano({ config: { apiKey: 'test-key' } })).to.throw(
             'ModerationMix only accepts moderation providers.'
         );
     });

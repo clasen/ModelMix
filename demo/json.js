@@ -6,7 +6,7 @@ const model = await ModelMix.new({ options: { max_tokens: 10000 }, config: { deb
     // .gptOss()
     // .o4mini()
     // .gpt45()
-    // .gemini25flash()
+    // .gemini37flash()
     .addText("Name and capital of 3 South American countries.")
 
 const jsonResult = await model.json([{

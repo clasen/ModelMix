@@ -60,6 +60,18 @@ describe('Provider Fallback Chain Tests', () => {
                 .to.throw('Invalid chain model at index 0: expected a model shortcut string.');
         });
 
+        it('should reject removed shortcuts from the public chain API', () => {
+            for (const shortcut of [
+                'gpt41', 'gpt41mini', 'gpt41nano',
+                'gemini25flash', 'gemini25pro', 'gemini3pro', 'gemini3flash',
+                'minimaxM25'
+            ]) {
+                expect(model[shortcut]).to.equal(undefined);
+                expect(() => model.chain(shortcut))
+                    .to.throw(`Unknown model shortcut "${shortcut}" in chain().`);
+            }
+        });
+
         it('should use primary provider when available', async () => {
             model.gpt5mini().sonnet46().addText('Hello');
 
@@ -195,7 +207,7 @@ describe('Provider Fallback Chain Tests', () => {
         });
 
         it('should cascade through multiple fallbacks', async () => {
-            model.gpt5mini().sonnet46().gemini3flash().addText('Hello');
+            model.gpt5mini().sonnet46().gemini37flash().addText('Hello');
 
             // Mock failed OpenAI response
             nock('https://api.openai.com')
@@ -279,7 +291,7 @@ describe('Provider Fallback Chain Tests', () => {
         });
 
         it('should fallback from Anthropic to Google', async () => {
-            model.sonnet46().gemini3flash().addText('Test message');
+            model.sonnet46().gemini37flash().addText('Test message');
 
             // Mock Anthropic failure
             nock('https://api.anthropic.com')
@@ -665,7 +677,7 @@ describe('Provider Fallback Chain Tests', () => {
         });
 
         it('should provide detailed error information when all fallbacks fail', async () => {
-            model.gpt5mini().sonnet46().gemini3flash().addText('Test');
+            model.gpt5mini().sonnet46().gemini37flash().addText('Test');
 
             // Mock all providers failing with different errors
             nock('https://api.openai.com')

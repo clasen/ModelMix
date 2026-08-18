@@ -204,14 +204,14 @@ Proposed configuration:
 ```js
 const workers = {
     fast: {
-        model: ModelMix.new().gpt41nano(),
+        model: ModelMix.new().gpt5nano(),
         intelligence: 1,
         cost: 1,
         speed: 5,
         description: 'Extraction, classification, and simple transformations'
     },
     balanced: {
-        model: ModelMix.new().gpt41mini(),
+        model: ModelMix.new().gpt5nano(),
         intelligence: 3,
         cost: 2,
         speed: 4,

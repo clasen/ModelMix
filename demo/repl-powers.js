@@ -12,9 +12,9 @@ async function replPowersExample() {
     console.log('\n=== JavaScript REPL - Potencias de 2 ===\n');
     const gptArgs = { options: { reasoning_effort: "none", verbosity: null } };
     const mmix = ModelMix.new({ config: { debug: 2, max_history: 10 } })
-        .gpt41nano()
+        .gpt5nano()
         .gpt52(gptArgs)
-        .gemini3flash()
+        .gemini37flash()
         .setSystem('You are a helpful assistant with access to a JavaScript REPL. When you use the REPL and get results, always show them to the user in your response.');
 
     // Variable para capturar el resultado de la herramienta
@@ -74,4 +74,3 @@ try {
 } catch (error) {
     console.error('❌ Error:', error);
 }
-

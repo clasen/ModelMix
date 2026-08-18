@@ -8,7 +8,7 @@ async function simpleCalculator() {
     console.log('\n=== Smart Calculator ===');
 
     const mmix = ModelMix.new()
-        .gpt41nano()
+        .gpt5nano()
         .setSystem('You are a smart calculator. Use the available tools to perform calculations.');
 
     // Add custom tool for advanced operations
@@ -93,7 +93,7 @@ async function contentGenerator() {
     console.log('\n=== Content Generator ===');
 
     const mmix = ModelMix.new({ config: { debug: 2, max_history: 1 } })
-        .gemini3flash()
+        .gemini37flash()
         .setSystem('You are a creative assistant that can generate different types of content.');
 
     // Tool for generating passwords

@@ -9,7 +9,7 @@ async function example1() {
     console.log('\n=== Example 1: Common Tools ===');
     
     const mmix = ModelMix.new({ config: { max_history: 10 } })
-        .gpt41nano();
+        .gpt5nano();
     
     // Add custom tools
     mmix.addTool({
@@ -66,7 +66,7 @@ async function example2() {
     console.log('\n=== Example 2: Custom Tool - Read Files ===');
     
     const mmix = ModelMix.new({ config: { max_history: 10 } })
-        .gpt41nano();
+        .gpt5nano();
 
     // Register custom tool for reading files
     mmix.addTool({
@@ -102,7 +102,7 @@ async function example3() {
     console.log('\n=== Example 3: HTTP Request Tool ===');
     
     const mmix = ModelMix.new({ config: { max_history: 10 } })
-        .gpt41nano();
+        .gpt5nano();
 
     // Register tool for making HTTP requests
     mmix.addTool({
@@ -158,7 +158,7 @@ async function example4() {
     console.log('\n=== Example 4: Multiple Tools Working Together ===');
     
     const mmix = ModelMix.new({ config: { max_history: 10 } })
-        .gpt41nano();
+        .gpt5nano();
 
     // Register multiple tools at once
     mmix.addTools([
@@ -248,7 +248,7 @@ async function example5() {
     console.log('\n=== Example 5: External MCP + Local Tools ===');
     
     const mmix = ModelMix.new({ config: { max_history: 10 } })
-        .gpt41nano();
+        .gpt5nano();
 
     // Add external MCP (if available)
     try {
@@ -341,7 +341,7 @@ async function runExamples() {
         console.log('\n✅ All examples completed');
         
         // Show registered tools
-        const mmix = ModelMix.new().gpt41nano();
+        const mmix = ModelMix.new().gpt5nano();
         mmix.addTool({
             name: "example_tool",
             description: "Example tool for demonstration",

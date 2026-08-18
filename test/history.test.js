@@ -570,7 +570,7 @@ describe('Conversation History Tests', () => {
             const model = ModelMix.new({
                 config: { debug: false, max_history: 10 }
             });
-            model.gemini3flash();
+            model.gemini37flash();
 
             model.addText('Hello');
             nock('https://generativelanguage.googleapis.com')

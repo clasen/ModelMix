@@ -26,7 +26,7 @@ console.log('-'.repeat(60));
 const providers = [
     { name: 'OpenAI GPT-5-nano', fn: (m) => m.gpt5nano() },
     { name: 'Anthropic Haiku', fn: (m) => m.haiku45() },
-    { name: 'Google Gemini', fn: (m) => m.gemini25flash() }
+    { name: 'Google Gemini', fn: (m) => m.gemini37flash() }
 ];
 
 const prompt = 'Explain quantum computing in one sentence.';
