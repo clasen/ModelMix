@@ -7,6 +7,7 @@
  */
 
 const OPENAI_LEVELS = ['none', 'low', 'medium', 'high', 'xhigh'];
+const OPENAI_LEVEL_LADDER = [...OPENAI_LEVELS, 'max'];
 const ANTHROPIC_LEVELS = ['low', 'medium', 'high', 'xhigh', 'max'];
 const GEMINI_LEVELS = ['minimal', 'low', 'medium', 'high'];
 
@@ -35,6 +36,9 @@ const GEMINI_BANDS = [
 
 /** Exact model → supported OpenAI reasoning_effort values */
 const OPENAI_MODEL_LEVELS = {
+    'gpt-5.6-sol': ['none', 'low', 'medium', 'high', 'xhigh', 'max'],
+    'gpt-5.6-terra': ['none', 'low', 'medium', 'high', 'xhigh', 'max'],
+    'gpt-5.6-luna': ['none', 'low', 'medium', 'high', 'xhigh', 'max'],
     'accounts/fireworks/models/qwen3p8-2p4t-a95b': ['none', 'low', 'medium', 'high'],
     'grok-4.6': ['low', 'medium', 'high', 'xhigh'],
     'gpt-5': ['minimal', 'low', 'medium', 'high'],
@@ -373,8 +377,11 @@ function mapEffort(providerFamily, effort, modelKey) {
         if (modelKey === GROK420_NON_REASONING) {
             return null;
         }
-        const desired = levelFromBands(normalized, OPENAI_BANDS);
-        const level = pickNearestLevel(desired, OPENAI_LEVELS, supportedOpenAILevels(modelKey));
+        const supported = supportedOpenAILevels(modelKey);
+        const desired = normalized === 100 && supported.includes('max')
+            ? 'max'
+            : levelFromBands(normalized, OPENAI_BANDS);
+        const level = pickNearestLevel(desired, OPENAI_LEVEL_LADDER, supported);
         return { reasoning_effort: level };
     }
 

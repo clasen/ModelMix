@@ -69,6 +69,14 @@ describe('Unified effort scale', () => {
             expect(mapEffort('openai', 10)).to.deep.equal({ reasoning_effort: 'none' });
             expect(mapEffort('openai', 50)).to.deep.equal({ reasoning_effort: 'medium' });
             expect(mapEffort('openai', 90)).to.deep.equal({ reasoning_effort: 'xhigh' });
+            expect(mapEffort('openai', 100)).to.deep.equal({ reasoning_effort: 'xhigh' });
+        });
+
+        it('maps GPT-5.6 maximum unified effort to max', () => {
+            expect(mapEffort('openai', 99, 'gpt-5.6-luna')).to.deep.equal({ reasoning_effort: 'xhigh' });
+            for (const model of ['gpt-5.6-sol', 'gpt-5.6-terra', 'gpt-5.6-luna']) {
+                expect(mapEffort('openai', 100, model)).to.deep.equal({ reasoning_effort: 'max' });
+            }
         });
 
         it('sets OpenAI adaptive only when supported (otherwise no-op)', () => {
@@ -357,6 +365,14 @@ describe('Unified effort scale', () => {
             applyUnifiedEffort(options, { effort: 15 }, 'openai', 'gpt-5.2');
             const request = MixOpenAIResponses.buildResponsesRequest(options, {});
             expect(request.reasoning).to.deep.equal({ effort: 'none' });
+        });
+
+        it('GPT-5.6 Luna .effort(100) sends max reasoning effort', () => {
+            const model = ModelMix.new().effort(100).gpt56luna();
+            const options = { model: 'gpt-5.6-luna', messages: [] };
+            applyUnifiedEffort(options, model.config, 'openai', 'gpt-5.6-luna');
+            const request = MixOpenAIResponses.buildResponsesRequest(options, {});
+            expect(request.reasoning).to.deep.equal({ effort: 'max' });
         });
 
         it('Anthropic config.effort maps through .effort().opus50()', () => {

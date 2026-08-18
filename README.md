@@ -245,6 +245,7 @@ ModelMix.new().effort(-1).minimaxM3().addText('...').message();
 ### Provider-specific behavior
 
 - **Gemini:** Gemini 3+ uses bands 0–24 / 25–49 / 50–74 / 75–100. Gemini 3.7 Flash clamps these bands to `low` / `low` / `medium` / `high`; `-1` leaves its native `medium` default unchanged. Gemini 2.5 maps 0–100 to `thinkingBudget`.
+- **GPT-5.6:** `100` maps to `max`; 80–99 remains `xhigh`.
 - **DeepSeek:** `↑` means thinking is enabled; `off` means it is disabled.
 - **MiniMax:** `off` maps to `thinking.disabled`; `adaptive` maps to `thinking.type=adaptive`.
 - **Anthropic:** Claude 5, Fable, Opus 4.6+, and Sonnet 4.6+ use adaptive thinking with `output_config.effort`. Sonnet 4.5 and Haiku 4.5 use `thinking.type=enabled` with `budget_tokens`.
