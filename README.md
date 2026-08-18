@@ -175,17 +175,20 @@ Here's a comprehensive list of available methods:
 | `grok43()`          | Grok       | grok-4.3                     | [\$1.25/\$2.50][6]       |
 | `grok420multiAgent()`| Grok      | grok-4.20-multi-agent-0309   | [\$1.25/\$2.50][6]       |
 | `grok420()`         | Grok       | grok-4.20-0309 (†)           | [\$1.25/\$2.50][6]       |
+| `qwen35397b()`      | OpenRouter | qwen/qwen3.5-397b-a17b       | [\$0.385/\$2.45][14]     |
 | `qwen36plus()`      | Fireworks  | qwen3p6-plus                 | [\$0.50/\$3.00][10]      |
 | `qwen37plus()`      | Fireworks  | models/qwen3p7-plus          | [\$0.40/\$1.60][10]      |
-| `qwen38max()`       | OpenRouter | qwen/qwen3.8-max             | [\$2.00/\$6.00][12]      |
+| `qwen38max()`       | Fireworks  | qwen3p8-2p4t-a95b            | [\$2.00/\$6.00][10]      |
 | `deepseekV4Flash()` | Fireworks  | models/deepseek-v4-flash      | [\$0.14/\$0.28][10]      |
-| `deepseekV4Pro()`   | Fireworks  | models/deepseek-v4-pro       | [\$1.74/\$3.48][10]      |
+| `deepseekV4Pro()`   | Fireworks  | models/deepseek-v4-pro-0813  | [\$1.32/\$3.96][12]      |
 | `GLM52()`           | Together   | zai-org/GLM-5.2              | [\$1.40/\$4.40][7]       |
 | `GLM51()`           | Fireworks  | models/glm-5p1               | [\$1.05/\$3.50][10]      |
 | `minimaxM3()`       | MiniMax    | MiniMax-M3                   | [\$0.30/\$1.20][9]       |
 | `minimaxM27()`      | MiniMax    | MiniMax-M2.7                 | [\$0.30/\$1.20][9]       |
 | `sonar()`           | Perplexity | sonar                        | [\$1.00/\$1.00][4]       |
 | `sonarPro()`        | Perplexity | sonar-pro                    | [\$3.00/\$15.00][4]      |
+| `hermes470b()`      | OpenRouter | nousresearch/hermes-4-70b    | [\$0.13/\$0.40][13]      |
+| `hermes4405b()`     | OpenRouter | nousresearch/hermes-4-405b   | [\$1.00/\$3.00][13]      |
 | `hermes3()`         | Lambda     | Hermes-3-Llama-3.1-405B-FP8  | [\$0.80/\$0.80][8]       |
 | `kimiK3()`          | Moonshot   | kimi-k3                      | [\$3.00/\$15.00][11]     |
 | `kimiK25()`         | Together   | Kimi-K2.5                    | [\$0.50/\$2.80][7]       |
@@ -204,7 +207,9 @@ Gemini 3.7 Flash and 3.6 Flash use Google's introductory standard pricing throug
 [9]: https://platform.minimax.io/docs/api-reference/anthropic-api-compatible-cache#supported-models-and-pricing "MiniMax Pricing"
 [10]: https://fireworks.ai/pricing#serverless-pricing "Fireworks Pricing"
 [11]: https://platform.kimi.ai/docs/guide/kimi-k3-pricing "Kimi K3 Pricing"
-[12]: https://openrouter.ai/qwen/qwen3.8-max "OpenRouter Pricing"
+[12]: https://fireworks.ai/models/deepseek-ai/deepseek-v4-pro-0813 "DeepSeek V4 Pro 0813 Pricing"
+[13]: https://openrouter.ai/nousresearch "Nous Research Models on OpenRouter"
+[14]: https://openrouter.ai/qwen/qwen3.5-397b-a17b "Qwen3.5 397B A17B on OpenRouter"
 
 Each method accepts optional `options`, `config`, and (for multi-provider methods) `mix` parameters to customize behavior.  
 

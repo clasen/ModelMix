@@ -35,6 +35,7 @@ const GEMINI_BANDS = [
 
 /** Exact model → supported OpenAI reasoning_effort values */
 const OPENAI_MODEL_LEVELS = {
+    'accounts/fireworks/models/qwen3p8-2p4t-a95b': ['none', 'low', 'medium', 'high'],
     'grok-4.6': ['low', 'medium', 'high', 'xhigh'],
     'gpt-5': ['minimal', 'low', 'medium', 'high'],
     'gpt-5-mini': ['minimal', 'low', 'medium', 'high'],

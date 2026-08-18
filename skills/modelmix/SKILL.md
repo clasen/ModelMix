@@ -177,13 +177,13 @@ Use `.effort(n)` (or `config.effort`) to enable Anthropic thinking — e.g. `.ef
 `minimaxM25()` `minimaxM27()` `minimaxM3()`
 
 ### Fireworks
-`qwen36plus()` `qwen37plus()` `deepseekV4Flash()` `deepseekV4Pro()` `kimiK26()`
+`qwen36plus()` `qwen37plus()` `qwen38max()` `deepseekV4Flash()` `deepseekV4Pro()` `kimiK26()`
 
 ### Cerebras
 `GLM46()`
 
 ### OpenRouter
-`qwen38max()` `GLM45()`
+`qwen35397b()` `hermes470b()` `hermes4405b()` `qwen38max()` `GLM45()`
 
 ### Multi-provider (auto-fallback across free/paid tiers)
 `hermes3()` `kimiK25()`

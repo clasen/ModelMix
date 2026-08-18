@@ -81,6 +81,12 @@ describe('Unified effort scale', () => {
             expect(mapEffort('openai', 10, 'gpt-oss-120b')).to.deep.equal({ reasoning_effort: 'low' });
         });
 
+        it('clamps Fireworks Qwen 3.8 Max to its supported reasoning levels', () => {
+            const key = 'accounts/fireworks/models/qwen3p8-2p4t-a95b';
+            expect(mapEffort('openai', 0, key)).to.deep.equal({ reasoning_effort: 'none' });
+            expect(mapEffort('openai', 100, key)).to.deep.equal({ reasoning_effort: 'high' });
+        });
+
         it('maps Anthropic adaptive models to thinking + output_config.effort', () => {
             expect(mapEffort('anthropic', 10, 'claude-opus-5')).to.deep.equal({
                 thinking: { type: 'adaptive', display: 'summarized' },
@@ -175,6 +181,10 @@ describe('Unified effort scale', () => {
                 thinking: { type: 'enabled' }
             });
             expect(mapEffort('openai', 100, 'deepseek-ai/DeepSeek-V4-Pro')).to.deep.equal({
+                reasoning_effort: 'max',
+                thinking: { type: 'enabled' }
+            });
+            expect(mapEffort('openai', 100, 'accounts/fireworks/models/deepseek-v4-pro-0813')).to.deep.equal({
                 reasoning_effort: 'max',
                 thinking: { type: 'enabled' }
             });

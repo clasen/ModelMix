@@ -362,6 +362,7 @@ const MODEL_PRICING = {
     // Fireworks
     'accounts/fireworks/models/deepseek-v4-flash': { input: 0.14, output: 0.28 },
     'accounts/fireworks/models/deepseek-v4-pro': { input: 1.74, output: 3.48 },
+    'accounts/fireworks/models/deepseek-v4-pro-0813': { input: 1.32, cachedInput: 0.044, output: 3.96 },
     'deepseek-ai/DeepSeek-V4-Flash': { input: 0.14, output: 0.28 },
     'deepseek-ai/DeepSeek-V4-Pro': { input: 2.10, output: 4.40 },
     'deepseek/deepseek-v4-flash': { input: 0.09, output: 0.18 },
@@ -369,10 +370,12 @@ const MODEL_PRICING = {
     'accounts/fireworks/models/glm-5p1': { input: 1.05, output: 3.50 },
     'zai-org/GLM-5.2': { input: 1.40, output: 4.40 },
     'accounts/fireworks/models/kimi-k2p5': { input: 0.50, output: 2.80 },
+    'qwen/qwen3.5-397b-a17b': { input: 0.385, output: 2.45 },
     'accounts/fireworks/models/qwen3p6-plus': { input: 0.50, output: 3.00 },
     'Qwen/Qwen3.6-Plus': { input: 0.50, output: 3.00 },
     'accounts/fireworks/models/qwen3p7-plus': { input: 0.40, output: 1.60 },
     'qwen/qwen3.7-plus': { input: 0.32, output: 1.28 },
+    'accounts/fireworks/models/qwen3p8-2p4t-a95b': { input: 2.00, cachedInput: 0.25, output: 6.00 },
     'qwen/qwen3.8-max': { input: 2.00, output: 6.00 },
     // MiniMax
     'MiniMax-M2.5': { input: 0.30, output: 1.20 },
@@ -384,7 +387,10 @@ const MODEL_PRICING = {
     // Perplexity
     'sonar': { input: 1.00, output: 1.00 },
     'sonar-pro': { input: 3.00, output: 15.00 },
-    // Hermes3 (Lambda/OpenRouter)
+    // Hermes 4 (OpenRouter)
+    'nousresearch/hermes-4-70b': { input: 0.13, output: 0.40 },
+    'nousresearch/hermes-4-405b': { input: 1.00, output: 3.00 },
+    // Hermes 3 (Lambda/OpenRouter)
     'Hermes-3-Llama-3.1-405B-FP8': { input: 0.80, output: 0.80 },
     'nousresearch/hermes-3-llama-3.1-405b:free': { input: 0, output: 0 },
     // Qwen3 (Together/Cerebras)
@@ -412,7 +418,8 @@ const CHAIN_MODEL_SHORTCUTS = new Set([
     'gemini37flash', 'gemini36flash', 'gemini35flash', 'gemini35flashLite',
     'gemini31flashLite', 'gemini25pro', 'sonarPro', 'sonar',
     'grok46', 'grok45', 'grok43', 'grok420multiAgent', 'grok420',
-    'qwen3', 'qwen36plus', 'qwen37plus', 'qwen38max', 'hermes3',
+    'qwen3', 'qwen35397b', 'qwen36plus', 'qwen37plus', 'qwen38max',
+    'hermes470b', 'hermes4405b', 'hermes3',
     'kimiK26', 'kimiK27Code', 'kimiK3', 'kimiK25',
     'minimaxM25', 'minimaxM27', 'minimaxM3', 'mimo25', 'mimo25pro',
     'deepseekV4Pro', 'deepseekV4Flash', 'GLM51', 'GLM52'
@@ -1090,6 +1097,10 @@ class ModelMix {
         return this;
     }
 
+    qwen35397b({ options = {}, config = {} } = {}) {
+        return this.attach('qwen/qwen3.5-397b-a17b', new MixOpenRouter({ options, config }));
+    }
+
     qwen36plus({ options = {}, config = {}, mix = { fireworks: true } } = {}) {
         mix = { ...this.mix, ...mix };
         if (mix.fireworks) this.attach('accounts/fireworks/models/qwen3p6-plus', new MixFireworks({ options, config }));
@@ -1104,10 +1115,19 @@ class ModelMix {
         return this;
     }
 
-    qwen38max({ options = {}, config = {}, mix = { openrouter: true } } = {}) {
+    qwen38max({ options = {}, config = {}, mix = { fireworks: true } } = {}) {
         mix = { ...this.mix, ...mix };
+        if (mix.fireworks) this.attach('accounts/fireworks/models/qwen3p8-2p4t-a95b', new MixFireworks({ options, config }));
         if (mix.openrouter) this.attach('qwen/qwen3.8-max', new MixOpenRouter({ options, config }));
         return this;
+    }
+
+    hermes470b({ options = {}, config = {} } = {}) {
+        return this.attach('nousresearch/hermes-4-70b', new MixOpenRouter({ options, config }));
+    }
+
+    hermes4405b({ options = {}, config = {} } = {}) {
+        return this.attach('nousresearch/hermes-4-405b', new MixOpenRouter({ options, config }));
     }
 
     hermes3({ options = {}, config = {}, mix = {} } = {}) {
@@ -1191,7 +1211,7 @@ class ModelMix {
     deepseekV4Pro({ options = {}, config = {}, mix = { fireworks: true } } = {}) {
         mix = { ...this.mix, ...mix };
         if (mix.nvidia) this.attach('deepseek-ai/deepseek-v4-pro', new MixNVIDIA({ options, config }));
-        if (mix.fireworks) this.attach('accounts/fireworks/models/deepseek-v4-pro', new MixFireworks({ options, config }));
+        if (mix.fireworks) this.attach('accounts/fireworks/models/deepseek-v4-pro-0813', new MixFireworks({ options, config }));
         if (mix.openrouter) this.attach('deepseek/deepseek-v4-pro', new MixOpenRouter({ options, config }));
         if (mix.together) this.attach('deepseek-ai/DeepSeek-V4-Pro', new MixTogether({ options, config }));
         return this;

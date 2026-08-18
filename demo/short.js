@@ -14,6 +14,9 @@ const mmix = await ModelMix.new(setup)
     .gemini37flash() // (fallback 2) Google gemini-3.7-flash
     .gpt41nano() // (fallback 3) OpenAI gpt-4.1-nano
     .grok46() // (fallback 4) Grok grok-4.6
+    .qwen35397b() // (fallback 5) OpenRouter qwen/qwen3.5-397b-a17b
+    .hermes470b() // (fallback 6) OpenRouter nousresearch/hermes-4-70b
+    .hermes4405b() // (fallback 7) OpenRouter nousresearch/hermes-4-405b
     .addText("What's your name?");
 
 console.log(await mmix.message());

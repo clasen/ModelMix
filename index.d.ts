@@ -504,9 +504,12 @@ export declare class ModelMix {
 
   // Multi-provider
   qwen3(args?: ModelAttachArgs): this;
+  qwen35397b(args?: ModelAttachArgs): this;
   qwen36plus(args?: ModelAttachArgs): this;
   qwen37plus(args?: ModelAttachArgs): this;
   qwen38max(args?: ModelAttachArgs): this;
+  hermes470b(args?: ModelAttachArgs): this;
+  hermes4405b(args?: ModelAttachArgs): this;
   hermes3(args?: ModelAttachArgs): this;
   kimiK26(args?: ModelAttachArgs): this;
   kimiK27Code(args?: ModelAttachArgs): this;

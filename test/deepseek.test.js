@@ -7,7 +7,12 @@ describe('DeepSeek Model Registration Tests', () => {
         model.deepseekV4Pro({ mix: { fireworks: true, openrouter: false } });
 
         expect(model.models).to.have.length(1);
-        expect(model.models[0].key).to.equal('accounts/fireworks/models/deepseek-v4-pro');
+        expect(model.models[0].key).to.equal('accounts/fireworks/models/deepseek-v4-pro-0813');
+        expect(ModelMix.calculateCost('accounts/fireworks/models/deepseek-v4-pro-0813', {
+            input: 1_000_000,
+            cached: 250_000,
+            output: 1_000_000
+        })).to.be.closeTo(4.961, 1e-10);
     });
 
     it('should register Together DeepSeek V4 Pro when together mix is enabled', () => {
