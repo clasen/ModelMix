@@ -137,58 +137,58 @@ This pattern allows you to:
 
 ModelMix provides convenient shorthand methods for quickly accessing different AI models.
 
-| Method              | Provider   | Model                        | Price (I/O) per 1 M tokens |
-| ------------------- | ---------- | ---------------------------- | -------------------------- |
-| `gpt56sol()`        | OpenAI     | gpt-5.6-sol                  | [\$5.00/\$30.00][1]      |
-| `gpt56terra()`      | OpenAI     | gpt-5.6-terra                | [\$2.00/\$12.00][1]      |
-| `gpt56luna()`       | OpenAI     | gpt-5.6-luna                 | [\$0.20/\$1.20][1]       |
-| `gpt55()`           | OpenAI     | gpt-5.5                      | [\$5.00/\$30.00][1]      |
-| `gpt54()`           | OpenAI     | gpt-5.4                      | [\$2.50/\$15.00][1]      |
-| `gpt54mini()`       | OpenAI     | gpt-5.4-mini                 | [\$0.75/\$4.50][1]       |
-| `gpt54nano()`       | OpenAI     | gpt-5.4-nano                 | [\$0.20/\$1.25][1]       |
-| `gpt53codex()`      | OpenAI     | gpt-5.3-codex                | [\$1.25/\$14.00][1]      |
-| `gpt52()`           | OpenAI     | gpt-5.2                      | [\$1.75/\$14.00][1]      |
-| `gpt51()`           | OpenAI     | gpt-5.1                      | [\$1.25/\$10.00][1]      |
-| `gpt5mini()`        | OpenAI     | gpt-5-mini                   | [\$0.25/\$2.00][1]       |
-| `gpt5nano()`        | OpenAI     | gpt-5-nano                   | [\$0.05/\$0.40][1]       |
-| `gptOss()`          | Together   | gpt-oss-120B                 | [\$0.15/\$0.60][7]       |
-| `fable5()`          | Anthropic  | claude-fable-5               | [\$10.00/\$50.00][2]     |
-| `opus5()`           | Anthropic  | claude-opus-5                | [\$5.00/\$25.00][2]      |
-| `opus48()`          | Anthropic  | claude-opus-4-8              | [\$5.00/\$25.00][2]      |
-| `opus47()`          | Anthropic  | claude-opus-4-7              | [\$5.00/\$25.00][2]      |
-| `opus46()`          | Anthropic  | claude-opus-4-6              | [\$5.00/\$25.00][2]      |
-| `sonnet5()`         | Anthropic  | claude-sonnet-5              | [\$3.00/\$15.00][2]      |
-| `sonnet46()`        | Anthropic  | claude-sonnet-4-6            | [\$3.00/\$15.00][2]      |
-| `haiku45()`         | Anthropic  | claude-haiku-4-5-20251001    | [\$1.00/\$5.00][2]       |
-| `gemini31pro()`     | Google     | gemini-3.1-pro-preview       | [\$2.00/\$12.00][3]      |
-| `gemini37flash()`   | Google     | gemini-3.7-flash             | [\$0.75/\$3.75][3]       |
-| `gemini36flash()`   | Google     | gemini-3.6-flash             | [\$0.75/\$3.75][3]       |
-| `gemini35flash()`    | Google     | gemini-3.5-flash              | [\$0.75/\$4.50][3]       |
-| `gemini35flashLite()`| Google     | gemini-3.5-flash-lite          | [\$0.30/\$2.50][3]       |
-| `gemini31flashLite()`| Google     | gemini-3.1-flash-lite-preview | [\$0.25/\$1.50][3]       |
-| `grok46()`          | Grok       | grok-4.6                     | [\$2.00/\$6.00][6]       |
-| `grok45()`          | Grok       | grok-4.5                     | [\$2.00/\$6.00][6]       |
-| `grok43()`          | Grok       | grok-4.3                     | [\$1.25/\$2.50][6]       |
-| `grok420multiAgent()`| Grok      | grok-4.20-multi-agent-0309   | [\$1.25/\$2.50][6]       |
-| `grok420()`         | Grok       | grok-4.20-0309 (†)           | [\$1.25/\$2.50][6]       |
-| `qwen35397b()`      | OpenRouter | qwen/qwen3.5-397b-a17b       | [\$0.385/\$2.45][14]     |
-| `qwen36plus()`      | Fireworks  | qwen3p6-plus                 | [\$0.50/\$3.00][10]      |
-| `qwen37plus()`      | Fireworks  | models/qwen3p7-plus          | [\$0.40/\$1.60][10]      |
-| `qwen38max()`       | Fireworks  | qwen3p8-2p4t-a95b            | [\$2.00/\$6.00][10]      |
-| `deepseekV4Flash()` | Fireworks  | models/deepseek-v4-flash      | [\$0.14/\$0.28][10]      |
-| `deepseekV4Pro()`   | Fireworks  | models/deepseek-v4-pro-0813  | [\$1.32/\$3.96][12]      |
-| `GLM52()`           | Together   | zai-org/GLM-5.2              | [\$1.40/\$4.40][7]       |
-| `GLM51()`           | Fireworks  | models/glm-5p1               | [\$1.05/\$3.50][10]      |
-| `minimaxM3()`       | MiniMax    | MiniMax-M3                   | [\$0.30/\$1.20][9]       |
-| `minimaxM27()`      | MiniMax    | MiniMax-M2.7                 | [\$0.30/\$1.20][9]       |
-| `sonar()`           | Perplexity | sonar                        | [\$1.00/\$1.00][4]       |
-| `sonarPro()`        | Perplexity | sonar-pro                    | [\$3.00/\$15.00][4]      |
-| `hermes470b()`      | OpenRouter | nousresearch/hermes-4-70b    | [\$0.13/\$0.40][13]      |
-| `hermes4405b()`     | OpenRouter | nousresearch/hermes-4-405b   | [\$1.00/\$3.00][13]      |
-| `hermes3()`         | Lambda     | Hermes-3-Llama-3.1-405B-FP8  | [\$0.80/\$0.80][8]       |
-| `kimiK3()`          | Moonshot   | kimi-k3                      | [\$3.00/\$15.00][11]     |
-| `kimiK25()`         | Together   | Kimi-K2.5                    | [\$0.50/\$2.80][7]       |
-| `kimiK26()`         | Fireworks  | models/kimi-k2p6             | [\$0.95/\$4.00][10]      |
+| Method | Provider | Model | Input / 1M | Output / 1M |
+| --- | --- | --- | --- | --- |
+| `gpt56sol()` | OpenAI | gpt-5.6-sol | [\$5.00][1] | [\$30.00][1] |
+| `gpt56terra()` | OpenAI | gpt-5.6-terra | [\$2.00][1] | [\$12.00][1] |
+| `gpt56luna()` | OpenAI | gpt-5.6-luna | [\$0.20][1] | [\$1.20][1] |
+| `gpt55()` | OpenAI | gpt-5.5 | [\$5.00][1] | [\$30.00][1] |
+| `gpt54()` | OpenAI | gpt-5.4 | [\$2.50][1] | [\$15.00][1] |
+| `gpt54mini()` | OpenAI | gpt-5.4-mini | [\$0.75][1] | [\$4.50][1] |
+| `gpt54nano()` | OpenAI | gpt-5.4-nano | [\$0.20][1] | [\$1.25][1] |
+| `gpt53codex()` | OpenAI | gpt-5.3-codex | [\$1.25][1] | [\$14.00][1] |
+| `gpt52()` | OpenAI | gpt-5.2 | [\$1.75][1] | [\$14.00][1] |
+| `gpt51()` | OpenAI | gpt-5.1 | [\$1.25][1] | [\$10.00][1] |
+| `gpt5mini()` | OpenAI | gpt-5-mini | [\$0.25][1] | [\$2.00][1] |
+| `gpt5nano()` | OpenAI | gpt-5-nano | [\$0.05][1] | [\$0.40][1] |
+| `gptOss()` | Together | gpt-oss-120B | [\$0.15][7] | [\$0.60][7] |
+| `fable5()` | Anthropic | claude-fable-5 | [\$10.00][2] | [\$50.00][2] |
+| `opus5()` | Anthropic | claude-opus-5 | [\$5.00][2] | [\$25.00][2] |
+| `opus48()` | Anthropic | claude-opus-4-8 | [\$5.00][2] | [\$25.00][2] |
+| `opus47()` | Anthropic | claude-opus-4-7 | [\$5.00][2] | [\$25.00][2] |
+| `opus46()` | Anthropic | claude-opus-4-6 | [\$5.00][2] | [\$25.00][2] |
+| `sonnet5()` | Anthropic | claude-sonnet-5 | [\$3.00][2] | [\$15.00][2] |
+| `sonnet46()` | Anthropic | claude-sonnet-4-6 | [\$3.00][2] | [\$15.00][2] |
+| `haiku45()` | Anthropic | claude-haiku-4-5-20251001 | [\$1.00][2] | [\$5.00][2] |
+| `gemini31pro()` | Google | gemini-3.1-pro-preview | [\$2.00][3] | [\$12.00][3] |
+| `gemini37flash()` | Google | gemini-3.7-flash | [\$0.75][3] | [\$3.75][3] |
+| `gemini36flash()` | Google | gemini-3.6-flash | [\$0.75][3] | [\$3.75][3] |
+| `gemini35flash()` | Google | gemini-3.5-flash | [\$0.75][3] | [\$4.50][3] |
+| `gemini35flashLite()` | Google | gemini-3.5-flash-lite | [\$0.30][3] | [\$2.50][3] |
+| `gemini31flashLite()` | Google | gemini-3.1-flash-lite-preview | [\$0.25][3] | [\$1.50][3] |
+| `grok46()` | Grok | grok-4.6 | [\$2.00][6] | [\$6.00][6] |
+| `grok45()` | Grok | grok-4.5 | [\$2.00][6] | [\$6.00][6] |
+| `grok43()` | Grok | grok-4.3 | [\$1.25][6] | [\$2.50][6] |
+| `grok420multiAgent()` | Grok | grok-4.20-multi-agent-0309 | [\$1.25][6] | [\$2.50][6] |
+| `grok420()` | Grok | grok-4.20-0309 (†) | [\$1.25][6] | [\$2.50][6] |
+| `qwen35397b()` | OpenRouter | qwen/qwen3.5-397b-a17b | [\$0.385][14] | [\$2.45][14] |
+| `qwen36plus()` | Fireworks | qwen3p6-plus | [\$0.50][10] | [\$3.00][10] |
+| `qwen37plus()` | Fireworks | models/qwen3p7-plus | [\$0.40][10] | [\$1.60][10] |
+| `qwen38max()` | Fireworks | qwen3p8-2p4t-a95b | [\$2.00][10] | [\$6.00][10] |
+| `deepseekV4Flash()` | Fireworks | models/deepseek-v4-flash | [\$0.14][10] | [\$0.28][10] |
+| `deepseekV4Pro()` | Fireworks | models/deepseek-v4-pro-0813 | [\$1.32][12] | [\$3.96][12] |
+| `GLM52()` | Together | zai-org/GLM-5.2 | [\$1.40][7] | [\$4.40][7] |
+| `GLM51()` | Fireworks | models/glm-5p1 | [\$1.05][10] | [\$3.50][10] |
+| `minimaxM3()` | MiniMax | MiniMax-M3 | [\$0.30][9] | [\$1.20][9] |
+| `minimaxM27()` | MiniMax | MiniMax-M2.7 | [\$0.30][9] | [\$1.20][9] |
+| `sonar()` | Perplexity | sonar | [\$1.00][4] | [\$1.00][4] |
+| `sonarPro()` | Perplexity | sonar-pro | [\$3.00][4] | [\$15.00][4] |
+| `hermes470b()` | OpenRouter | nousresearch/hermes-4-70b | [\$0.13][13] | [\$0.40][13] |
+| `hermes4405b()` | OpenRouter | nousresearch/hermes-4-405b | [\$1.00][13] | [\$3.00][13] |
+| `hermes3()` | Lambda | Hermes-3-Llama-3.1-405B-FP8 | [\$0.80][8] | [\$0.80][8] |
+| `kimiK3()` | Moonshot | kimi-k3 | [\$3.00][11] | [\$15.00][11] |
+| `kimiK25()` | Together | Kimi-K2.5 | [\$0.50][7] | [\$2.80][7] |
+| `kimiK26()` | Fireworks | models/kimi-k2p6 | [\$0.95][10] | [\$4.00][10] |
 
 Gemini 3.7 Flash and 3.6 Flash use Google's introductory standard pricing through December 31, 2026; standard rates double on January 1, 2027.
 
