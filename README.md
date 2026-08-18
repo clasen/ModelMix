@@ -138,7 +138,7 @@ This pattern allows you to:
 ModelMix provides convenient shorthand methods for quickly accessing different AI models.
 
 | Method | Provider | Model | Input / 1M | Output / 1M |
-| --- | --- | --- | --- | --- |
+| --- | --- | --- | ---: | ---: |
 | `gpt56sol()` | OpenAI | gpt-5.6-sol | [\$5.00][1] | [\$30.00][1] |
 | `gpt56terra()` | OpenAI | gpt-5.6-terra | [\$2.00][1] | [\$12.00][1] |
 | `gpt56luna()` | OpenAI | gpt-5.6-luna | [\$0.20][1] | [\$1.20][1] |
