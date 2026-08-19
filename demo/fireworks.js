@@ -1,14 +1,12 @@
-import { ModelMix, MixFireworks } from '../index.js';
+import { ModelMix } from '../index.js';
 try { process.loadEnvFile(); } catch { }
 
 async function main() {
     try {
-        const ai = ModelMix.new().attach(
-            'accounts/martin-clasen-497c5b/deployments/u7ocooxr',
-            new MixFireworks()
-        );
+        const ai = ModelMix.new();
 
-        const response = await ai
+        const response = await ai.effort(50)
+            .deepseekV4Flash()
             .addText('What is the capital of France?')
             .message();
 
