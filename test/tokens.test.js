@@ -576,6 +576,26 @@ describe('Token Usage Tracking', () => {
         }
     });
 
+    it('should register GPT-OSS 120B through the current OpenRouter model ID', function () {
+        const originalOpenRouterApiKey = process.env.OPENROUTER_API_KEY;
+        process.env.OPENROUTER_API_KEY = 'test-openrouter-key';
+
+        try {
+            const model = ModelMix.new().gptOss({
+                mix: { cerebras: false, groq: true, openrouter: true, together: false }
+            });
+
+            expect(model.models.map(({ key }) => key)).to.deep.equal([
+                'openai/gpt-oss-120b',
+                'openai/gpt-oss-120b'
+            ]);
+            expect(model.models[1].provider).to.be.instanceOf(MixOpenRouter);
+        } finally {
+            if (originalOpenRouterApiKey === undefined) delete process.env.OPENROUTER_API_KEY;
+            else process.env.OPENROUTER_API_KEY = originalOpenRouterApiKey;
+        }
+    });
+
     it('should use api-key header for MiMo provider', function () {
         const originalMimoApiKey = process.env.MIMO_API_KEY;
         process.env.MIMO_API_KEY = 'test-mimo-key';

@@ -117,9 +117,9 @@ const ETH = ModelMix.new()
 console.log(ETH.price);
 ```
 
-**This example uses providers with free quotas (OpenRouter, Groq, Cerebras) - just get the API key and you're ready to go. If one model runs out of quota, ModelMix automatically falls back to the next model in the chain.**
+**This example uses providers with free quotas (Groq, Cerebras, and Together). OpenRouter is disabled because its GPT-OSS 120B route is no longer free. If one model runs out of quota, ModelMix automatically falls back to the next model in the chain.**
 ```javascript
-ModelMix.new()
+ModelMix.new({ mix: { openrouter: false } })
   .gptOss()
   .kimiK25()
   .hermes3()

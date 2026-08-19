@@ -548,7 +548,7 @@ For full debug output, also set: `DEBUG=ModelMix* node script.js`
 ### Free-tier models
 
 ```javascript
-const model = ModelMix.new()
+const model = ModelMix.new({ mix: { openrouter: false } })
     .gptOss()
     .kimiK25()
     .hermes3()
@@ -556,7 +556,7 @@ const model = ModelMix.new()
 console.log(await model.message());
 ```
 
-These use providers with free quotas (OpenRouter, Groq, Cerebras). If one runs out of quota, ModelMix falls back to the next.
+These use providers with free quotas (Groq, Cerebras, and Together). OpenRouter is disabled because its GPT-OSS 120B route is no longer free. If one runs out of quota, ModelMix falls back to the next.
 
 ### Multi-provider routing
 

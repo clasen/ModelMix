@@ -47,7 +47,6 @@ const OPENAI_MODEL_LEVELS = {
     'gpt-5.3-codex': ['low', 'medium', 'high', 'xhigh'],
     'gpt-oss-120b': ['low', 'medium', 'high'],
     'openai/gpt-oss-120b': ['low', 'medium', 'high'],
-    'openai/gpt-oss-120b:free': ['low', 'medium', 'high'],
 };
 
 /**

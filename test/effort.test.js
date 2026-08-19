@@ -1,4 +1,5 @@
 const { expect } = require('chai');
+const sinon = require('sinon');
 const {
     normalizeEffort,
     mapEffort,
@@ -356,6 +357,25 @@ describe('Unified effort scale', () => {
 
         it('rejects invalid fluent effort', () => {
             expect(() => ModelMix.new().effort(150)).to.throw(/Invalid effort/);
+        });
+    });
+
+    describe('debug logging', () => {
+        afterEach(() => {
+            sinon.restore();
+        });
+
+        it('includes the unified effort in the model header', async () => {
+            const provider = new MixOpenAIResponses();
+            sinon.stub(provider, 'create').resolves({ message: 'ok', toolCalls: [] });
+            const log = sinon.spy(console, 'log');
+            const model = ModelMix.new({ config: { debug: 1, effort: 60 } })
+                .attach('gpt-5.6-luna', provider)
+                .addText('Hello');
+
+            await model.message();
+
+            expect(log.calledWithMatch(/→ \[openairesponses:gpt-5\.6-luna@60\] #1/)).to.equal(true);
         });
     });
 

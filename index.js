@@ -7,29 +7,51 @@ const { inspect } = require('util');
 const log = require('lemonlog')('ModelMix');
 const Bottleneck = require('bottleneck');
 const path = require('path');
-const WebSocket = require('ws');
 const generateJsonSchema = require('./schema');
 const { Client } = require("@modelcontextprotocol/sdk/client/index.js");
 const { StdioClientTransport } = require("@modelcontextprotocol/sdk/client/stdio.js");
 const { MCPToolsManager } = require('./mcp-tools');
+const { fetchBinaryResponse } = require('./http-client');
+const { isPlainObject } = require('./lib/object-utils');
+const { normalizeContentCache } = require('./lib/content-cache');
+const tokenUsage = require('./lib/token-usage');
+const { parseChainModels } = require('./lib/model-chain');
 const {
-    stripContentTypeHeader,
-    createMultipartFormData,
-    buildRequestBodyAndHeaders
-} = require('./multipart');
-const {
-    fetchJsonResponse,
-    fetchBinaryResponse,
-    fetchStreamResponse
-} = require('./http-client');
+    validateTemplateData,
+    validateTemplateDataKey,
+    preprocessChoiceDirectives,
+    createTemplateRenderContext
+} = require('./lib/template-engine');
 const {
     normalizeEffort,
     applyUnifiedEffort,
     resolveProviderFamily,
-    resolveGrok420ModelKey,
-    GROK420_REASONING,
-    GROK420_NON_REASONING
+    resolveGrok420ModelKey
 } = require('./effort');
+
+let MixCustom;
+let MixOpenAI;
+let MixModeration;
+let MixOpenAIResponses;
+let MixOpenAIModeration;
+let MixOpenAIWebSocket;
+let MixOpenRouter;
+let MixKimi;
+let MixAnthropic;
+let MixMiniMax;
+let MixMiMo;
+let MixPerplexity;
+let MixOllama;
+let MixGrok;
+let MixLambda;
+let MixLMStudio;
+let MixGroq;
+let MixTogether;
+let MixCerebras;
+let MixFireworks;
+let MixNVIDIA;
+let MixGoogle;
+let ModerationMix;
 
 const DEFAULT_RETRYABLE_STATUS_CODES = [408, 425, 429, 500, 502, 503, 504, 529];
 
@@ -39,12 +61,6 @@ function getErrorStatusCode(error) {
 
 function sleep(ms) {
     return new Promise(resolve => setTimeout(resolve, ms));
-}
-
-function isPlainObject(value) {
-    if (!value || typeof value !== 'object' || Array.isArray(value)) return false;
-    const prototype = Object.getPrototypeOf(value);
-    return prototype === Object.prototype || prototype === null;
 }
 
 function clonePluginValue(value, seen = new WeakMap()) {
@@ -75,381 +91,7 @@ function validatePluginResult(result, pluginName) {
     return result;
 }
 
-function normalizeContentCache(cache) {
-    if (cache !== undefined) {
-        if (!isPlainObject(cache) || cache.breakpoint !== true) {
-            throw new TypeError('cache must be { breakpoint: true }.');
-        }
-        return { breakpoint: true };
-    }
-    return undefined;
-}
 
-function stripContentCacheMetadata(content) {
-    if (!content || typeof content !== 'object') return content;
-    const sanitized = { ...content };
-    delete sanitized.cache;
-    delete sanitized.cache_control;
-    delete sanitized.prompt_cache_breakpoint;
-    return sanitized;
-}
-
-function hasNeutralCacheBreakpoint(messages = []) {
-    return messages.some(message => Array.isArray(message?.content)
-        && message.content.some(block => block?.cache?.breakpoint === true));
-}
-
-function validateTemplateData(value) {
-    if (!isPlainObject(value)) {
-        throw new TypeError('Template data must be a plain non-null object.');
-    }
-    if (Object.prototype.hasOwnProperty.call(value, '$mix')) {
-        throw new TypeError('Template data key "$mix" is reserved.');
-    }
-}
-
-function validateTemplateDataKey(key) {
-    if (typeof key !== 'string' || key.length === 0) {
-        throw new TypeError('Template data key must be a non-empty string.');
-    }
-    if (key === '$mix') {
-        throw new TypeError('Template data key "$mix" is reserved.');
-    }
-}
-
-function templateLocation({ filename, label }, lineNumber) {
-    return `${filename || label} at line ${lineNumber}`;
-}
-
-function preprocessChoiceDirectives(source, { filename = null, label = 'template' } = {}) {
-    const parts = source.split(/(\r\n|\n|\r)/);
-    const blocks = [];
-
-    for (let index = 0; index < parts.length; index += 2) {
-        const line = parts[index];
-        const trimmed = line.trim();
-        const lineNumber = (index / 2) + 1;
-        const location = templateLocation({ filename, label }, lineNumber);
-        const newline = parts[index + 1] || '';
-
-        if (/^<%\s*choice\s*%>$/.test(trimmed)) {
-            const parent = blocks[blocks.length - 1];
-            if (parent && parent.optionCount === 0) {
-                throw new Error(`A nested choice must be inside an option (${location}).`);
-            }
-            blocks.push({ lineNumber, optionCount: 0, weighted: null });
-            parts[index] = '<% $mix.choice(option => { -%>';
-            continue;
-        }
-
-        const optionMatch = trimmed.match(/^<%\s*option(?:\s+(.+?))?\s*%>$/);
-        if (optionMatch) {
-            const block = blocks[blocks.length - 1];
-            if (!block) {
-                throw new Error(`Option directive must be inside a choice (${location}).`);
-            }
-
-            const weightText = optionMatch[1];
-            const weighted = weightText !== undefined;
-            if (block.weighted !== null && block.weighted !== weighted) {
-                throw new Error(`Choice options must either all have weights or all omit them (${location}).`);
-            }
-
-            let argument = '';
-            if (weighted) {
-                const weight = Number(weightText);
-                if (!Number.isFinite(weight) || weight <= 0) {
-                    throw new Error(`Choice weight must be a positive finite number (${location}).`);
-                }
-                argument = `${weight}, `;
-            }
-
-            block.weighted = weighted;
-            parts[index] = `<% ${block.optionCount > 0 ? '}); ' : ''}option(${argument}() => { -%>`;
-            block.optionCount += 1;
-            continue;
-        }
-
-        if (/^<%\s*\/choice\s*%>$/.test(trimmed)) {
-            const block = blocks.pop();
-            if (!block) {
-                throw new Error(`Closing choice directive has no matching opening directive (${location}).`);
-            }
-            if (block.optionCount === 0) {
-                throw new Error(`Choice must contain at least one option (${location}).`);
-            }
-            parts[index] = '<% }); }); -%>';
-            continue;
-        }
-
-        if (/^<%\s*(?:choice|option|\/choice)(?:\s|%>)/.test(trimmed)) {
-            throw new Error(`Invalid choice directive (${location}).`);
-        }
-
-        const block = blocks[blocks.length - 1];
-        if (block && block.optionCount === 0) {
-            if (trimmed) {
-                throw new Error(`Choice content must be inside an option (${location}).`);
-            }
-            parts[index] = '<%# -%>';
-        }
-
-        if (newline) parts[index + 1] = newline;
-    }
-
-    if (blocks.length > 0) {
-        const block = blocks[blocks.length - 1];
-        throw new Error(`Unclosed choice directive (${templateLocation({ filename, label }, block.lineNumber)}).`);
-    }
-
-    return parts.join('');
-}
-
-function createTemplateRenderContext(random = Math.random) {
-    const choice = defineOptions => {
-        if (typeof defineOptions !== 'function') {
-            throw new TypeError('$mix.choice expects an option definition callback.');
-        }
-
-        const options = [];
-        let weighted = null;
-        const option = (weightOrRender, renderOption) => {
-            const hasWeight = renderOption !== undefined;
-            const weight = hasWeight ? weightOrRender : 1;
-            const render = hasWeight ? renderOption : weightOrRender;
-
-            if (weighted !== null && weighted !== hasWeight) {
-                throw new TypeError('$mix.choice options cannot mix weighted and unweighted forms.');
-            }
-            if (!Number.isFinite(weight) || weight <= 0) {
-                throw new TypeError('$mix.choice weights must be positive finite numbers.');
-            }
-            if (typeof render !== 'function') {
-                throw new TypeError('$mix.choice options require a render callback.');
-            }
-
-            weighted = hasWeight;
-            options.push({ weight, render });
-        };
-
-        defineOptions(option);
-        if (options.length === 0) {
-            throw new Error('$mix.choice requires at least one option.');
-        }
-
-        const totalWeight = options.reduce((sum, current) => sum + current.weight, 0);
-        if (!Number.isFinite(totalWeight)) {
-            throw new TypeError('$mix.choice total weight must be finite.');
-        }
-
-        let target = random() * totalWeight;
-        for (const current of options) {
-            target -= current.weight;
-            if (target < 0) return current.render();
-        }
-        return options[options.length - 1].render();
-    };
-
-    return {
-        helpers: Object.freeze({ choice }),
-        renderedTemplateData: new Map(),
-        renderedMessages: new Map(),
-        renderedSystems: new Map()
-    };
-}
-
-function configForDebug(config) {
-    const safeConfig = { ...config };
-    delete safeConfig.apiKey;
-    delete safeConfig.debug;
-    return safeConfig;
-}
-
-function redactSecret(value, secret, seen = new WeakSet()) {
-    if (!secret) return value;
-    if (typeof value === 'string') return value.split(secret).join('[REDACTED]');
-    if (!value || typeof value !== 'object') return value;
-    if (seen.has(value)) return '[Circular]';
-
-    seen.add(value);
-    if (Array.isArray(value)) {
-        return value.map(item => redactSecret(item, secret, seen));
-    }
-    return Object.fromEntries(
-        Object.entries(value).map(([key, item]) => [key, redactSecret(item, secret, seen)])
-    );
-}
-
-// Pricing per 1M tokens in USD
-// Based on provider pricing pages linked in README
-const GPT56_LONG_CONTEXT_PRICING = Object.freeze({
-    inputThreshold: 272_000,
-    inputMultiplier: 2,
-    outputMultiplier: 1.5
-});
-
-const GROK46_LONG_CONTEXT_PRICING = Object.freeze({
-    inputThreshold: 200_000,
-    inputMultiplier: 2,
-    outputMultiplier: 2,
-    inclusive: true
-});
-
-function usesLongContextRates(pricing, inputTokens) {
-    const longContext = pricing.longContext;
-    if (!longContext) return false;
-    return longContext.inclusive
-        ? inputTokens >= longContext.inputThreshold
-        : inputTokens > longContext.inputThreshold;
-}
-
-const MODEL_PRICING = {
-    // OpenAI
-    'gpt-realtime-mini': { input: 0.60, cachedInput: 0.06, output: 2.40 },
-    'gpt-realtime': { input: 4.00, cachedInput: 0.40, output: 16.00 },
-    'gpt-5.6-sol': { input: 5.00, cachedInput: 0.50, cacheWrite: 6.25, output: 30.00, longContext: GPT56_LONG_CONTEXT_PRICING },
-    'gpt-5.6-terra': { input: 2.00, cachedInput: 0.20, cacheWrite: 2.50, output: 12.00, longContext: GPT56_LONG_CONTEXT_PRICING },
-    'gpt-5.6-luna': { input: 0.20, cachedInput: 0.02, cacheWrite: 0.25, output: 1.20, longContext: GPT56_LONG_CONTEXT_PRICING },
-    'gpt-5.5-pro': { input: 30.00, output: 180.00 },
-    'gpt-5.5': { input: 5.00, cachedInput: 0.50, output: 30.00 },
-    'gpt-5.4': { input: 2.50, cachedInput: 0.25, output: 15.00 },
-    'gpt-5.4-pro': { input: 30.00, output: 180.00 },
-    'gpt-5.4-mini': { input: 0.75, cachedInput: 0.075, output: 4.50 },
-    'gpt-5.4-nano': { input: 0.20, cachedInput: 0.02, output: 1.25 },
-    'gpt-5.3-codex': { input: 1.75, cachedInput: 0.175, output: 14.00 },
-    'gpt-5.2': { input: 1.75, cachedInput: 0.175, output: 14.00 },
-    'gpt-5.2-chat-latest': { input: 1.75, cachedInput: 0.175, output: 14.00 },
-    'gpt-5.1': { input: 1.25, cachedInput: 0.125, output: 10.00 },
-    'gpt-5': { input: 1.25, cachedInput: 0.125, output: 10.00 },
-    'gpt-5-mini': { input: 0.25, cachedInput: 0.025, output: 2.00 },
-    'gpt-5-nano': { input: 0.05, cachedInput: 0.005, output: 0.40 },
-    'gpt-4.1': { input: 2.00, cachedInput: 0.50, output: 8.00 },
-    'gpt-4.1-mini': { input: 0.40, cachedInput: 0.10, output: 1.60 },
-    'gpt-4.1-nano': { input: 0.10, cachedInput: 0.025, output: 0.40 },
-    // gptOss (Together/Groq/Cerebras/OpenRouter)
-    'openai/gpt-oss-120b': { input: 0.15, output: 0.60 },
-    'gpt-oss-120b': { input: 0.15, output: 0.60 },
-    'openai/gpt-oss-120b:free': { input: 0, output: 0 },
-    // Anthropic
-    'claude-fable-5': { input: 10.00, cachedInput: 1.00, cacheWrite: 12.50, cacheWrite1h: 20.00, output: 50.00 },
-    'claude-opus-5': { input: 5.00, cachedInput: 0.50, cacheWrite: 6.25, cacheWrite1h: 10.00, output: 25.00 },
-    'claude-sonnet-5': { input: 3.00, cachedInput: 0.30, cacheWrite: 3.75, cacheWrite1h: 6.00, output: 15.00 },
-    'claude-opus-4-8': { input: 5.00, cachedInput: 0.50, cacheWrite: 6.25, cacheWrite1h: 10.00, output: 25.00 },
-    'claude-opus-4-7': { input: 5.00, cachedInput: 0.50, cacheWrite: 6.25, cacheWrite1h: 10.00, output: 25.00 },
-    'claude-opus-4-6': { input: 5.00, cachedInput: 0.50, cacheWrite: 6.25, cacheWrite1h: 10.00, output: 25.00 },
-    'claude-sonnet-4-6': { input: 3.00, cachedInput: 0.30, cacheWrite: 3.75, cacheWrite1h: 6.00, output: 15.00 },
-    'claude-sonnet-4-5-20250929': { input: 3.00, cachedInput: 0.30, cacheWrite: 3.75, cacheWrite1h: 6.00, output: 15.00 },
-    'claude-haiku-4-5-20251001': { input: 1.00, cachedInput: 0.10, cacheWrite: 1.25, cacheWrite1h: 2.00, output: 5.00 },
-    // Google
-    'gemini-3.1-pro-preview': { input: 2.00, output: 12.00 },
-    'gemini-3-pro-preview': { input: 2.00, output: 12.00 },
-    'gemini-3-flash-preview': { input: 0.50, output: 3.00 },
-    'gemini-3.7-flash': { input: 0.75, cachedInput: 0.075, output: 3.75 },
-    'gemini-3.6-flash': { input: 0.75, cachedInput: 0.075, output: 3.75 },
-    'gemini-3.5-flash': { input: 0.75, output: 4.50 },
-    'gemini-3.5-flash-lite': { input: 0.30, output: 2.50 },
-    'gemini-2.5-pro': { input: 1.25, output: 10.00 },
-    'gemini-2.5-flash': { input: 0.30, output: 2.50 },
-    'gemini-3.1-flash-lite-preview': { input: 0.25, output: 1.50 },
-    // Grok
-    'grok-4.6': { input: 2.00, cachedInput: 0.50, output: 6.00, longContext: GROK46_LONG_CONTEXT_PRICING },
-    'grok-4.5': { input: 2.00, output: 6.00 },
-    'grok-4.3': { input: 1.25, output: 2.50 },
-    'grok-4.20-multi-agent-0309': { input: 1.25, output: 2.50 },
-    'grok-4.20-0309': { input: 1.25, output: 2.50 },
-    'grok-4.20-0309-reasoning': { input: 1.25, output: 2.50 },
-    'grok-4.20-0309-non-reasoning': { input: 1.25, output: 2.50 },
-    // Fireworks
-    'accounts/fireworks/models/deepseek-v4-flash': { input: 0.14, output: 0.28 },
-    'accounts/fireworks/models/deepseek-v4-pro': { input: 1.74, output: 3.48 },
-    'accounts/fireworks/models/deepseek-v4-pro-0813': { input: 1.32, cachedInput: 0.044, output: 3.96 },
-    'deepseek-ai/DeepSeek-V4-Flash': { input: 0.14, output: 0.28 },
-    'deepseek-ai/DeepSeek-V4-Pro': { input: 2.10, output: 4.40 },
-    'deepseek/deepseek-v4-flash': { input: 0.09, output: 0.18 },
-    'accounts/fireworks/models/glm-4p7': { input: 0.55, output: 2.19 },
-    'accounts/fireworks/models/glm-5p1': { input: 1.05, output: 3.50 },
-    'zai-org/GLM-5.2': { input: 1.40, output: 4.40 },
-    'accounts/fireworks/models/kimi-k2p5': { input: 0.50, output: 2.80 },
-    'qwen/qwen3.5-397b-a17b': { input: 0.385, output: 2.45 },
-    'accounts/fireworks/models/qwen3p6-plus': { input: 0.50, output: 3.00 },
-    'Qwen/Qwen3.6-Plus': { input: 0.50, output: 3.00 },
-    'accounts/fireworks/models/qwen3p7-plus': { input: 0.40, output: 1.60 },
-    'qwen/qwen3.7-plus': { input: 0.32, output: 1.28 },
-    'accounts/fireworks/models/qwen3p8-2p4t-a95b': { input: 2.00, cachedInput: 0.25, output: 6.00 },
-    'qwen/qwen3.8-max': { input: 2.00, output: 6.00 },
-    // MiniMax
-    'MiniMax-M2.5': { input: 0.30, output: 1.20 },
-    'MiniMax-M2.7': { input: 0.30, output: 1.20 },
-    'MiniMax-M3': { input: 0.30, output: 1.20 },
-    'minimax/minimax-m2.7': { input: 0.30, output: 1.20 },
-    'minimax/minimax-m3': { input: 0.30, output: 1.20 },
-    'MiniMaxAI/MiniMax-M3': { input: 0.30, output: 1.20 },
-    // Perplexity
-    'sonar': { input: 1.00, output: 1.00 },
-    'sonar-pro': { input: 3.00, output: 15.00 },
-    // Hermes 4 (OpenRouter)
-    'nousresearch/hermes-4-70b': { input: 0.13, output: 0.40 },
-    'nousresearch/hermes-4-405b': { input: 1.00, output: 3.00 },
-    // Hermes 3 (Lambda/OpenRouter)
-    'Hermes-3-Llama-3.1-405B-FP8': { input: 0.80, output: 0.80 },
-    'nousresearch/hermes-3-llama-3.1-405b:free': { input: 0, output: 0 },
-    // Qwen3 (Together/Cerebras)
-    'Qwen/Qwen3-235B-A22B-fp8-tput': { input: 0.20, output: 0.60 },
-    'qwen-3-32b': { input: 0.20, output: 0.60 },
-    // Kimi K2.5 (Together/Fireworks/OpenRouter)
-    'moonshotai/Kimi-K2.5': { input: 0.50, output: 2.80 },
-    'moonshotai/kimi-k2.5': { input: 0.50, output: 2.80 },
-    // Kimi K3
-    'kimi-k3': { input: 3.00, output: 15.00 },
-    'moonshotai/kimi-k3': { input: 3.00, output: 15.00 },
-    // GLM 4.7 (OpenRouter/Cerebras)
-    'z-ai/glm-4.7': { input: 0.55, output: 2.19 },
-    'zai-glm-4.7': { input: 0.55, output: 2.19 },
-};
-
-const CHAIN_MODEL_SHORTCUTS = new Set([
-    'gpt5', 'gpt5mini', 'gpt5nano',
-    'gpt51', 'gpt52', 'gpt54', 'gpt54mini', 'gpt54nano', 'gpt54pro',
-    'gpt55', 'gpt55pro', 'gpt56sol', 'gpt56terra', 'gpt56luna',
-    'gptRealtime', 'gptRealtimeMini', 'gpt53codex', 'gpt53chat', 'gptOss',
-    'fable50', 'fable5', 'opus50', 'opus5', 'opus48', 'opus47', 'opus46',
-    'sonnet50', 'sonnet5', 'sonnet46', 'sonnet45', 'haiku45',
-    'gemini31pro', 'gemini37flash', 'gemini36flash', 'gemini35flash',
-    'gemini35flashLite', 'gemini31flashLite', 'sonarPro', 'sonar',
-    'grok46', 'grok45', 'grok43', 'grok420multiAgent', 'grok420',
-    'qwen3', 'qwen35397b', 'qwen36plus', 'qwen37plus', 'qwen38max',
-    'hermes470b', 'hermes4405b', 'hermes3',
-    'kimiK26', 'kimiK27Code', 'kimiK3', 'kimiK25',
-    'minimaxM27', 'minimaxM3', 'mimo25', 'mimo25pro',
-    'deepseekV4Pro', 'deepseekV4Flash', 'GLM51', 'GLM52'
-]);
-
-function parseChainModels(modelSpecs) {
-    if (modelSpecs.length === 0) {
-        throw new TypeError('chain() requires at least one model shortcut string.');
-    }
-
-    return modelSpecs.map((modelSpec, index) => {
-        if (typeof modelSpec !== 'string') {
-            throw new TypeError(`Invalid chain model at index ${index}: expected a model shortcut string.`);
-        }
-
-        const match = /^([A-Za-z_$][A-Za-z0-9_$]*)(?:@(-?\d+))?$/.exec(modelSpec);
-        if (!match) {
-            throw new TypeError(`Invalid chain model "${modelSpec}": expected "shortcut" or "shortcut@effort".`);
-        }
-
-        const shortcut = match[1];
-        if (!CHAIN_MODEL_SHORTCUTS.has(shortcut)) {
-            throw new Error(`Unknown model shortcut "${shortcut}" in chain().`);
-        }
-
-        return {
-            shortcut,
-            effort: match[2] === undefined ? undefined : normalizeEffort(Number(match[2]))
-        };
-    });
-}
 
 class ModelMix {
 
@@ -707,166 +349,28 @@ class ModelMix {
         return str.length > maxLen ? str.substring(0, maxLen) + '...' : str;
     }
 
-    static normalizeTokenUsage({ input = 0, output = 0, thinking = 0, total, cached = 0, cacheWrite = 0, cacheWrite5m = 0, cacheWrite1h = 0 } = {}) {
-        const tokenCount = value => Number.isFinite(value) ? Math.max(0, value) : 0;
-        const normalizedInput = tokenCount(input);
-        const normalizedOutput = tokenCount(output);
-        const normalizedThinking = tokenCount(thinking);
-        const normalizedCached = tokenCount(cached);
-        const normalizedCacheWrite5m = tokenCount(cacheWrite5m);
-        const normalizedCacheWrite1h = tokenCount(cacheWrite1h);
-        const normalizedCacheWrite = Math.max(
-            tokenCount(cacheWrite),
-            normalizedCacheWrite5m + normalizedCacheWrite1h
-        );
-        const normalizedTotal = Number.isFinite(total)
-            ? Math.max(0, total)
-            : normalizedInput + normalizedOutput + normalizedThinking;
-        const uncachedInput = Math.max(0, normalizedInput - normalizedCached - normalizedCacheWrite);
-        const cacheHitRate = normalizedInput > 0
-            ? Number((normalizedCached / normalizedInput).toFixed(4))
-            : 0;
-
-        return {
-            input: normalizedInput,
-            output: normalizedOutput,
-            thinking: normalizedThinking,
-            total: normalizedTotal,
-            cached: normalizedCached,
-            cacheWrite: normalizedCacheWrite,
-            cacheWrite5m: normalizedCacheWrite5m,
-            cacheWrite1h: normalizedCacheWrite1h,
-            uncachedInput,
-            cacheHitRate,
-            cacheSavings: 0,
-            cacheWritePremium: 0,
-            breakEvenHits: 0,
-            cost: 0,
-            costBreakdown: {
-                uncachedInput: 0,
-                cachedInput: 0,
-                cacheWrite: 0,
-                cacheWrite5m: 0,
-                cacheWrite1h: 0,
-                output: 0,
-                total: 0
-            }
-        };
+    static normalizeTokenUsage(usage = {}) {
+        return tokenUsage.normalizeTokenUsage(usage);
     }
 
     static calculateCostBreakdown(modelKey, tokens) {
-        const pricing = MODEL_PRICING[modelKey];
-        if (!pricing) return ModelMix.normalizeTokenUsage().costBreakdown;
-
-        const normalized = ModelMix.normalizeTokenUsage(tokens);
-        const longContext = pricing.longContext;
-        const useLongContextRates = usesLongContextRates(pricing, normalized.input);
-        const inputMultiplier = useLongContextRates ? longContext.inputMultiplier : 1;
-        const outputMultiplier = useLongContextRates ? longContext.outputMultiplier : 1;
-        const {
-            input: inputPerMillion,
-            cachedInput: cachedInputPerMillion = inputPerMillion,
-            cacheWrite: cacheWritePerMillion = inputPerMillion,
-            cacheWrite1h: cacheWrite1hPerMillion = cacheWritePerMillion,
-            output: outputPerMillion
-        } = pricing;
-        const roundCost = value => Number(value.toFixed(12));
-        const genericCacheWrite = Math.max(
-            0,
-            normalized.cacheWrite - normalized.cacheWrite5m - normalized.cacheWrite1h
-        );
-        const cacheWrite5mCost = roundCost(
-            normalized.cacheWrite5m * cacheWritePerMillion * inputMultiplier / 1_000_000
-        );
-        const cacheWrite1hCost = roundCost(
-            normalized.cacheWrite1h * cacheWrite1hPerMillion * inputMultiplier / 1_000_000
-        );
-        const genericCacheWriteCost = roundCost(
-            genericCacheWrite * cacheWritePerMillion * inputMultiplier / 1_000_000
-        );
-        const breakdown = {
-            uncachedInput: roundCost(normalized.uncachedInput * inputPerMillion * inputMultiplier / 1_000_000),
-            cachedInput: roundCost(normalized.cached * cachedInputPerMillion * inputMultiplier / 1_000_000),
-            cacheWrite: roundCost(genericCacheWriteCost + cacheWrite5mCost + cacheWrite1hCost),
-            cacheWrite5m: cacheWrite5mCost,
-            cacheWrite1h: cacheWrite1hCost,
-            output: roundCost(
-                (normalized.output + normalized.thinking) * outputPerMillion * outputMultiplier / 1_000_000
-            )
-        };
-        breakdown.total = roundCost(
-            breakdown.uncachedInput
-            + breakdown.cachedInput
-            + breakdown.cacheWrite
-            + breakdown.output
-        );
-        return breakdown;
+        return tokenUsage.calculateCostBreakdown(modelKey, tokens);
     }
 
     static calculateCacheMetrics(modelKey, tokens) {
-        const pricing = MODEL_PRICING[modelKey];
-        const emptyMetrics = {
-            cacheSavings: 0,
-            cacheWritePremium: 0,
-            breakEvenHits: 0
-        };
-        if (!pricing) return emptyMetrics;
-
-        const normalized = ModelMix.normalizeTokenUsage(tokens);
-        const longContext = pricing.longContext;
-        const useLongContextRates = usesLongContextRates(pricing, normalized.input);
-        const inputMultiplier = useLongContextRates ? longContext.inputMultiplier : 1;
-        const cachedInputPerMillion = pricing.cachedInput ?? pricing.input;
-        const cacheWritePerMillion = pricing.cacheWrite ?? pricing.input;
-        const cacheWrite1hPerMillion = pricing.cacheWrite1h ?? cacheWritePerMillion;
-        const readSavingsPerMillion = Math.max(0, pricing.input - cachedInputPerMillion) * inputMultiplier;
-        const writePremiumPerMillion = Math.max(0, cacheWritePerMillion - pricing.input) * inputMultiplier;
-        const write1hPremiumPerMillion = Math.max(0, cacheWrite1hPerMillion - pricing.input) * inputMultiplier;
-        const roundCost = value => Number(value.toFixed(12));
-        const cacheSavings = roundCost(normalized.cached * readSavingsPerMillion / 1_000_000);
-        const genericCacheWrite = Math.max(
-            0,
-            normalized.cacheWrite - normalized.cacheWrite5m - normalized.cacheWrite1h
-        );
-        const cacheWritePremium = roundCost(
-            (
-                (genericCacheWrite + normalized.cacheWrite5m) * writePremiumPerMillion
-                + normalized.cacheWrite1h * write1hPremiumPerMillion
-            ) / 1_000_000
-        );
-        const fullHitSavings = normalized.cacheWrite * readSavingsPerMillion / 1_000_000;
-
-        return {
-            cacheSavings,
-            cacheWritePremium,
-            breakEvenHits: fullHitSavings > 0
-                ? Number((cacheWritePremium / fullHitSavings).toFixed(4))
-                : 0
-        };
+        return tokenUsage.calculateCacheMetrics(modelKey, tokens);
     }
 
     static calculateCost(modelKey, tokens) {
-        if (!MODEL_PRICING[modelKey]) return null;
-        return ModelMix.calculateCostBreakdown(modelKey, tokens).total;
+        return tokenUsage.calculateCost(modelKey, tokens);
     }
 
     static extractCacheTokens(usage = {}) {
-        return usage.input_tokens_details?.cached_tokens
-            ?? usage.prompt_tokens_details?.cached_tokens
-            ?? usage.cache_read_input_tokens
-            ?? usage.cachedContentTokenCount
-            ?? usage.cached_content_token_count
-            ?? 0;
+        return tokenUsage.extractCacheTokens(usage);
     }
 
     static extractCacheWriteTokens(usage = {}) {
-        return usage.input_tokens_details?.cache_write_tokens
-            ?? usage.prompt_tokens_details?.cache_write_tokens
-            ?? usage.cache_creation_input_tokens
-            ?? usage.cache_write_input_tokens
-            ?? usage.cacheWriteTokenCount
-            ?? usage.cache_write_token_count
-            ?? 0;
+        return tokenUsage.extractCacheWriteTokens(usage);
     }
 
     static formatInputSummary(messages, system, debug = 2) {
@@ -917,7 +421,8 @@ class ModelMix {
 
     attach(key, provider) {
 
-        if (this.models.some(model => model.key === key)) {
+        if (this.models.some(model => model.key === key
+            && model.provider.constructor === provider.constructor)) {
             return this;
         }
 
@@ -988,7 +493,7 @@ class ModelMix {
         if (mix.together) this.attach('openai/gpt-oss-120b', new MixTogether({ options, config }));
         if (mix.cerebras) this.attach('gpt-oss-120b', new MixCerebras({ options, config }));
         if (mix.groq) this.attach('openai/gpt-oss-120b', new MixGroq({ options, config }));
-        if (mix.openrouter) this.attach('openai/gpt-oss-120b:free', new MixOpenRouter({ options, config }));
+        if (mix.openrouter) this.attach('openai/gpt-oss-120b', new MixOpenRouter({ options, config }));
         return this;
     }
     fable50({ options = {}, config = {} } = {}) {
@@ -1675,6 +1180,431 @@ class ModelMix {
         return this.systemTemplate;
     }
 
+    _mergeRequestConfig(config = {}) {
+        return {
+            ...this.config,
+            ...config,
+            retry: {
+                ...(this.config.retry || {}),
+                ...(config.retry || {})
+            }
+        };
+    }
+
+    _requirePreparedMessages(messages) {
+        if (messages.length === 0) {
+            throw new Error("No user messages have been added. Use addText(prompt), addTextFromFile(filePath), addImage(filePath), or addImageFromUrl(url) to add a prompt.");
+        }
+    }
+
+    _renderSystem(config, providerConfig, systemSuffix, templateContext) {
+        const systemTemplate = this._resolveSystemTemplate(config, providerConfig);
+        const systemCacheKey = JSON.stringify([systemTemplate.filename, systemTemplate.source]);
+        if (!templateContext.renderedSystems.has(systemCacheKey)) {
+            templateContext.renderedSystems.set(
+                systemCacheKey,
+                this._renderTemplate(systemTemplate.source, {
+                    filename: systemTemplate.filename,
+                    label: 'system template'
+                }, templateContext)
+            );
+        }
+        return templateContext.renderedSystems.get(systemCacheKey) + systemSuffix;
+    }
+
+    async _executePlugins({
+        config,
+        options,
+        systemSuffix,
+        outputMode,
+        templateContext,
+        executionMetadata,
+        isRootExecution
+    }) {
+        const preparedMessages = await this.prepareMessages(templateContext);
+        this._requirePreparedMessages(preparedMessages);
+
+        const request = {
+            system: this._renderSystem(config, {}, systemSuffix, templateContext),
+            messages: clonePluginValue(preparedMessages),
+            options: clonePluginValue({ ...this.options, ...options }),
+            config: clonePluginValue(this._mergeRequestConfig(config)),
+            outputMode
+        };
+        const metadata = executionMetadata || {
+            executionId: randomUUID(),
+            parentExecutionId: null,
+            depth: 0
+        };
+        let providerInvoked = false;
+
+        const dispatch = async index => {
+            if (index === this.plugins.length) {
+                providerInvoked = true;
+                return this.execute({
+                    config,
+                    options,
+                    systemSuffix,
+                    outputMode,
+                    _templateContext: templateContext,
+                    _pluginRequest: request,
+                    _executionMetadata: metadata,
+                    _pluginsApplied: true
+                });
+            }
+
+            const plugin = this.plugins[index];
+            let nextCalled = false;
+            const next = () => {
+                if (nextCalled) {
+                    throw new Error(`Plugin "${plugin.name}" called next() multiple times.`);
+                }
+                nextCalled = true;
+                return dispatch(index + 1);
+            };
+            const context = {
+                request,
+                execution: Object.freeze({ ...metadata }),
+                invoke: input => this._invokeChild(input, metadata)
+            };
+            const result = await plugin.execute(context, next);
+            return validatePluginResult(result, plugin.name);
+        };
+
+        const result = await dispatch(0);
+        this.lastRaw = result;
+        if (!providerInvoked) {
+            if (this.config.max_history === 0) {
+                this.messages = [];
+            } else if (result.message) {
+                this._addText(result.message, { role: 'assistant' });
+            }
+        }
+        if (isRootExecution) this._commitTemplateRenderContext(templateContext);
+        return result;
+    }
+
+    _createProviderAttempt({
+        currentModel,
+        preparedMessages,
+        config,
+        options,
+        finalConfig,
+        pluginRequest,
+        systemSuffix,
+        templateContext
+    }) {
+        const provider = currentModel.provider;
+        const currentOptions = {
+            ...this.options,
+            messages: preparedMessages,
+            ...provider.options,
+            ...provider.getOptionsTools(this.tools),
+            ...options,
+            ...(pluginRequest?.options || {}),
+            model: currentModel.key
+        };
+        const currentConfig = pluginRequest
+            ? {
+                ...provider.config,
+                ...pluginRequest.config,
+                retry: {
+                    ...(provider.config?.retry || {}),
+                    ...(pluginRequest.config.retry || {})
+                }
+            }
+            : {
+                ...finalConfig,
+                ...provider.config,
+                ...config,
+                retry: {
+                    ...(finalConfig.retry || {}),
+                    ...(provider.config?.retry || {}),
+                    ...(config.retry || {})
+                }
+            };
+
+        currentConfig.system = pluginRequest
+            ? pluginRequest.system
+            : this._renderSystem(config, provider.config, systemSuffix, templateContext);
+
+        const resolvedModelKey = resolveGrok420ModelKey(
+            currentModel.key,
+            currentConfig.effort,
+            currentOptions
+        );
+        currentOptions.model = resolvedModelKey;
+        applyUnifiedEffort(
+            currentOptions,
+            currentConfig,
+            resolveProviderFamily(provider),
+            resolvedModelKey
+        );
+
+        return { provider, currentOptions, currentConfig, resolvedModelKey };
+    }
+
+    _logProviderAttempt({ attempt, originalIndex, provider, currentConfig, resolvedModelKey, preparedMessages }) {
+        if (currentConfig.debug < 1) return;
+
+        const isPrimary = attempt === 0;
+        const prefix = isPrimary ? '→' : '↻';
+        const suffix = isPrimary
+            ? (currentConfig.roundRobin ? ` (round-robin #${originalIndex + 1})` : '')
+            : ' (fallback)';
+        const providerName = provider.constructor.name.replace(/^Mix/, '').toLowerCase();
+        const effort = currentConfig.effort === undefined ? '' : `@${currentConfig.effort}`;
+        const header = `\n${prefix} [${providerName}:${resolvedModelKey}${effort}] #${originalIndex + 1}${suffix}`;
+
+        if (currentConfig.debug >= 2) {
+            console.log(`${header}\n${ModelMix.formatInputSummary(preparedMessages, currentConfig.system, currentConfig.debug)}`);
+        } else {
+            console.log(header);
+        }
+    }
+
+    async _invokeProviderWithRetry(provider, currentOptions, currentConfig, resolvedModelKey) {
+        if (currentOptions.stream && this.streamCallback) {
+            provider.streamCallback = this.streamCallback;
+        }
+
+        const retryConfig = currentConfig.retry || {};
+        const retries = retryConfig.enabled ? Math.max(0, retryConfig.retries || 0) : 0;
+        const baseDelayMs = Math.max(0, retryConfig.baseDelayMs || 0);
+        const maxDelayMs = Math.max(baseDelayMs, retryConfig.maxDelayMs || baseDelayMs);
+        const retryableStatusCodes = new Set(
+            Array.isArray(retryConfig.retryableStatusCodes) && retryConfig.retryableStatusCodes.length > 0
+                ? retryConfig.retryableStatusCodes
+                : DEFAULT_RETRYABLE_STATUS_CODES
+        );
+
+        let attempt = 0;
+        while (true) {
+            const startTime = Date.now();
+            try {
+                const result = await provider.create({ options: currentOptions, config: currentConfig });
+                return { result, elapsedMs: Date.now() - startTime };
+            } catch (error) {
+                const statusCode = getErrorStatusCode(error);
+                if (attempt >= retries || !retryableStatusCodes.has(statusCode)) throw error;
+
+                if (currentConfig.debug >= 1) {
+                    console.log(`↺ Retrying [${resolvedModelKey}] due to status ${statusCode} (${attempt + 2}/${retries + 1})`);
+                }
+                const delay = Math.min(baseDelayMs * Math.pow(2, attempt), maxDelayMs);
+                await sleep(delay);
+                attempt += 1;
+            }
+        }
+    }
+
+    _enrichResultTokens(result, resolvedModelKey, elapsedMs) {
+        if (!result.tokens) return;
+
+        const normalizedTokens = ModelMix.normalizeTokenUsage(result.tokens);
+        const costBreakdown = ModelMix.calculateCostBreakdown(resolvedModelKey, normalizedTokens);
+        const cacheMetrics = ModelMix.calculateCacheMetrics(resolvedModelKey, normalizedTokens);
+        result.tokens = {
+            ...result.tokens,
+            ...normalizedTokens,
+            ...cacheMetrics,
+            cost: tokenUsage.hasModelPricing(resolvedModelKey) ? costBreakdown.total : 0,
+            costBreakdown
+        };
+        const elapsedSec = elapsedMs / 1000;
+        result.tokens.speed = elapsedSec > 0 ? Math.round(result.tokens.output / elapsedSec) : 0;
+    }
+
+    async _continueToolCalls(result, pluginRequest, execution) {
+        const toolMessages = pluginRequest
+            ? clonePluginValue(pluginRequest.messages)
+            : this.messages;
+        if (result.assistantMessage) {
+            toolMessages.push(result.assistantMessage);
+        } else if (result.message) {
+            if (result.signature) {
+                toolMessages.push({
+                    role: 'assistant',
+                    content: [{
+                        type: 'thinking',
+                        thinking: result.think ?? '',
+                        signature: result.signature
+                    }]
+                });
+            } else {
+                toolMessages.push({
+                    role: 'assistant',
+                    content: [{ type: 'text', text: result.message }]
+                });
+            }
+        }
+
+        if (!result.assistantMessage) {
+            toolMessages.push({ role: 'assistant', content: null, tool_calls: result.toolCalls });
+        }
+        const toolResults = await this.processToolCalls(result.toolCalls);
+        for (const toolResult of toolResults) {
+            toolMessages.push({
+                role: 'tool',
+                tool_call_id: toolResult.tool_call_id,
+                name: toolResult.name,
+                content: toolResult.content
+            });
+        }
+        this.messages = toolMessages;
+
+        return this.execute({
+            ...execution,
+            _pluginRequest: pluginRequest
+                ? { ...pluginRequest, messages: toolMessages }
+                : null
+        });
+    }
+
+    _logProviderSuccess(result, currentConfig) {
+        if (currentConfig.debug === 1) console.log('✓ Success');
+
+        if (currentConfig.debug >= 2) {
+            const tokenInfo = result.tokens
+                ? ` ${result.tokens.input} → ${result.tokens.output} tok`
+                    + (result.tokens.cached ? ` (cached:${result.tokens.cached})` : '')
+                    + (result.tokens.speed ? ` | ${result.tokens.speed} t/s` : '')
+                    + (result.tokens.cost != null ? ` $${result.tokens.cost.toFixed(4)}` : '')
+                : '';
+            console.log(`✓${tokenInfo}\n${ModelMix.formatOutputSummary(result, currentConfig.debug).trim()}`);
+        }
+
+        if (currentConfig.debug >= 4) {
+            if (result.response) {
+                console.log('\n[RAW RESPONSE]');
+                console.log(ModelMix.formatJSON(result.response));
+            }
+            if (result.message) {
+                console.log('\n[FULL MESSAGE]');
+                console.log(ModelMix.formatMessage(result.message));
+            }
+            if (result.think) {
+                console.log('\n[FULL THINKING]');
+                console.log(result.think);
+            }
+        }
+
+        if (currentConfig.debug >= 1) console.log('');
+    }
+
+    _recordProviderResult(result) {
+        this.lastRaw = result;
+        if (this.config.max_history === 0) {
+            this.messages = [];
+        } else if (result.message) {
+            if (result.assistantMessage) {
+                this.messages.push(result.assistantMessage);
+            } else if (result.signature) {
+                this.messages.push({
+                    role: 'assistant',
+                    content: [{
+                        type: 'thinking',
+                        thinking: result.think ?? '',
+                        signature: result.signature
+                    }, {
+                        type: 'text',
+                        text: result.message
+                    }]
+                });
+            } else {
+                this._addText(result.message, { role: 'assistant' });
+            }
+        }
+    }
+
+    _logProviderFailure(error, currentModelKey, attempt, modelsToTry) {
+        log.warn(`Model ${currentModelKey} failed (Attempt #${attempt + 1}/${modelsToTry.length}).`);
+        if (error.message) log.warn(`Error: ${error.message}`);
+        if (error.statusCode) log.warn(`Status Code: ${error.statusCode}`);
+        if (error.details) log.warn(`Details:\n${ModelMix.formatJSON(error.details)}`);
+
+        if (attempt === modelsToTry.length - 1) {
+            console.error(`All ${modelsToTry.length} model(s) failed. Throwing last error from ${currentModelKey}.`);
+            throw error;
+        }
+        log.info(`-> Proceeding to next model: ${modelsToTry[attempt + 1].model.key}`);
+    }
+
+    async _executeProviderChain({
+        config,
+        options,
+        systemSuffix,
+        outputMode,
+        templateContext,
+        pluginRequest,
+        executionMetadata,
+        pluginsApplied
+    }) {
+        const preparedMessages = pluginRequest
+            ? pluginRequest.messages
+            : await this.prepareMessages(templateContext);
+        this._requirePreparedMessages(preparedMessages);
+
+        const finalConfig = pluginRequest ? pluginRequest.config : this._mergeRequestConfig(config);
+        const modelsToTry = this.models.map((model, index) => ({ model, index }));
+        if (finalConfig.roundRobin && this.models.length > 1) {
+            this.models.push(this.models.shift());
+        }
+
+        let lastError = null;
+        for (let attempt = 0; attempt < modelsToTry.length; attempt++) {
+            const { model: currentModel, index: originalIndex } = modelsToTry[attempt];
+            const providerAttempt = this._createProviderAttempt({
+                currentModel,
+                preparedMessages,
+                config,
+                options,
+                finalConfig,
+                pluginRequest,
+                systemSuffix,
+                templateContext
+            });
+            this._logProviderAttempt({
+                attempt,
+                originalIndex,
+                preparedMessages,
+                ...providerAttempt
+            });
+
+            try {
+                const { result, elapsedMs } = await this._invokeProviderWithRetry(
+                    providerAttempt.provider,
+                    providerAttempt.currentOptions,
+                    providerAttempt.currentConfig,
+                    providerAttempt.resolvedModelKey
+                );
+                this._enrichResultTokens(result, providerAttempt.resolvedModelKey, elapsedMs);
+
+                if (result.toolCalls && result.toolCalls.length > 0) {
+                    return this._continueToolCalls(result, pluginRequest, {
+                        options,
+                        config,
+                        systemSuffix,
+                        outputMode,
+                        _templateContext: templateContext,
+                        _executionMetadata: executionMetadata,
+                        _pluginsApplied: pluginsApplied
+                    });
+                }
+
+                this._logProviderSuccess(result, providerAttempt.currentConfig);
+                this._recordProviderResult(result);
+                return result;
+            } catch (error) {
+                lastError = error;
+                this._logProviderFailure(error, currentModel.key, attempt, modelsToTry);
+            }
+        }
+
+        log.error('Fallback logic completed without success or throwing the final error.');
+        throw lastError || new Error('Failed to get response from any model, and no specific error was caught.');
+    }
+
     async execute({
         config = {},
         options = {},
@@ -1689,412 +1619,31 @@ class ModelMix {
         const templateContext = _templateContext || createTemplateRenderContext(() => this._choiceRandom());
 
         if (!_pluginsApplied && this.plugins.length > 0) {
-            const preparedMessages = await this.prepareMessages(templateContext);
-            if (preparedMessages.length === 0) {
-                throw new Error("No user messages have been added. Use addText(prompt), addTextFromFile(filePath), addImage(filePath), or addImageFromUrl(url) to add a prompt.");
-            }
-            const requestConfig = {
-                ...this.config,
-                ...config,
-                retry: {
-                    ...(this.config.retry || {}),
-                    ...(config.retry || {})
-                }
-            };
-            const systemTemplate = this._resolveSystemTemplate(config, {});
-            const systemCacheKey = JSON.stringify([systemTemplate.filename, systemTemplate.source]);
-            if (!templateContext.renderedSystems.has(systemCacheKey)) {
-                templateContext.renderedSystems.set(
-                    systemCacheKey,
-                    this._renderTemplate(systemTemplate.source, {
-                        filename: systemTemplate.filename,
-                        label: 'system template'
-                    }, templateContext)
-                );
-            }
-            const request = {
-                system: templateContext.renderedSystems.get(systemCacheKey) + systemSuffix,
-                messages: clonePluginValue(preparedMessages),
-                options: clonePluginValue({ ...this.options, ...options }),
-                config: clonePluginValue(requestConfig),
-                outputMode
-            };
-            const executionMetadata = _executionMetadata || {
-                executionId: randomUUID(),
-                parentExecutionId: null,
-                depth: 0
-            };
-            let providerInvoked = false;
-
-            const dispatch = async index => {
-                if (index === this.plugins.length) {
-                    providerInvoked = true;
-                    return this.execute({
-                        config,
-                        options,
-                        systemSuffix,
-                        outputMode,
-                        _templateContext: templateContext,
-                        _pluginRequest: request,
-                        _executionMetadata: executionMetadata,
-                        _pluginsApplied: true
-                    });
-                }
-
-                const plugin = this.plugins[index];
-                let nextCalled = false;
-                const next = () => {
-                    if (nextCalled) {
-                        throw new Error(`Plugin "${plugin.name}" called next() multiple times.`);
-                    }
-                    nextCalled = true;
-                    return dispatch(index + 1);
-                };
-                const context = {
-                    request,
-                    execution: Object.freeze({ ...executionMetadata }),
-                    invoke: input => this._invokeChild(input, executionMetadata)
-                };
-                const result = await plugin.execute(context, next);
-                return validatePluginResult(result, plugin.name);
-            };
-
-            const result = await dispatch(0);
-            this.lastRaw = result;
-            if (!providerInvoked) {
-                if (this.config.max_history === 0) {
-                    this.messages = [];
-                } else if (result.message) {
-                    this._addText(result.message, { role: 'assistant' });
-                }
-            }
-            if (isRootExecution) this._commitTemplateRenderContext(templateContext);
-            return result;
+            return this._executePlugins({
+                config,
+                options,
+                systemSuffix,
+                outputMode,
+                templateContext,
+                executionMetadata: _executionMetadata,
+                isRootExecution
+            });
         }
 
         if (!this.models || this.models.length === 0) {
-            throw new Error("No models specified. Use methods like .gpt5(), .sonnet46() first.");
+            throw new Error('No models specified. Use methods like .gpt5(), .sonnet46() first.');
         }
 
-        const execution = this.limiter.schedule(async () => {
-            const preparedMessages = _pluginRequest
-                ? _pluginRequest.messages
-                : await this.prepareMessages(templateContext);
-
-            if (preparedMessages.length === 0) {
-                throw new Error("No user messages have been added. Use addText(prompt), addTextFromFile(filePath), addImage(filePath), or addImageFromUrl(url) to add a prompt.");
-            }
-
-            // Merge config to get final roundRobin value and retry settings
-            const finalConfig = _pluginRequest
-                ? _pluginRequest.config
-                : {
-                    ...this.config,
-                    ...config,
-                    retry: {
-                        ...(this.config.retry || {}),
-                        ...(config.retry || {})
-                    }
-                };
-
-            // Try all models in order (first is primary, rest are fallbacks)
-            const modelsToTry = this.models.map((model, index) => ({ model, index }));
-
-            // Round robin: rotate models array AFTER using current for next request
-            if (finalConfig.roundRobin && this.models.length > 1) {
-                const firstModel = this.models.shift();
-                this.models.push(firstModel);
-            }
-
-            let lastError = null;
-
-            for (let i = 0; i < modelsToTry.length; i++) {
-
-                const { model: currentModel, index: originalIndex } = modelsToTry[i];
-                const currentModelKey = currentModel.key;
-                const providerInstance = currentModel.provider;
-                const optionsTools = providerInstance.getOptionsTools(this.tools);
-
-                // Create clean copies for each provider to avoid contamination
-                const currentOptions = {
-                    ...this.options,
-                    messages: preparedMessages,
-                    ...providerInstance.options,
-                    ...optionsTools,
-                    ...options,
-                    ...(_pluginRequest?.options || {}),
-                    model: currentModelKey
-                };
-
-                const currentConfig = _pluginRequest
-                    ? {
-                        ...providerInstance.config,
-                        ..._pluginRequest.config,
-                        retry: {
-                            ...(providerInstance.config?.retry || {}),
-                            ...(_pluginRequest.config.retry || {})
-                        }
-                    }
-                    : {
-                        ...finalConfig,
-                        ...providerInstance.config,
-                        ...config,
-                        retry: {
-                            ...(finalConfig.retry || {}),
-                            ...(providerInstance.config?.retry || {}),
-                            ...(config.retry || {})
-                        }
-                    };
-                if (_pluginRequest) {
-                    currentConfig.system = _pluginRequest.system;
-                } else {
-                    const systemTemplate = this._resolveSystemTemplate(config, providerInstance.config);
-                    const systemCacheKey = JSON.stringify([systemTemplate.filename, systemTemplate.source]);
-                    if (!templateContext.renderedSystems.has(systemCacheKey)) {
-                        templateContext.renderedSystems.set(
-                            systemCacheKey,
-                            this._renderTemplate(systemTemplate.source, {
-                                filename: systemTemplate.filename,
-                                label: 'system template'
-                            }, templateContext)
-                        );
-                    }
-                    currentConfig.system = templateContext.renderedSystems.get(systemCacheKey) + systemSuffix;
-                }
-
-                // Grok 4.20 alias → reasoning / non-reasoning from unified effort
-                const resolvedModelKey = resolveGrok420ModelKey(
-                    currentModelKey,
-                    currentConfig.effort,
-                    currentOptions
-                );
-                currentOptions.model = resolvedModelKey;
-
-                // Unified effort → native provider fields (skipped if native already set)
-                const providerFamily = resolveProviderFamily(providerInstance);
-                applyUnifiedEffort(currentOptions, currentConfig, providerFamily, resolvedModelKey);
-
-                if (currentConfig.debug >= 1) {
-                    const isPrimary = i === 0;
-                    const prefix = isPrimary ? '→' : '↻';
-                    const suffix = isPrimary
-                        ? (currentConfig.roundRobin ? ` (round-robin #${originalIndex + 1})` : '')
-                        : ' (fallback)';
-                    // Extract provider name from class name (e.g., "MixOpenRouter" -> "openrouter")
-                    const providerName = providerInstance.constructor.name.replace(/^Mix/, '').toLowerCase();
-                    const header = `\n${prefix} [${providerName}:${resolvedModelKey}] #${originalIndex + 1}${suffix}`;
-
-                    if (currentConfig.debug >= 2) {
-                        console.log(`${header}\n${ModelMix.formatInputSummary(preparedMessages, currentConfig.system, currentConfig.debug)}`);
-                    } else {
-                        console.log(header);
-                    }
-                }
-
-                try {
-                    if (currentOptions.stream && this.streamCallback) {
-                        providerInstance.streamCallback = this.streamCallback;
-                    }
-
-                    const retryConfig = currentConfig.retry || {};
-                    const retries = retryConfig.enabled ? Math.max(0, retryConfig.retries || 0) : 0;
-                    const baseDelayMs = Math.max(0, retryConfig.baseDelayMs || 0);
-                    const maxDelayMs = Math.max(baseDelayMs, retryConfig.maxDelayMs || baseDelayMs);
-                    const retryableStatusCodes = new Set(
-                        Array.isArray(retryConfig.retryableStatusCodes) && retryConfig.retryableStatusCodes.length > 0
-                            ? retryConfig.retryableStatusCodes
-                            : DEFAULT_RETRYABLE_STATUS_CODES
-                    );
-
-                    let attempt = 0;
-                    let result;
-                    let startTime = 0;
-
-                    while (true) {
-                        try {
-                            startTime = Date.now();
-                            result = await providerInstance.create({ options: currentOptions, config: currentConfig });
-                            break;
-                        } catch (attemptError) {
-                            const statusCode = getErrorStatusCode(attemptError);
-                            const isRetryable = retryableStatusCodes.has(statusCode);
-                            const canRetry = attempt < retries && isRetryable;
-
-                            if (!canRetry) {
-                                throw attemptError;
-                            }
-
-                            if (currentConfig.debug >= 1) {
-                                const nextAttempt = attempt + 2;
-                                const totalAttempts = retries + 1;
-                                console.log(`↺ Retrying [${resolvedModelKey}] due to status ${statusCode} (${nextAttempt}/${totalAttempts})`);
-                            }
-
-                            const delay = Math.min(baseDelayMs * Math.pow(2, attempt), maxDelayMs);
-                            await sleep(delay);
-                            attempt += 1;
-                        }
-                    }
-
-                    const elapsedMs = Date.now() - startTime;
-
-                    if (result.tokens) {
-                        const normalizedTokens = ModelMix.normalizeTokenUsage(result.tokens);
-                        const costBreakdown = ModelMix.calculateCostBreakdown(resolvedModelKey, normalizedTokens);
-                        const cacheMetrics = ModelMix.calculateCacheMetrics(resolvedModelKey, normalizedTokens);
-                        result.tokens = {
-                            ...result.tokens,
-                            ...normalizedTokens,
-                            ...cacheMetrics,
-                            cost: MODEL_PRICING[resolvedModelKey] ? costBreakdown.total : 0,
-                            costBreakdown
-                        };
-                        const elapsedSec = elapsedMs / 1000;
-                        result.tokens.speed = elapsedSec > 0 ? Math.round(result.tokens.output / elapsedSec) : 0;
-                    }
-
-                    if (result.toolCalls && result.toolCalls.length > 0) {
-                        const toolMessages = _pluginRequest
-                            ? clonePluginValue(_pluginRequest.messages)
-                            : this.messages;
-                        if (result.assistantMessage) {
-                            toolMessages.push(result.assistantMessage);
-                        } else if (result.message) {
-                            if (result.signature) {
-                                toolMessages.push({
-                                    role: "assistant", content: [{
-                                        type: "thinking",
-                                        // Empty string is valid (Anthropic display: "omitted").
-                                        thinking: result.think ?? '',
-                                        signature: result.signature
-                                    }]
-                                });
-                            } else {
-                                toolMessages.push({
-                                    role: 'assistant',
-                                    content: [{ type: 'text', text: result.message }]
-                                });
-                            }
-                        }
-
-                        if (!result.assistantMessage) {
-                            toolMessages.push({ role: "assistant", content: null, tool_calls: result.toolCalls });
-                        }
-
-                        const toolResults = await this.processToolCalls(result.toolCalls);
-                        for (const toolResult of toolResults) {
-                            toolMessages.push({
-                                role: 'tool',
-                                tool_call_id: toolResult.tool_call_id,
-                                name: toolResult.name,
-                                content: toolResult.content
-                            });
-                        }
-                        this.messages = toolMessages;
-
-                        const nextPluginRequest = _pluginRequest
-                            ? {
-                                ..._pluginRequest,
-                                messages: toolMessages
-                            }
-                            : null;
-                        return this.execute({
-                            options,
-                            config,
-                            systemSuffix,
-                            outputMode,
-                            _templateContext: templateContext,
-                            _pluginRequest: nextPluginRequest,
-                            _executionMetadata,
-                            _pluginsApplied
-                        });
-                    }
-
-                    // debug level 1: Just success indicator
-                    if (currentConfig.debug === 1) {
-                        console.log(`✓ Success`);
-                    }
-
-                    // debug level 2: Readable summary of output
-                    if (currentConfig.debug >= 2) {
-                        const tokenInfo = result.tokens
-                            ? ` ${result.tokens.input} → ${result.tokens.output} tok`
-                                + (result.tokens.cached ? ` (cached:${result.tokens.cached})` : '')
-                                + (result.tokens.speed ? ` | ${result.tokens.speed} t/s` : '')
-                                + (result.tokens.cost != null ? ` $${result.tokens.cost.toFixed(4)}` : '')
-                            : '';
-                        console.log(`✓${tokenInfo}\n${ModelMix.formatOutputSummary(result, currentConfig.debug).trim()}`);
-                    }
-
-                    // debug level 4 (verbose): Full response details
-                    if (currentConfig.debug >= 4) {
-                        if (result.response) {
-                            console.log('\n[RAW RESPONSE]');
-                            console.log(ModelMix.formatJSON(result.response));
-                        }
-
-                        if (result.message) {
-                            console.log('\n[FULL MESSAGE]');
-                            console.log(ModelMix.formatMessage(result.message));
-                        }
-
-                        if (result.think) {
-                            console.log('\n[FULL THINKING]');
-                            console.log(result.think);
-                        }
-                    }
-
-                    if (currentConfig.debug >= 1) console.log('');
-
-                    this.lastRaw = result;
-
-                    // Manage conversation history based on max_history setting
-                    if (this.config.max_history === 0) {
-                        // Stateless: clear messages so next call starts fresh
-                        this.messages = [];
-                    } else if (result.message) {
-                        // Persist assistant response for multi-turn conversations
-                        if (result.assistantMessage) {
-                            this.messages.push(result.assistantMessage);
-                        } else if (result.signature) {
-                            this.messages.push({
-                                role: "assistant", content: [{
-                                    type: "thinking",
-                                    // Empty string is valid (Anthropic display: "omitted").
-                                    thinking: result.think ?? '',
-                                    signature: result.signature
-                                }, {
-                                    type: "text",
-                                    text: result.message
-                                }]
-                            });
-                        } else {
-                            this._addText(result.message, { role: "assistant" });
-                        }
-                    }
-
-                    return result;
-
-                } catch (error) {
-                    lastError = error;
-                    log.warn(`Model ${currentModelKey} failed (Attempt #${i + 1}/${modelsToTry.length}).`);
-                    if (error.message) log.warn(`Error: ${error.message}`);
-                    if (error.statusCode) log.warn(`Status Code: ${error.statusCode}`);
-                    if (error.details) log.warn(`Details:\n${ModelMix.formatJSON(error.details)}`);
-
-                    if (i === modelsToTry.length - 1) {
-                        console.error(`All ${modelsToTry.length} model(s) failed. Throwing last error from ${currentModelKey}.`);
-                        throw lastError;
-                    } else {
-                        const nextModelKey = modelsToTry[i + 1].model.key;
-                        log.info(`-> Proceeding to next model: ${nextModelKey}`);
-                    }
-                }
-            }
-
-            log.error("Fallback logic completed without success or throwing the final error.");
-            throw lastError || new Error("Failed to get response from any model, and no specific error was caught.");
-        });
+        const execution = this.limiter.schedule(() => this._executeProviderChain({
+            config,
+            options,
+            systemSuffix,
+            outputMode,
+            templateContext,
+            pluginRequest: _pluginRequest,
+            executionMetadata: _executionMetadata,
+            pluginsApplied: _pluginsApplied
+        }));
 
         if (!isRootExecution) return execution;
 
@@ -2102,7 +1651,6 @@ class ModelMix {
         this._commitTemplateRenderContext(templateContext);
         return result;
     }
-
     async processToolCalls(toolCalls) {
         const result = []
 
@@ -2266,1915 +1814,33 @@ class ModelMix {
     }
 }
 
-class MixCustom {
-    constructor({ config = {}, options = {}, headers = {} } = {}) {
-        this.config = this.getDefaultConfig(config);
-        this.options = this.getDefaultOptions(options);
-        this.headers = this.getDefaultHeaders(headers);
-        this.streamCallback = null; // Define streamCallback here
-    }
-
-    getDefaultOptions(customOptions) {
-        return {
-            ...customOptions
-        };
-    }
-
-    getDefaultConfig(customConfig) {
-        return {
-            url: '',
-            apiKey: '',
-            ...customConfig
-        };
-    }
-
-    getDefaultHeaders(customHeaders) {
-        return {
-            'accept': 'application/json',
-            'content-type': 'application/json',
-            'authorization': `Bearer ${this.config.apiKey}`,
-            ...customHeaders
-        };
-    }
-
-    convertMessages(messages, config) {
-        return MixOpenAI.convertMessages(messages, config);
-    }
-
-    sanitizeCacheOptions(options) {
-        delete options.cache_control;
-        delete options.prompt_cache_key;
-        delete options.prompt_cache_options;
-        delete options.prompt_cache_retention;
-    }
-
-    static stripContentTypeHeader(headers = {}) {
-        return stripContentTypeHeader(headers);
-    }
-
-    static createMultipartFormData({ fields = {}, files = [] } = {}) {
-        return createMultipartFormData({ fields, files });
-    }
-
-    static buildRequestBodyAndHeaders(options, headers) {
-        return buildRequestBodyAndHeaders(options, headers);
-    }
-
-    async create({ config = {}, options = {} } = {}) {
-        try {
-            this.sanitizeCacheOptions(options);
-            if (Array.isArray(options.messages)) {
-                options.messages = this.convertMessages(options.messages, config);
-            }
-
-            const request = buildRequestBodyAndHeaders(options, this.headers);
-
-            // debug level 4 (verbose): Full request details
-            if (config.debug >= 4) {
-                console.log('\n[REQUEST DETAILS]');
-
-                console.log('\n[CONFIG]');
-                console.log(ModelMix.formatJSON(configForDebug(config)));
-
-                console.log('\n[OPTIONS]');
-                console.log(ModelMix.formatJSON(request.options));
-            }
-
-            if (options.stream) {
-                return this.processStream(await fetchStreamResponse(this.config.url, {
-                    method: 'POST',
-                    headers: request.headers,
-                    body: request.body
-                }));
-            } else {
-                return this.processResponse(await fetchJsonResponse(this.config.url, {
-                    method: 'POST',
-                    headers: request.headers,
-                    body: request.body
-                }));
-            }
-        } catch (error) {
-            throw this.handleError(error);
-        }
-    }
-
-    handleError(error) {
-        let errorMessage = 'An error occurred in MixCustom';
-        let statusCode = null;
-        let errorDetails = null;
-
-        if (error?.isHttpError || error?.response || typeof error?.statusCode === 'number') {
-            statusCode = error.statusCode ?? error.response?.status ?? null;
-            errorMessage = error.message || `Request to ${this.config.url} failed with status code ${statusCode}`;
-            errorDetails = error.details ?? error.response?.data ?? null;
-        } else if (error?.message) {
-            errorMessage = error.message;
-        }
-
-        const formattedError = {
-            message: redactSecret(errorMessage, this.config.apiKey),
-            statusCode,
-            details: redactSecret(errorDetails, this.config.apiKey),
-            stack: redactSecret(error.stack, this.config.apiKey)
-        };
-
-        return formattedError;
-    }
-
-    processStream(response) {
-        return new Promise((resolve, reject) => {
-            let raw = [];
-            let message = '';
-            let buffer = '';
-
-            response.data.on('data', chunk => {
-                buffer += chunk.toString();
-
-                let boundary;
-                while ((boundary = buffer.indexOf('\n')) !== -1) {
-                    const dataStr = buffer.slice(0, boundary).trim();
-                    buffer = buffer.slice(boundary + 1);
-
-                    const firstBraceIndex = dataStr.indexOf('{');
-                    if (dataStr === '[DONE]' || firstBraceIndex === -1) continue;
-
-                    const jsonStr = dataStr.slice(firstBraceIndex);
-                    try {
-                        const data = JSON.parse(jsonStr);
-                        if (this.streamCallback) {
-                            const delta = this.extractDelta(data);
-                            message += delta;
-                            this.streamCallback({ response: data, message, delta });
-                            raw.push(data);
-                        }
-                    } catch (error) {
-                        console.error('Error parsing JSON:', error);
-                    }
-                }
-            });
-
-            response.data.on('end', () => resolve({
-                response: raw,
-                message: message.trim(),
-                toolCalls: [],
-                think: null,
-                tokens: raw.length > 0 ? MixCustom.extractTokens(raw[raw.length - 1]) : { input: 0, output: 0, total: 0, cached: 0 }
-            }));
-            response.data.on('error', reject);
-        });
-    }
-
-    extractDelta(data) {
-        return data.choices[0].delta.content;
-    }
-
-    static extractMessage(data) {
-        const choice = data?.choices?.[0] || {};
-        const messageObj = choice.message || {};
-        const finishReason = choice.finish_reason;
-
-        if (typeof messageObj.refusal === 'string' && messageObj.refusal.trim().length > 0) {
-            throw new Error(`OpenAI model refused to process this request: ${messageObj.refusal}`);
-        }
-
-        if (finishReason === 'content_filter') {
-            throw new Error('OpenAI response was blocked by content_filter.');
-        }
-
-        let message = '';
-        if (typeof messageObj.content === 'string') {
-            message = messageObj.content.trim();
-        } else if (Array.isArray(messageObj.content)) {
-            const refusalPart = messageObj.content.find(part => part?.type === 'refusal' || (typeof part?.refusal === 'string' && part.refusal.trim().length > 0));
-            if (refusalPart) {
-                const refusalText = typeof refusalPart.refusal === 'string' ? refusalPart.refusal : 'No refusal text provided.';
-                throw new Error(`OpenAI model refused to process this request: ${refusalText}`);
-            }
-            message = messageObj.content
-                .filter(part => typeof part?.text === 'string')
-                .map(part => part.text)
-                .join('')
-                .trim();
-        }
-
-        const endTagIndex = message.indexOf('</think>');
-        if (message.startsWith('<think>') && endTagIndex !== -1) {
-            return message.substring(endTagIndex + 8).trim();
-        }
-        return message;
-    }
-
-    static extractThink(data) {
-
-        if (data.choices[0].message?.reasoning_content) {
-            return data.choices[0].message.reasoning_content;
-        } else if (data.choices[0].message?.reasoning) {
-            return data.choices[0].message.reasoning;
-        }
-
-        const message = data.choices[0].message?.content?.trim() || '';
-        const endTagIndex = message.indexOf('</think>');
-        if (message.startsWith('<think>') && endTagIndex !== -1) {
-            return message.substring(7, endTagIndex).trim();
-        }
-        return null;
-    }
-
-    static extractToolCalls(data) {
-        return data.choices[0].message?.tool_calls?.map(call => ({
-            id: call.id,
-            type: 'function',
-            function: {
-                name: call.function.name,
-                arguments: call.function.arguments
-            }
-        })) || []
-    }
-
-    static extractTokens(data) {
-        // OpenAI/Groq/Together/Lambda/Cerebras/Fireworks format
-        if (data.usage) {
-            return ModelMix.normalizeTokenUsage({
-                input: data.usage.prompt_tokens || 0,
-                output: data.usage.completion_tokens || 0,
-                total: data.usage.total_tokens,
-                cached: ModelMix.extractCacheTokens(data.usage),
-                cacheWrite: ModelMix.extractCacheWriteTokens(data.usage)
-            });
-        }
-        return ModelMix.normalizeTokenUsage();
-    }
-
-    processResponse(response) {
-        return {
-            message: MixCustom.extractMessage(response.data),
-            think: MixCustom.extractThink(response.data),
-            toolCalls: MixCustom.extractToolCalls(response.data),
-            tokens: MixCustom.extractTokens(response.data),
-            response: response.data
-        }
-    }
-
-    getOptionsTools(tools) {
-        return MixOpenAI.getOptionsTools(tools);
-    }
-}
-
-class MixOpenAI extends MixCustom {
-    sanitizeCacheOptions(options) {
-        delete options.cache_control;
-        delete options.prompt_cache_options;
-    }
-
-    getDefaultConfig(customConfig) {
-
-        if (!process.env.OPENAI_API_KEY) {
-            throw new Error('OpenAI API key not found. Please provide it in config or set OPENAI_API_KEY environment variable.');
-        }
-
-        return super.getDefaultConfig({
-            url: 'https://api.openai.com/v1/chat/completions',
-            apiKey: process.env.OPENAI_API_KEY,
-            ...customConfig
-        });
-    }
-
-    async create({ config = {}, options = {} } = {}) {
-
-        // Remove max_tokens and temperature for o1/o3 models
-        if (options.model?.startsWith('o')) {
-            delete options.max_tokens;
-            delete options.temperature;
-        }
-
-        // Use max_completion_tokens and remove temperature for GPT-5 models
-        if (options.model?.includes('gpt-5')) {
-            if (options.max_tokens) {
-                options.max_completion_tokens = options.max_tokens;
-                delete options.max_tokens;
-            }
-            delete options.temperature;
-        }
-
-        return super.create({ config, options });
-    }
-
-    static convertMessages(messages, config) {
-
-        const content = config.system;
-        messages = [{ role: 'system', content }, ...messages || []];
-
-        const results = []
-        for (const message of messages) {
-
-            if (message.tool_calls) {
-                results.push({
-                    role: 'assistant',
-                    content: message.content ?? null,
-                    ...(message.reasoning_content && { reasoning_content: message.reasoning_content }),
-                    tool_calls: message.tool_calls
-                })
-                continue;
-            }
-
-            if (message.role === 'tool') {
-                // Handle new format: tool_call_id directly on message
-                if (message.tool_call_id) {
-                    results.push({
-                        role: 'tool',
-                        tool_call_id: message.tool_call_id,
-                        content: message.content
-                    });
-                }
-                // Handle old format: content is an array
-                else if (Array.isArray(message.content)) {
-                    for (const content of message.content) {
-                        results.push({
-                            role: 'tool',
-                            tool_call_id: content.tool_call_id,
-                            content: content.content
-                        })
-                    }
-                }
-                continue;
-            }
-
-            let convertedMessage = { ...message };
-            if (Array.isArray(message.content)) {
-                convertedMessage = {
-                    ...message,
-                    content: message.content.filter(content => content !== null && content !== undefined).map(content => {
-                        if (content && content.type === 'image') {
-                            const { media_type, data } = content.source;
-                            return {
-                                type: 'image_url',
-                                image_url: {
-                                    url: `data:${media_type};base64,${data}`
-                                }
-                            };
-                        }
-                        return stripContentCacheMetadata(content);
-                    })
-                };
-            }
-
-            results.push(convertedMessage);
-        }
-
-        return results;
-    }
-
-    static getOptionsTools(tools) {
-        const options = {};
-        const toolsArray = [];
-        for (const tool in tools) {
-            for (const item of tools[tool]) {
-                toolsArray.push({
-                    type: 'function',
-                    function: {
-                        name: item.name,
-                        description: item.description,
-                        parameters: item.inputSchema
-                    }
-                });
-            }
-        }
-
-        // Solo incluir tools si el array no está vacío
-        if (toolsArray.length > 0) {
-            options.tools = toolsArray;
-            // options.tool_choice = "auto";
-        }
-
-        return options;
-    }
-}
-
-class MixModeration extends MixCustom {
-    getOptionsTools() {
-        return {};
-    }
-}
-
-class MixOpenAIResponses extends MixOpenAI {
-    async create({ config = {}, options = {} } = {}) {
-
-        // Keep GPT/o-model option normalization behavior
-        if (options.model?.startsWith('o')) {
-            delete options.max_tokens;
-            delete options.temperature;
-        }
-        if (options.model?.includes('gpt-5')) {
-            if (options.max_tokens) {
-                options.max_completion_tokens = options.max_tokens;
-                delete options.max_tokens;
-            }
-            delete options.temperature;
-        }
-
-        const responsesUrl = this.config.url.replace('/chat/completions', '/responses');
-        const request = MixOpenAIResponses.buildResponsesRequest(options, config);
-        const response = await fetchJsonResponse(responsesUrl, {
-            method: 'POST',
-            headers: this.headers,
-            body: JSON.stringify(request)
-        });
-
-        return MixOpenAIResponses.processResponsesResponse(response);
-    }
-
-    static buildResponsesRequest(options = {}, config = {}) {
-        const isGPT56 = typeof options.model === 'string' && options.model.startsWith('gpt-5.6');
-        const input = MixOpenAIResponses.messagesToResponsesInput(options.messages, {
-            translateNeutralCache: isGPT56
-        });
-        if (config.system) {
-            input.unshift({ role: 'developer', content: [{ type: 'input_text', text: config.system }] });
-        }
-        MixOpenAIResponses.validatePromptCaching(options, input);
-        const request = {
-            model: options.model,
-            input,
-            stream: false
-        };
-
-        if (options.reasoning_effort) request.reasoning = { effort: options.reasoning_effort };
-        if (options.verbosity) request.text = { verbosity: options.verbosity };
-
-        if (options.response_format) {
-            const rf = options.response_format;
-            let format;
-            if (rf.type === 'json_schema' && rf.json_schema) {
-                format = {
-                    type: 'json_schema',
-                    name: rf.json_schema.name || 'response',
-                    strict: true,
-                    schema: rf.json_schema.schema
-                };
-            } else if (rf.type) {
-                format = { type: rf.type };
-            }
-            if (format) {
-                request.text = { ...request.text, format };
-            }
-        }
-
-        if (typeof options.max_completion_tokens === 'number') {
-            request.max_output_tokens = options.max_completion_tokens;
-        } else if (typeof options.max_tokens === 'number') {
-            request.max_output_tokens = options.max_tokens;
-        }
-
-        if (typeof options.temperature === 'number') request.temperature = options.temperature;
-        if (typeof options.top_p === 'number') request.top_p = options.top_p;
-        if (typeof options.presence_penalty === 'number') request.presence_penalty = options.presence_penalty;
-        if (typeof options.frequency_penalty === 'number') request.frequency_penalty = options.frequency_penalty;
-        if (options.stop !== undefined) request.stop = options.stop;
-        if (typeof options.n === 'number') request.n = options.n;
-        if (options.logit_bias !== undefined) request.logit_bias = options.logit_bias;
-        if (options.user !== undefined) request.user = options.user;
-        if (options.prompt_cache_key !== undefined) request.prompt_cache_key = options.prompt_cache_key;
-        if (options.prompt_cache_retention !== undefined) request.prompt_cache_retention = options.prompt_cache_retention;
-        if (options.prompt_cache_options !== undefined) request.prompt_cache_options = options.prompt_cache_options;
-
-        return request;
-    }
-
-    static validatePromptCaching(options, input) {
-        const isGPT56 = typeof options.model === 'string' && options.model.startsWith('gpt-5.6');
-        const cacheOptions = options.prompt_cache_options;
-        const breakpoints = input.flatMap(message => Array.isArray(message.content)
-            ? message.content
-                .filter(block => block?.prompt_cache_breakpoint !== undefined)
-                .map(block => block.prompt_cache_breakpoint)
-            : []);
-
-        if (isGPT56 && options.prompt_cache_retention !== undefined) {
-            throw new Error('GPT-5.6 does not support prompt_cache_retention; use prompt_cache_options.ttl instead.');
-        }
-        if (!isGPT56 && cacheOptions !== undefined) {
-            throw new Error('prompt_cache_options is only supported by GPT-5.6 models.');
-        }
-        if (!isGPT56 && breakpoints.length > 0) {
-            throw new Error('prompt_cache_breakpoint is only supported by GPT-5.6 models.');
-        }
-        if (cacheOptions !== undefined) {
-            if (!isPlainObject(cacheOptions)) {
-                throw new TypeError('prompt_cache_options must be a plain non-null object.');
-            }
-            if (cacheOptions.mode !== undefined
-                && cacheOptions.mode !== 'implicit'
-                && cacheOptions.mode !== 'explicit') {
-                throw new TypeError('prompt_cache_options.mode must be "implicit" or "explicit".');
-            }
-            if (cacheOptions.ttl !== undefined && cacheOptions.ttl !== '30m') {
-                throw new TypeError('prompt_cache_options.ttl must be "30m".');
-            }
-        }
-        for (const breakpoint of breakpoints) {
-            if (!isPlainObject(breakpoint)) {
-                throw new TypeError('prompt_cache_breakpoint must be a plain non-null object.');
-            }
-            if (breakpoint.mode !== 'explicit') {
-                throw new TypeError('prompt_cache_breakpoint mode must be "explicit".');
-            }
-        }
-    }
-
-    static processResponsesResponse(response) {
-        const message = MixOpenAIResponses.extractResponsesMessage(response.data);
-        return {
-            message,
-            think: null,
-            toolCalls: [],
-            tokens: MixOpenAIResponses.extractResponsesTokens(response.data),
-            response: response.data
-        };
-    }
-
-    static extractResponsesTokens(data) {
-        if (data.usage) {
-            return ModelMix.normalizeTokenUsage({
-                input: data.usage.input_tokens || 0,
-                output: data.usage.output_tokens || 0,
-                total: data.usage.total_tokens,
-                cached: ModelMix.extractCacheTokens(data.usage),
-                cacheWrite: ModelMix.extractCacheWriteTokens(data.usage)
-            });
-        }
-        return ModelMix.normalizeTokenUsage();
-    }
-
-    static extractResponsesMessage(data) {
-        if (!Array.isArray(data.output)) return '';
-        return data.output
-            .filter(item => item.type === 'message')
-            .flatMap(item => Array.isArray(item.content) ? item.content : [])
-            .filter(content => content.type === 'output_text' && typeof content.text === 'string')
-            .map(content => content.text)
-            .join('\n')
-            .trim();
-    }
-
-    static messagesToResponsesInput(messages = [], { translateNeutralCache = false } = {}) {
-        const mapped = [];
-
-        for (const message of messages) {
-            if (!message || !message.role) continue;
-            if (message.tool_calls || message.role === 'tool') continue;
-
-            const content = [];
-            const isAssistant = message.role === 'assistant';
-            const textType = isAssistant ? 'output_text' : 'input_text';
-            if (typeof message.content === 'string') {
-                if (message.content) content.push({ type: textType, text: message.content });
-            } else if (Array.isArray(message.content)) {
-                for (const item of message.content) {
-                    if (!item || typeof item !== 'object') continue;
-                    const neutralCache = item.cache !== undefined
-                        ? normalizeContentCache(item.cache)
-                        : undefined;
-                    const promptCacheBreakpoint = item.prompt_cache_breakpoint !== undefined
-                        ? item.prompt_cache_breakpoint
-                        : (translateNeutralCache && neutralCache?.breakpoint
-                            ? { mode: 'explicit' }
-                            : undefined);
-                    const breakpoint = !isAssistant && promptCacheBreakpoint !== undefined
-                        ? { prompt_cache_breakpoint: promptCacheBreakpoint }
-                        : {};
-
-                    if ((item.type === 'text' || item.type === 'input_text' || item.type === 'output_text')
-                        && typeof item.text === 'string') {
-                        content.push({ type: textType, text: item.text, ...breakpoint });
-                        continue;
-                    }
-                    if (item.type === 'image' && item.source) {
-                        let imageUrl;
-                        if (item.source.type === 'base64') {
-                            if (!item.source.media_type || typeof item.source.data !== 'string') {
-                                throw new TypeError('Responses base64 images require source.media_type and string source.data.');
-                            }
-                            imageUrl = `data:${item.source.media_type};base64,${item.source.data}`;
-                        } else if (item.source.type === 'url' && typeof item.source.data === 'string') {
-                            imageUrl = item.source.data;
-                        } else {
-                            throw new TypeError('Responses images must be processed to base64 or use a URL source.');
-                        }
-                        content.push({ type: 'input_image', image_url: imageUrl, ...breakpoint });
-                        continue;
-                    }
-                    if (item.type === 'image_url' && typeof item.image_url?.url === 'string') {
-                        content.push({ type: 'input_image', image_url: item.image_url.url, ...breakpoint });
-                        continue;
-                    }
-                    if (item.type === 'input_image' || item.type === 'input_file') {
-                        content.push({
-                            ...stripContentCacheMetadata(item),
-                            ...breakpoint
-                        });
-                    }
-                }
-            }
-
-            if (content.length === 0) continue;
-            mapped.push({
-                role: message.role,
-                content
-            });
-        }
-
-        return mapped;
-    }
-}
-
-class MixOpenAIModeration extends MixModeration {
-    getDefaultConfig(customConfig) {
-        const apiKey = customConfig.apiKey || process.env.OPENAI_API_KEY;
-        if (!apiKey) {
-            throw new Error('OpenAI API key not found. Please provide it in config or set OPENAI_API_KEY environment variable.');
-        }
-
-        return super.getDefaultConfig({
-            url: 'https://api.openai.com/v1/moderations',
-            apiKey,
-            ...customConfig
-        });
-    }
-
-    async create({ config = {}, options = {} } = {}) {
-        if (options.stream) {
-            throw new Error('Stream is not supported for OpenAI moderation');
-        }
-
-        const input = MixOpenAIModeration.messagesToModerationInput(options.messages);
-        const response = await fetchJsonResponse(this.config.url, {
-            method: 'POST',
-            headers: this.headers,
-            body: JSON.stringify({ model: options.model, input })
-        });
-
-        return {
-            moderation: response.data.results,
-            tokens: ModelMix.normalizeTokenUsage(),
-            response: response.data
-        };
-    }
-
-    static messagesToModerationInput(messages = []) {
-        const input = [];
-
-        for (const message of messages) {
-            if (typeof message.content === 'string') {
-                input.push({ type: 'text', text: message.content });
-                continue;
-            }
-            if (!Array.isArray(message.content)) continue;
-
-            for (const content of message.content) {
-                if (content?.type === 'text') {
-                    input.push({ type: 'text', text: content.text });
-                } else if (content?.type === 'image') {
-                    const { media_type: mediaType, data } = content.source || {};
-                    if (!mediaType || !data) {
-                        throw new Error('OpenAI moderation images must be prepared as base64 data URLs');
-                    }
-                    input.push({
-                        type: 'image_url',
-                        image_url: { url: `data:${mediaType};base64,${data}` }
-                    });
-                }
-            }
-        }
-
-        return input;
-    }
-}
-
-class ModerationMix extends ModelMix {
-    static new(setup = {}) {
-        return new ModerationMix(setup);
-    }
-
-    new({ options = {}, config = {} } = {}) {
-        return new ModerationMix({
-            options: { ...this.options, ...options },
-            config: { ...this.config, ...config }
-        });
-    }
-
-    attach(key, provider) {
-        if (!(provider instanceof MixModeration)) {
-            throw new Error('ModerationMix only accepts moderation providers.');
-        }
-        return super.attach(key, provider);
-    }
-
-    openai({ options = {}, config = {} } = {}) {
-        return this.attach('omni-moderation-latest', new MixOpenAIModeration({ options, config }));
-    }
-
-    async message() {
-        throw new Error('ModerationMix does not generate messages. Use raw() and read result.moderation.');
-    }
-
-    async json() {
-        throw new Error('ModerationMix does not generate JSON. Use raw() and read result.moderation.');
-    }
-
-    async block() {
-        throw new Error('ModerationMix does not generate blocks. Use raw() and read result.moderation.');
-    }
-
-    async stream() {
-        throw new Error('ModerationMix does not support streaming. Use raw().');
-    }
-}
-
-class MixOpenAIWebSocket extends MixOpenAIResponses {
-    getDefaultConfig(customConfig) {
-        return super.getDefaultConfig({
-            realtimeUrl: 'wss://api.openai.com/v1/realtime',
-            websocketTimeoutMs: 120000,
-            ...customConfig
-        });
-    }
-
-    async create({ config = {}, options = {} } = {}) {
-        if (options.model?.startsWith('o')) {
-            delete options.max_tokens;
-            delete options.temperature;
-        }
-        if (options.model?.includes('gpt-5')) {
-            if (options.max_tokens) {
-                options.max_completion_tokens = options.max_tokens;
-                delete options.max_tokens;
-            }
-            delete options.temperature;
-        }
-
-        const mergedConfig = { ...this.config, ...config };
-        const realtimeUrl = `${mergedConfig.realtimeUrl}?model=${encodeURIComponent(options.model)}`;
-        const timeoutMs = mergedConfig.websocketTimeoutMs || 120000;
-
-        return await new Promise((resolve, reject) => {
-            const ws = new WebSocket(realtimeUrl, {
-                headers: {
-                    authorization: `Bearer ${mergedConfig.apiKey}`
-                }
-            });
-
-            const events = [];
-            let message = '';
-            let settled = false;
-            let finalResponse = null;
-
-            const timeout = setTimeout(() => {
-                if (settled) return;
-                settled = true;
-                ws.close();
-                reject({
-                    message: `Realtime WebSocket timed out after ${timeoutMs}ms`,
-                    statusCode: null,
-                    details: null
-                });
-            }, timeoutMs);
-
-            const cleanUp = () => clearTimeout(timeout);
-
-            ws.on('open', () => {
-                const session = {
-                    type: 'realtime',
-                    output_modalities: ['text']
-                };
-
-                if (mergedConfig.system) session.instructions = mergedConfig.system;
-                if (Array.isArray(options.tools) && options.tools.length > 0) {
-                    session.tools = options.tools;
-                }
-
-                ws.send(JSON.stringify({ type: 'session.update', session }));
-
-                const items = MixOpenAIWebSocket.messagesToConversationItems(options.messages);
-                for (const item of items) {
-                    ws.send(JSON.stringify({
-                        type: 'conversation.item.create',
-                        item
-                    }));
-                }
-
-                const responseConfig = { output_modalities: ['text'] };
-                if (typeof options.max_completion_tokens === 'number') {
-                    responseConfig.max_output_tokens = Math.min(options.max_completion_tokens, 4096);
-                } else if (typeof options.max_tokens === 'number') {
-                    responseConfig.max_output_tokens = Math.min(options.max_tokens, 4096);
-                }
-                if (Array.isArray(options.tools) && options.tools.length > 0) responseConfig.tools = options.tools;
-
-                ws.send(JSON.stringify({
-                    type: 'response.create',
-                    response: responseConfig
-                }));
-            });
-
-            ws.on('message', raw => {
-                let event;
-                try {
-                    event = JSON.parse(raw.toString());
-                } catch {
-                    return;
-                }
-
-                events.push(event);
-
-                const isTextDeltaEvent = event.type === 'response.text.delta' || event.type === 'response.output_text.delta';
-                if (isTextDeltaEvent) {
-                    const delta = MixOpenAIWebSocket.extractDelta(event);
-                    if (delta) {
-                        message += delta;
-                        if (this.streamCallback) {
-                            this.streamCallback({ response: event, message, delta });
-                        }
-                    }
-                    return;
-                }
-
-                if (event.type === 'response.done') {
-                    finalResponse = event.response || null;
-                    if (!message && finalResponse) {
-                        message = MixOpenAIResponses.extractResponsesMessage(finalResponse);
-                    }
-
-                    if (!settled) {
-                        settled = true;
-                        cleanUp();
-                        ws.close();
-                        resolve({
-                            message: message.trim(),
-                            think: null,
-                            toolCalls: [],
-                            tokens: MixOpenAIResponses.extractResponsesTokens(finalResponse || {}),
-                            response: {
-                                response: finalResponse,
-                                events
-                            }
-                        });
-                    }
-                    return;
-                }
-
-                if (event.type === 'error' && !settled) {
-                    settled = true;
-                    cleanUp();
-                    ws.close();
-                    reject({
-                        message: event.error?.message || 'Realtime WebSocket error',
-                        statusCode: null,
-                        details: event.error || event
-                    });
-                }
-            });
-
-            ws.on('error', error => {
-                if (settled) return;
-                settled = true;
-                cleanUp();
-                reject({
-                    message: error.message || 'Realtime WebSocket connection error',
-                    statusCode: null,
-                    details: null,
-                    stack: error.stack
-                });
-            });
-
-            ws.on('close', () => {
-                if (settled) return;
-                settled = true;
-                cleanUp();
-                reject({
-                    message: 'Realtime WebSocket closed before response.done',
-                    statusCode: null,
-                    details: null
-                });
-            });
-        });
-    }
-
-    static messagesToConversationItems(messages = []) {
-        const items = [];
-
-        for (const message of messages) {
-            if (!message || !message.role) continue;
-            if (message.role === 'tool' || message.tool_calls) continue;
-
-            const role = message.role === 'assistant' ? 'assistant' : (message.role === 'system' ? 'system' : 'user');
-            const content = [];
-
-            if (typeof message.content === 'string') {
-                content.push({
-                    type: role === 'assistant' ? 'text' : 'input_text',
-                    text: message.content
-                });
-            } else if (Array.isArray(message.content)) {
-                for (const item of message.content) {
-                    if (!item || item.type !== 'text' || typeof item.text !== 'string') continue;
-                    content.push({
-                        type: role === 'assistant' ? 'text' : 'input_text',
-                        text: item.text
-                    });
-                }
-            }
-
-            if (content.length === 0) continue;
-            items.push({ type: 'message', role, content });
-        }
-
-        return items;
-    }
-
-    static extractDelta(event) {
-        if (typeof event.delta === 'string') return event.delta;
-        return '';
-    }
-}
-
-class MixOpenRouter extends MixOpenAI {
-    getDefaultConfig(customConfig) {
-
-        if (!process.env.OPENROUTER_API_KEY) {
-            throw new Error('OpenRouter API key not found. Please provide it in config or set OPENROUTER_API_KEY environment variable.');
-        }
-
-        return MixCustom.prototype.getDefaultConfig.call(this, {
-            url: 'https://openrouter.ai/api/v1/chat/completions',
-            apiKey: process.env.OPENROUTER_API_KEY,
-            ...customConfig
-        });
-    }
-}
-
-class MixKimi extends MixOpenAI {
-    getDefaultConfig(customConfig) {
-        if (!process.env.MOONSHOT_API_KEY) {
-            throw new Error('Moonshot API key not found. Please provide it in config or set MOONSHOT_API_KEY environment variable.');
-        }
-
-        return MixCustom.prototype.getDefaultConfig.call(this, {
-            url: 'https://api.moonshot.ai/v1/chat/completions',
-            apiKey: process.env.MOONSHOT_API_KEY,
-            ...customConfig
-        });
-    }
-
-    async create({ config = {}, options = {} } = {}) {
-        if (Object.hasOwn(options, 'max_tokens')) {
-            options.max_completion_tokens = options.max_tokens;
-            delete options.max_tokens;
-        }
-
-        delete options.temperature;
-        delete options.top_p;
-        delete options.n;
-        delete options.presence_penalty;
-        delete options.frequency_penalty;
-
-        return super.create({ config, options });
-    }
-
-    extractDelta(data) {
-        return data?.choices?.[0]?.delta?.content || '';
-    }
-
-    processResponse(response) {
-        return {
-            ...super.processResponse(response),
-            assistantMessage: response.data?.choices?.[0]?.message
-        };
-    }
-}
-
-class MixAnthropic extends MixCustom {
-
-    sanitizeCacheOptions(options) {
-        delete options.prompt_cache_key;
-        delete options.prompt_cache_options;
-        delete options.prompt_cache_retention;
-    }
-
-    static validateCacheControl(cacheControl) {
-        if (!isPlainObject(cacheControl) || cacheControl.type !== 'ephemeral') {
-            throw new TypeError('Anthropic cache_control must have type "ephemeral".');
-        }
-        if (cacheControl.ttl !== undefined
-            && cacheControl.ttl !== '5m'
-            && cacheControl.ttl !== '1h') {
-            throw new TypeError('Anthropic cache_control.ttl must be "5m" or "1h".');
-        }
-    }
-
-    /**
-     * Opus 4.7+ and Claude 5 family reject sampling params (temperature/top_p/top_k).
-     * See: https://platform.claude.com/docs/en/about-claude/models/migration-guide
-     */
-    static rejectsSamplingParams(model = '') {
-        const id = String(model).toLowerCase();
-        if (!id.includes('claude')) return false;
-        if (id.includes('mythos') || id.includes('fable')) return true;
-
-        const opus = id.match(/claude-opus-(\d+)(?:-(\d+))?/);
-        if (opus) {
-            const major = Number(opus[1]);
-            const minor = opus[2] !== undefined ? Number(opus[2]) : 0;
-            return major > 4 || (major === 4 && minor >= 7);
-        }
-
-        const sonnet = id.match(/claude-sonnet-(\d+)/);
-        if (sonnet) return Number(sonnet[1]) >= 5;
-
-        return false;
-    }
-
-    getDefaultConfig(customConfig) {
-
-        if (!process.env.ANTHROPIC_API_KEY) {
-            throw new Error('Anthropic API key not found. Please provide it in config or set ANTHROPIC_API_KEY environment variable.');
-        }
-
-        return super.getDefaultConfig({
-            url: 'https://api.anthropic.com/v1/messages',
-            apiKey: process.env.ANTHROPIC_API_KEY,
-            ...customConfig
-        });
-    }
-
-    async create({ config = {}, options = {} } = {}) {
-
-        delete options.response_format;
-
-        if (MixAnthropic.rejectsSamplingParams(options.model)) {
-            delete options.temperature;
-            delete options.top_p;
-            delete options.top_k;
-        }
-
-        const requestConfig = { ...config };
-        if (hasNeutralCacheBreakpoint(options.messages)) {
-            const contentCacheControl = options.cache_control ?? { type: 'ephemeral' };
-            MixAnthropic.validateCacheControl(contentCacheControl);
-            requestConfig._contentCacheControl = { ...contentCacheControl };
-            delete options.cache_control;
-        } else if (options.cache_control !== undefined) {
-            MixAnthropic.validateCacheControl(options.cache_control);
-        }
-
-        options.system = config.system;
-
-        try {
-            return await super.create({ config: requestConfig, options });
-        } catch (error) {
-            // Log the error details for debugging
-            if (error.response && error.response.data) {
-                log.error('Anthropic API Error:\n', error.response.data);
-            }
-            throw error;
-        }
-    }
-
-    convertMessages(messages, config) {
-        return MixAnthropic.convertMessages(messages, config);
-    }
-
-    static convertMessages(messages, config) {
-        // Filter out orphaned tool results for Anthropic
-        const filteredMessages = [];
-        for (let i = 0; i < messages.length; i++) {
-            if (messages[i].role === 'tool') {
-                // Preceding assistant may use OpenAI tool_calls or Anthropic tool_use blocks.
-                let foundToolCall = false;
-                for (let j = i - 1; j >= 0; j--) {
-                    if (ModelMix.hasToolInteraction(messages[j]) && messages[j].role === 'assistant') {
-                        foundToolCall = true;
-                        break;
-                    }
-                }
-                if (!foundToolCall) {
-                    // Skip orphaned tool results
-                    continue;
-                }
-            }
-            filteredMessages.push(messages[i]);
-        }
-
-        return filteredMessages.map(message => {
-            if (message.role === 'tool') {
-                // Handle new format: tool_call_id directly on message
-                if (message.tool_call_id) {
-                    return {
-                        role: "user",
-                        content: [{
-                            type: "tool_result",
-                            tool_use_id: message.tool_call_id,
-                            content: message.content
-                        }]
-                    }
-                }
-                // Handle old format: content is an array
-                return {
-                    role: "user",
-                    content: message.content.map(content => ({
-                        type: "tool_result",
-                        tool_use_id: content.tool_call_id,
-                        content: content.content
-                    }))
-                }
-            }
-
-            // Handle messages with tool_calls (assistant messages that call tools)
-            if (message.tool_calls) {
-                const content = message.tool_calls.map(call => ({
-                    type: 'tool_use',
-                    id: call.id,
-                    name: call.function.name,
-                    input: JSON.parse(call.function.arguments)
-                }));
-                return { role: 'assistant', content };
-            }
-
-            // Handle content conversion for other messages
-            if (message.content && Array.isArray(message.content)) {
-                const content = message.content.filter(content => content !== null && content !== undefined).map(content => {
-                    const neutralCache = content?.cache !== undefined
-                        ? normalizeContentCache(content.cache)
-                        : undefined;
-                    if (neutralCache && content.cache_control !== undefined) {
-                        throw new TypeError('Use either cache or cache_control on an Anthropic content block, not both.');
-                    }
-                    let converted = content;
-                    if (content && content.type === 'function') {
-                        converted = {
-                            type: 'tool_use',
-                            id: content.id,
-                            name: content.function.name,
-                            input: JSON.parse(content.function.arguments)
-                        };
-                    }
-                    const sanitized = stripContentCacheMetadata(converted);
-                    if (content.cache_control !== undefined) {
-                        MixAnthropic.validateCacheControl(content.cache_control);
-                        sanitized.cache_control = { ...content.cache_control };
-                    } else if (neutralCache?.breakpoint) {
-                        sanitized.cache_control = {
-                            ...(config?._contentCacheControl || { type: 'ephemeral' })
-                        };
-                    }
-                    return sanitized;
-                });
-                return { ...message, content };
-            }
-
-            return { ...message };
-        });
-    }
-
-    getDefaultHeaders(customHeaders) {
-        return super.getDefaultHeaders({
-            'x-api-key': this.config.apiKey,
-            'anthropic-version': '2023-06-01',
-            ...customHeaders
-        });
-    }
-
-    extractDelta(data) {
-        if (data.delta && data.delta.text) return data.delta.text;
-        return '';
-    }
-
-    static extractToolCalls(data) {
-
-        return data.content.map(item => {
-            if (item.type === 'tool_use') {
-                return {
-                    id: item.id,
-                    type: 'function',
-                    function: {
-                        name: item.name,
-                        arguments: JSON.stringify(item.input)
-                    }
-                };
-            }
-            return null;
-        }).filter(item => item !== null);
-    }
-
-    static extractMessage(data) {
-        const content = Array.isArray(data?.content) ? data.content : [];
-        const stopReason = data?.stop_reason;
-
-        // Anthropic can return text in different positions depending on thinking/tool blocks.
-        const textBlock = content.find(block => typeof block?.text === 'string' && block.text.trim().length > 0);
-        if (textBlock) {
-            return textBlock.text;
-        }
-
-        // A tool_use turn can legitimately contain no text blocks.
-        if (stopReason === 'tool_use') {
-            return '';
-        }
-
-        // Empty/non-text content is often due to safety refusal or token limits.
-        const contentTypes = content.map(block => block?.type || 'unknown').join(', ') || 'none';
-
-        if (stopReason === 'refusal') {
-            throw new Error('Anthropic refused to process this request (content policy). Try different wording or a fallback model.');
-        }
-        if (!content.length) {
-            throw new Error(`Anthropic returned empty content (stop_reason: ${stopReason ?? 'unknown'}).`);
-        }
-        throw new Error(`Anthropic content blocks are missing .text (stop_reason: ${stopReason ?? 'unknown'}, content_types: ${contentTypes}).`);
-    }
-
-    static extractThinkingBlock(data) {
-        const content = Array.isArray(data?.content) ? data.content : [];
-        return content.find(block => block?.type === 'thinking') || null;
-    }
-
-    static extractThink(data) {
-        const block = MixAnthropic.extractThinkingBlock(data);
-        // Preserve empty string: display "omitted" returns thinking: "" with a signature.
-        return typeof block?.thinking === 'string' ? block.thinking : null;
-    }
-
-    static extractSignature(data) {
-        const block = MixAnthropic.extractThinkingBlock(data);
-        return typeof block?.signature === 'string' && block.signature
-            ? block.signature
-            : null;
-    }
-
-    static extractTokens(data) {
-        // Anthropic format
-        if (data.usage) {
-            const cached = ModelMix.extractCacheTokens(data.usage);
-            const cacheWrite5m = data.usage.cache_creation?.ephemeral_5m_input_tokens ?? 0;
-            const cacheWrite1h = data.usage.cache_creation?.ephemeral_1h_input_tokens ?? 0;
-            const cacheWrite = Math.max(
-                ModelMix.extractCacheWriteTokens(data.usage),
-                cacheWrite5m + cacheWrite1h
-            );
-            const input = (data.usage.input_tokens || 0) + cached + cacheWrite;
-            const output = data.usage.output_tokens || 0;
-            return ModelMix.normalizeTokenUsage({
-                input,
-                output,
-                total: input + output,
-                cached,
-                cacheWrite,
-                cacheWrite5m,
-                cacheWrite1h
-            });
-        }
-        return ModelMix.normalizeTokenUsage();
-    }
-
-    processResponse(response) {
-        const data = response.data;
-        return {
-            message: MixAnthropic.extractMessage(data),
-            think: MixAnthropic.extractThink(data),
-            toolCalls: MixAnthropic.extractToolCalls(data),
-            tokens: MixAnthropic.extractTokens(data),
-            response: data,
-            signature: MixAnthropic.extractSignature(data),
-            // Replay Anthropic content blocks verbatim (including empty thinking).
-            assistantMessage: Array.isArray(data?.content)
-                ? { role: 'assistant', content: data.content }
-                : undefined
-        }
-    }
-
-    getOptionsTools(tools) {
-        return MixAnthropic.getOptionsTools(tools);
-    }
-
-    static getOptionsTools(tools) {
-        const options = {};
-        const toolsArray = [];
-        for (const tool in tools) {
-            for (const item of tools[tool]) {
-                toolsArray.push({
-                    name: item.name,
-                    description: item.description,
-                    input_schema: item.inputSchema
-                });
-            }
-        }
-
-        // Solo incluir tools si el array no está vacío
-        if (toolsArray.length > 0) {
-            options.tools = toolsArray;
-        }
-
-        return options;
-    }
-}
-
-class MixMiniMax extends MixOpenAI {
-    getDefaultConfig(customConfig) {
-
-        if (!process.env.MINIMAX_API_KEY) {
-            throw new Error('MiniMax API key not found. Please provide it in config or set MINIMAX_API_KEY environment variable.');
-        }
-
-        return MixCustom.prototype.getDefaultConfig.call(this, {
-            url: 'https://api.minimax.io/v1/chat/completions',
-            apiKey: process.env.MINIMAX_API_KEY,
-            ...customConfig
-        });
-    }
-
-    extractDelta(data) {
-        // MiniMax might send different formats during streaming
-        if (data.choices && data.choices[0] && data.choices[0].delta && data.choices[0].delta.content) {
-            return data.choices[0].delta.content;
-        }
-        return '';
-    }
-}
-
-class MixMiMo extends MixOpenAI {
-    getDefaultConfig(customConfig) {
-        if (!process.env.MIMO_API_KEY) {
-            throw new Error('MiMo API key not found. Please provide it in config or set MIMO_API_KEY environment variable.');
-        }
-
-        return MixCustom.prototype.getDefaultConfig.call(this, {
-            url: 'https://api.xiaomimimo.com/v1/chat/completions',
-            apiKey: process.env.MIMO_API_KEY,
-            ...customConfig
-        });
-    }
-
-    getDefaultHeaders(customHeaders) {
-        return {
-            'accept': 'application/json',
-            'content-type': 'application/json',
-            'api-key': this.config.apiKey,
-            ...customHeaders
-        };
-    }
-}
-
-class MixPerplexity extends MixCustom {
-    getDefaultConfig(customConfig) {
-
-        if (!process.env.PPLX_API_KEY) {
-            throw new Error('Perplexity API key not found. Please provide it in config or set PPLX_API_KEY environment variable.');
-        }
-
-        return super.getDefaultConfig({
-            url: 'https://api.perplexity.ai/chat/completions',
-            apiKey: process.env.PPLX_API_KEY,
-            ...customConfig
-        });
-    }
-
-    async create({ config = {}, options = {} } = {}) {
-
-        if (config.schema) {
-            options.response_format = {
-                type: 'json_schema',
-                json_schema: { schema: config.schema }
-            };
-        }
-
-        return super.create({ config, options });
-    }
-}
-
-class MixOllama extends MixCustom {
-
-    getDefaultConfig(customConfig) {
-        return super.getDefaultConfig({
-            url: 'http://localhost:11434/api/chat',
-            ...customConfig
-        });
-    }
-
-    getDefaultOptions(customOptions) {
-        return {
-            options: customOptions,
-        };
-    }
-
-    extractDelta(data) {
-        if (data.message && data.message.content) return data.message.content;
-        return '';
-    }
-
-    extractMessage(data) {
-        return data.message.content.trim();
-    }
-
-    convertMessages(messages, config) {
-        return MixOllama.convertMessages(messages, config);
-    }
-
-    static convertMessages(messages, config) {
-        const content = config.system;
-        messages = [{ role: 'system', content }, ...messages || []];
-
-        return messages.map(entry => {
-            let content = '';
-            let images = [];
-
-            entry.content.forEach(item => {
-                if (item.type === 'text') {
-                    content += item.text + ' ';
-                } else if (item.type === 'image') {
-                    images.push(item.source.data);
-                }
-            });
-
-            return {
-                role: entry.role,
-                content: content.trim(),
-                images: images
-            };
-        });
-    }
-}
-
-class MixGrok extends MixOpenAI {
-    getDefaultConfig(customConfig) {
-
-        if (!process.env.XAI_API_KEY) {
-            throw new Error('Grok API key not found. Please provide it in config or set XAI_API_KEY environment variable.');
-        }
-
-        return super.getDefaultConfig({
-            url: 'https://api.x.ai/v1/chat/completions',
-            apiKey: process.env.XAI_API_KEY,
-            ...customConfig
-        });
-    }
-
-    async create({ config = {}, options = {} } = {}) {
-        if (options.model === GROK420_REASONING || options.model === GROK420_NON_REASONING) {
-            delete options.reasoning_effort;
-        }
-        return super.create({ config, options });
-    }
-}
-
-class MixLambda extends MixCustom {
-    getDefaultConfig(customConfig) {
-
-        if (!process.env.LAMBDA_API_KEY) {
-            throw new Error('Lambda API key not found. Please provide it in config or set LAMBDA_API_KEY environment variable.');
-        }
-
-        return super.getDefaultConfig({
-            url: 'https://api.lambda.ai/v1/chat/completions',
-            apiKey: process.env.LAMBDA_API_KEY,
-            ...customConfig
-        });
-    }
-}
-
-class MixLMStudio extends MixCustom {
-    getDefaultConfig(customConfig) {
-        return super.getDefaultConfig({
-            url: 'http://localhost:1234/v1/chat/completions',
-            ...customConfig
-        });
-    }
-
-    create({ config = {}, options = {} } = {}) {
-        if (config.schema) {
-            options.response_format = {
-                type: 'json_schema',
-                json_schema: { schema: config.schema }
-            };
-        }
-        return super.create({ config, options });
-    }
-
-    static extractThink(data) {
-        const message = data.choices[0].message?.content?.trim() || '';
-
-        // Check for LMStudio special tags
-        const startTag = '<|channel|>analysis<|message|>';
-        const endTag = '<|end|><|start|>assistant<|channel|>final<|message|>';
-
-        const startIndex = message.indexOf(startTag);
-        const endIndex = message.indexOf(endTag);
-
-        if (startIndex !== -1 && endIndex !== -1) {
-            // Extract content between the special tags
-            const thinkContent = message.substring(startIndex + startTag.length, endIndex).trim();
-            return thinkContent;
-        }
-
-        // Fall back to default extraction method
-        return MixCustom.extractThink(data);
-    }
-
-    static extractMessage(data) {
-        const message = data.choices[0].message?.content?.trim() || '';
-
-        // Check for LMStudio special tags and extract final message
-        const endTag = '<|end|><|start|>assistant<|channel|>final<|message|>';
-        const endIndex = message.indexOf(endTag);
-
-        if (endIndex !== -1) {
-            // Return only the content after the final message tag
-            return message.substring(endIndex + endTag.length).trim();
-        }
-
-        // Fall back to default extraction method
-        return MixCustom.extractMessage(data);
-    }
-
-    processResponse(response) {
-        return {
-            message: MixLMStudio.extractMessage(response.data),
-            think: MixLMStudio.extractThink(response.data),
-            toolCalls: MixCustom.extractToolCalls(response.data),
-            tokens: MixCustom.extractTokens(response.data),
-            response: response.data
-        };
-    }
-}
-
-class MixGroq extends MixCustom {
-    getDefaultConfig(customConfig) {
-
-        if (!process.env.GROQ_API_KEY) {
-            throw new Error('Groq API key not found. Please provide it in config or set GROQ_API_KEY environment variable.');
-        }
-
-        return super.getDefaultConfig({
-            url: 'https://api.groq.com/openai/v1/chat/completions',
-            apiKey: process.env.GROQ_API_KEY,
-            ...customConfig
-        });
-    }
-}
-
-class MixTogether extends MixCustom {
-    getDefaultConfig(customConfig) {
-
-        if (!process.env.TOGETHER_API_KEY) {
-            throw new Error('Together API key not found. Please provide it in config or set TOGETHER_API_KEY environment variable.');
-        }
-
-        return super.getDefaultConfig({
-            url: 'https://api.together.xyz/v1/chat/completions',
-            apiKey: process.env.TOGETHER_API_KEY,
-            ...customConfig
-        });
-    }
-
-    getDefaultOptions(customOptions) {
-        return {
-            stop: ["<|eot_id|>", "<|eom_id|>"],
-            ...customOptions
-        };
-    }
-}
-
-class MixCerebras extends MixCustom {
-    getDefaultConfig(customConfig) {
-
-        if (!process.env.CEREBRAS_API_KEY) {
-            throw new Error('Together API key not found. Please provide it in config or set CEREBRAS_API_KEY environment variable.');
-        }
-
-        return super.getDefaultConfig({
-            url: 'https://api.cerebras.ai/v1/chat/completions',
-            apiKey: process.env.CEREBRAS_API_KEY,
-            ...customConfig
-        });
-    }
-
-    create({ config = {}, options = {} } = {}) {
-        delete options.response_format;
-        return super.create({ config, options });
-    }
-}
-
-class MixFireworks extends MixCustom {
-    getDefaultConfig(customConfig) {
-
-        if (!process.env.FIREWORKS_API_KEY) {
-            throw new Error('Fireworks API key not found. Please provide it in config or set FIREWORKS_API_KEY environment variable.');
-        }
-
-        return super.getDefaultConfig({
-            url: 'https://api.fireworks.ai/inference/v1/chat/completions',
-            apiKey: process.env.FIREWORKS_API_KEY,
-            ...customConfig
-        });
-    }
-}
-
-class MixNVIDIA extends MixCustom {
-    getDefaultConfig(customConfig) {
-
-        if (!process.env.NVIDIA_API_KEY) {
-            throw new Error('NVIDIA API key not found. Please provide it in config or set NVIDIA_API_KEY environment variable.');
-        }
-
-        return super.getDefaultConfig({
-            url: 'https://integrate.api.nvidia.com/v1/chat/completions',
-            apiKey: process.env.NVIDIA_API_KEY,
-            ...customConfig
-        });
-    }
-}
-
-class MixGoogle extends MixCustom {
-    getDefaultConfig(customConfig) {
-        return super.getDefaultConfig({
-            url: 'https://generativelanguage.googleapis.com/v1beta/models',
-            apiKey: process.env.GEMINI_API_KEY,
-            ...customConfig
-        });
-    }
-
-    getDefaultHeaders(customHeaders) {
-        return {
-            'Content-Type': 'application/json',
-            ...customHeaders
-        };
-    }
-
-    static convertMessages(messages, config) {
-        return messages.map(message => {
-
-            // Handle assistant messages with tool_calls (content is null)
-            if (message.role === 'assistant' && message.tool_calls) {
-                return {
-                    role: 'model',
-                    parts: message.tool_calls.map(toolCall => {
-                        const part = {
-                            functionCall: {
-                                name: toolCall.function.name,
-                                args: JSON.parse(toolCall.function.arguments)
-                            }
-                        };
-                        if (toolCall.thought_signature) {
-                            part.thoughtSignature = toolCall.thought_signature;
-                        }
-                        return part;
-                    })
-                }
-            }
-
-            // Handle new tool result format: tool_call_id and name directly on message
-            if (message.role === 'tool' && message.name) {
-                return {
-                    role: 'user',
-                    parts: [{
-                        functionResponse: {
-                            name: message.name,
-                            response: {
-                                output: message.content,
-                            },
-                        }
-                    }]
-                }
-            }
-
-            if (!Array.isArray(message.content)) return message;
-            const role = (message.role === 'assistant' || message.role === 'tool') ? 'model' : 'user'
-
-            if (message.role === 'tool') {
-                // Handle old format: content is an array of {name, content}
-                return {
-                    role,
-                    parts: message.content.map(content => ({
-                        functionResponse: {
-                            name: content.name,
-                            response: {
-                                output: content.content,
-                            },
-                        }
-                    }))
-                }
-            }
-
-            return {
-                role,
-                parts: message.content.map(content => {
-                    if (content.type === 'text') {
-                        return { text: content.text };
-                    }
-
-                    if (content.type === 'image') {
-                        return {
-                            inline_data: {
-                                mime_type: content.source.media_type,
-                                data: content.source.data
-                            }
-                        }
-                    }
-
-                    if (content.type === 'function') {
-                        return {
-                            functionCall: {
-                                name: content.function.name,
-                                args: JSON.parse(content.function.arguments)
-                            }
-                        }
-                    }
-
-                    return content;
-                })
-            }
-        });
-
-        // Merge consecutive user messages containing only functionResponse parts
-        // Google requires all function responses for a turn in a single message
-        return converted.reduce((acc, msg) => {
-            if (acc.length > 0) {
-                const prev = acc[acc.length - 1];
-                if (prev.role === 'user' && msg.role === 'user' &&
-                    prev.parts.every(p => p.functionResponse) &&
-                    msg.parts.every(p => p.functionResponse)) {
-                    prev.parts.push(...msg.parts);
-                    return acc;
-                }
-            }
-            acc.push(msg);
-            return acc;
-        }, []);
-    }
-
-    async create({ config = {}, options = {} } = {}) {
-        if (!this.config.apiKey) {
-            throw new Error('Gemini API key not found. Please provide it in config or set GEMINI_API_KEY environment variable.');
-        }
-
-        const generateContentApi = options.stream ? 'streamGenerateContent' : 'generateContent';
-
-        const fullUrl = `${this.config.url}/${options.model}:${generateContentApi}?key=${this.config.apiKey}`;
-
-
-        const content = config.system;
-        const systemInstruction = { parts: [{ text: content }] };
-
-        options.messages = MixGoogle.convertMessages(options.messages);
-
-        const generationConfig = {
-            maxOutputTokens: options.max_tokens,
-        }
-
-        if (options.top_p) {
-            generationConfig.topP = options.top_p;
-        }
-
-        // Thinking / effort (from unified config.effort or native options)
-        if (options.thinkingConfig) {
-            generationConfig.thinkingConfig = options.thinkingConfig;
-        } else if (options.thinkingLevel != null || options.thinkingBudget != null) {
-            generationConfig.thinkingConfig = {};
-            if (options.thinkingLevel != null) {
-                generationConfig.thinkingConfig.thinkingLevel = options.thinkingLevel;
-            }
-            if (options.thinkingBudget != null) {
-                generationConfig.thinkingConfig.thinkingBudget = options.thinkingBudget;
-            }
-        }
-
-        // Gemini does not support responseMimeType when function calling is used
-        const hasTools = options.tools && options.tools.length > 0 &&
-            options.tools.some(t => t.functionDeclarations && t.functionDeclarations.length > 0);
-
-        if (!hasTools) {
-            generationConfig.responseMimeType = "text/plain";
-        }
-
-        const payload = {
-            generationConfig,
-            systemInstruction,
-            contents: options.messages,
-            tools: options.tools
-        };
-
-        try {
-            // debug level 4 (verbose): Full request details
-            if (config.debug >= 4) {
-                console.log('\n[REQUEST DETAILS - GOOGLE]');
-
-                console.log('\n[CONFIG]');
-                console.log(ModelMix.formatJSON(configForDebug(config)));
-
-                console.log('\n[PAYLOAD]');
-                console.log(ModelMix.formatJSON(payload));
-            }
-
-            if (options.stream) {
-                throw new Error('Stream is not supported for Gemini');
-            } else {
-                return this.processResponse(await fetchJsonResponse(fullUrl, {
-                    method: 'POST',
-                    headers: this.headers,
-                    body: JSON.stringify(payload)
-                }));
-            }
-        } catch (error) {
-            throw this.handleError(error);
-        }
-    }
-
-    processResponse(response) {
-        return {
-            message: MixGoogle.extractMessage(response.data),
-            think: null,
-            toolCalls: MixGoogle.extractToolCalls(response.data),
-            tokens: MixGoogle.extractTokens(response.data),
-            response: response.data
-        }
-    }
-
-    static extractToolCalls(data) {
-        return data.candidates?.[0]?.content?.parts?.map(part => {
-            if (part.functionCall) {
-                return {
-                    id: part.functionCall.id,
-                    type: 'function',
-                    function: {
-                        name: part.functionCall.name,
-                        arguments: JSON.stringify(part.functionCall.args)
-                    },
-                    thought_signature: part.thoughtSignature || ""
-                };
-            }
-            return null;
-        }).filter(item => item !== null) || [];
-    }
-
-    static extractMessage(data) {
-        return data.candidates?.[0]?.content?.parts?.[0]?.text;
-    }
-
-    static extractTokens(data) {
-        // Google Gemini format
-        if (data.usageMetadata) {
-            return ModelMix.normalizeTokenUsage({
-                input: data.usageMetadata.promptTokenCount || 0,
-                output: data.usageMetadata.candidatesTokenCount || 0,
-                thinking: data.usageMetadata.thoughtsTokenCount || 0,
-                total: data.usageMetadata.totalTokenCount,
-                cached: ModelMix.extractCacheTokens(data.usageMetadata),
-                cacheWrite: ModelMix.extractCacheWriteTokens(data.usageMetadata)
-            });
-        }
-        return ModelMix.normalizeTokenUsage();
-    }
-
-    static stripUnsupportedSchemaProps(schema) {
-        if (!schema || typeof schema !== 'object') return schema;
-        const cleaned = { ...schema };
-        delete cleaned.default;
-        if (cleaned.properties) {
-            cleaned.properties = Object.fromEntries(
-                Object.entries(cleaned.properties).map(([key, value]) => [key, MixGoogle.stripUnsupportedSchemaProps(value)])
-            );
-        }
-        if (cleaned.items) {
-            cleaned.items = MixGoogle.stripUnsupportedSchemaProps(cleaned.items);
-        }
-        return cleaned;
-    }
-
-    static getOptionsTools(tools) {
-        const functionDeclarations = [];
-        for (const tool in tools) {
-            for (const item of tools[tool]) {
-                functionDeclarations.push({
-                    name: item.name,
-                    description: item.description,
-                    parameters: MixGoogle.stripUnsupportedSchemaProps(item.inputSchema)
-                });
-            }
-        }
-
-        const options = {};
-
-        // Solo incluir tools si el array no está vacío
-        if (functionDeclarations.length > 0) {
-            options.tools = [{
-                functionDeclarations
-            }];
-        }
-
-        return options;
-    }
-
-    getOptionsTools(tools) {
-        return MixGoogle.getOptionsTools(tools);
-    }
-}
+({
+    MixCustom,
+    MixOpenAI,
+    MixModeration,
+    MixOpenAIResponses,
+    MixOpenAIModeration,
+    MixOpenAIWebSocket,
+    MixOpenRouter,
+    MixKimi,
+    MixAnthropic,
+    MixMiniMax,
+    MixMiMo,
+    MixPerplexity,
+    MixOllama,
+    MixGrok,
+    MixLambda,
+    MixLMStudio,
+    MixGroq,
+    MixTogether,
+    MixCerebras,
+    MixFireworks,
+    MixNVIDIA,
+    MixGoogle,
+    ModerationMix
+} = require('./lib/providers')({
+    ModelMix,
+    log
+}));
 
 module.exports = { MixCustom, ModelMix, ModerationMix, MixModeration, MixAnthropic, MixKimi, MixMiniMax, MixMiMo, MixOpenAI, MixOpenAIResponses, MixOpenAIModeration, MixOpenAIWebSocket, MixOpenRouter, MixPerplexity, MixOllama, MixLMStudio, MixGroq, MixTogether, MixGrok, MixCerebras, MixGoogle, MixFireworks, MixNVIDIA, normalizeEffort, applyUnifiedEffort, resolveProviderFamily };
