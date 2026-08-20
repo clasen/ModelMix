@@ -175,8 +175,10 @@ ModelMix provides convenient shorthand methods for quickly accessing different A
 | `qwen36plus()` | Fireworks | qwen3p6-plus | [\$0.50][10] | [\$3.00][10] |
 | `qwen37plus()` | Fireworks | models/qwen3p7-plus | [\$0.40][10] | [\$1.60][10] |
 | `qwen38max()` | Fireworks | qwen3p8-2p4t-a95b | [\$2.00][10] | [\$6.00][10] |
+| `qwen3827b()` | OpenRouter | qwen/qwen3.8-27b | [\$0.45][15] | [\$3.20][15] |
 | `deepseekV4Flash()` | Fireworks | models/deepseek-v4-flash | [\$0.14][10] | [\$0.28][10] |
 | `deepseekV4Pro()` | Fireworks | models/deepseek-v4-pro-0813 | [\$1.32][12] | [\$3.96][12] |
+| `GLM53()` | OpenRouter | z-ai/glm-5.3 | [\$1.40][16] | [\$4.40][16] |
 | `GLM52()` | Together | zai-org/GLM-5.2 | [\$1.40][7] | [\$4.40][7] |
 | `GLM51()` | Fireworks | models/glm-5p1 | [\$1.05][10] | [\$3.50][10] |
 | `minimaxM3()` | MiniMax | MiniMax-M3 | [\$0.30][9] | [\$1.20][9] |
@@ -206,6 +208,8 @@ Gemini 3.7 Flash and 3.6 Flash use Google's introductory standard pricing throug
 [12]: https://fireworks.ai/models/deepseek-ai/deepseek-v4-pro-0813 "DeepSeek V4 Pro 0813 Pricing"
 [13]: https://openrouter.ai/nousresearch "Nous Research Models on OpenRouter"
 [14]: https://openrouter.ai/qwen/qwen3.5-397b-a17b "Qwen3.5 397B A17B on OpenRouter"
+[15]: https://openrouter.ai/qwen/qwen3.8-27b "Qwen3.8 27B on OpenRouter"
+[16]: https://openrouter.ai/z-ai/glm-5.3 "GLM 5.3 on OpenRouter"
 
 Each method accepts optional `options`, `config`, and (for multi-provider methods) `mix` parameters to customize behavior.  
 
@@ -246,6 +250,8 @@ ModelMix.new().effort(-1).minimaxM3().addText('...').message();
 
 - **Gemini:** Gemini 3+ uses bands 0–24 / 25–49 / 50–74 / 75–100. Gemini 3.7 Flash clamps these bands to `low` / `low` / `medium` / `high`; `-1` leaves its native `medium` default unchanged. Gemini 2.5 maps 0–100 to `thinkingBudget`.
 - **GPT-5.6:** `100` maps to `max`; 80–99 remains `xhigh`.
+- **Qwen 3.8 27B:** 0–39 / 40–79 / 80–100 map to `low` / `medium` / `xhigh`; `-1` leaves the native `xhigh` default unchanged.
+- **GLM 5.3:** reasoning is mandatory; 0–39 / 40–79 / 80–100 map to `low` / `high` / `max`; `-1` leaves the native `max` default unchanged.
 - **DeepSeek:** `↑` means thinking is enabled; `off` means it is disabled.
 - **MiniMax:** `off` maps to `thinking.disabled`; `adaptive` maps to `thinking.type=adaptive`.
 - **Anthropic:** Claude 5, Fable, Opus 4.6+, and Sonnet 4.6+ use adaptive thinking with `output_config.effort`. Sonnet 4.5 and Haiku 4.5 use `thinking.type=enabled` with `budget_tokens`.

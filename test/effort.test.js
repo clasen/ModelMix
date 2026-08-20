@@ -96,6 +96,23 @@ describe('Unified effort scale', () => {
             expect(mapEffort('openai', 100, key)).to.deep.equal({ reasoning_effort: 'high' });
         });
 
+        it('maps Qwen 3.8 27B to its supported reasoning levels', () => {
+            const key = 'qwen/qwen3.8-27b';
+            expect(mapEffort('openai', 0, key)).to.deep.equal({ reasoning_effort: 'low' });
+            expect(mapEffort('openai', 50, key)).to.deep.equal({ reasoning_effort: 'medium' });
+            expect(mapEffort('openai', 100, key)).to.deep.equal({ reasoning_effort: 'xhigh' });
+            expect(mapEffort('openai', -1, key)).to.equal(null);
+        });
+
+        it('maps GLM 5.3 to mandatory low, high, and max reasoning', () => {
+            const key = 'z-ai/glm-5.3';
+            expect(mapEffort('openai', 39, key)).to.deep.equal({ reasoning_effort: 'low' });
+            expect(mapEffort('openai', 40, key)).to.deep.equal({ reasoning_effort: 'high' });
+            expect(mapEffort('openai', 79, key)).to.deep.equal({ reasoning_effort: 'high' });
+            expect(mapEffort('openai', 80, key)).to.deep.equal({ reasoning_effort: 'max' });
+            expect(mapEffort('openai', -1, key)).to.equal(null);
+        });
+
         it('maps Anthropic adaptive models to thinking + output_config.effort', () => {
             expect(mapEffort('anthropic', 10, 'claude-opus-5')).to.deep.equal({
                 thinking: { type: 'adaptive', display: 'summarized' },

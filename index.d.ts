@@ -501,6 +501,7 @@ export declare class ModelMix {
   qwen36plus(args?: ModelAttachArgs): this;
   qwen37plus(args?: ModelAttachArgs): this;
   qwen38max(args?: ModelAttachArgs): this;
+  qwen3827b(args?: ModelAttachArgs): this;
   hermes470b(args?: ModelAttachArgs): this;
   hermes4405b(args?: ModelAttachArgs): this;
   hermes3(args?: ModelAttachArgs): this;
@@ -517,6 +518,7 @@ export declare class ModelMix {
   deepseekV4Flash(args?: ModelAttachArgs): this;
   GLM51(args?: ModelAttachArgs): this;
   GLM52(args?: ModelAttachArgs): this;
+  GLM53(args?: ModelAttachArgs): this;
 
   addText(text: string, options?: RoleOptions): this;
   addTextFromFile(filePath: string, options?: RoleOptions): this;

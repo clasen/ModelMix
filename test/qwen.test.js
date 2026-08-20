@@ -61,6 +61,26 @@ describe('Qwen Model Registration Tests', () => {
         expect(model.models[0].key).to.equal('qwen/qwen3.8-max');
     });
 
+    it('should register Qwen 3.8 27B through OpenRouter', () => {
+        const model = ModelMix.new().qwen3827b();
+
+        expect(model.models).to.have.length(1);
+        expect(model.models[0].key).to.equal('qwen/qwen3.8-27b');
+        expect(model.models[0].provider).to.be.instanceOf(MixOpenRouter);
+        expect(ModelMix.calculateCost('qwen/qwen3.8-27b', {
+            input: 1_000_000,
+            cached: 250_000,
+            output: 1_000_000
+        })).to.equal(3.55);
+    });
+
+    it('should support Qwen 3.8 27B in chain()', () => {
+        const model = ModelMix.new().chain('qwen3827b');
+
+        expect(model.models).to.have.length(1);
+        expect(model.models[0].key).to.equal('qwen/qwen3.8-27b');
+    });
+
     it('should register Qwen 3.5 397B A17B through OpenRouter', () => {
         const model = ModelMix.new().qwen35397b();
 

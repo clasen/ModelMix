@@ -605,6 +605,10 @@ class ModelMix {
         return this;
     }
 
+    qwen3827b({ options = {}, config = {} } = {}) {
+        return this.attach('qwen/qwen3.8-27b', new MixOpenRouter({ options, config }));
+    }
+
     hermes470b({ options = {}, config = {} } = {}) {
         return this.attach('nousresearch/hermes-4-70b', new MixOpenRouter({ options, config }));
     }
@@ -716,6 +720,10 @@ class ModelMix {
         mix = { ...this.mix, ...mix };
         if (mix.together) this.attach('zai-org/GLM-5.2', new MixTogether({ options, config }));
         return this;
+    }
+
+    GLM53({ options = {}, config = {} } = {}) {
+        return this.attach('z-ai/glm-5.3', new MixOpenRouter({ options, config }));
     }
 
     addText(text, { role = "user", cache } = {}) {

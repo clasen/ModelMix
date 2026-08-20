@@ -143,7 +143,7 @@ ModelMix.new({ config: { effort: 80 } })
 | DeepSeek V4 | off | `low`↑ | `high`↑ | `high`↑ | `max`↑ | — |
 | MiniMax M3 | off | adaptive | adaptive | adaptive | adaptive | adaptive |
 
-\* GPT-5.6 maps `100` to `max`; 80–99 remains `xhigh`. Gemini bands: 0–24 / 25–49 / 50–74 / 75–100. Gemini 3.7 Flash supports only `low` / `medium` / `high`, so the first two bands clamp to `low`; `-1` keeps its native `medium` default. DeepSeek `↑` = thinking on; `off` = thinking disabled. MiniMax `off`/`adaptive` = `thinking.disabled` / `thinking.type=adaptive`. Gemini 2.5 maps 0–100 to `thinkingBudget`. Anthropic: adaptive + `output_config.effort` on Claude 5 / Fable / Opus 4.6+ / Sonnet 4.6+; Sonnet 4.5 / Haiku 4.5 use `thinking.type=enabled` + `budget_tokens`. Grok 4.6 maps 0–39 / 40–59 / 60–79 / 80–100 to `low` / `medium` / `high` / `xhigh`; without effort it uses native `high`. `-1` = adaptive/dynamic when available, else no-op. Levels clamp per model. Former `*think()` methods are removed — use `.effort(n).<model>()`. Kimi: `kimiK25()` / `kimiK26()`. Grok 4.20: `.grok420()` non-reasoning; `.effort(20+|-1).grok420()` selects reasoning.
+\* GPT-5.6 maps `100` to `max`; 80–99 remains `xhigh`. Qwen 3.8 27B maps 0–39 / 40–79 / 80–100 to `low` / `medium` / `xhigh`. GLM 5.3 requires reasoning and maps those bands to `low` / `high` / `max`. Gemini bands: 0–24 / 25–49 / 50–74 / 75–100. Gemini 3.7 Flash supports only `low` / `medium` / `high`, so the first two bands clamp to `low`; `-1` keeps its native `medium` default. DeepSeek `↑` = thinking on; `off` = thinking disabled. MiniMax `off`/`adaptive` = `thinking.disabled` / `thinking.type=adaptive`. Gemini 2.5 maps 0–100 to `thinkingBudget`. Anthropic: adaptive + `output_config.effort` on Claude 5 / Fable / Opus 4.6+ / Sonnet 4.6+; Sonnet 4.5 / Haiku 4.5 use `thinking.type=enabled` + `budget_tokens`. Grok 4.6 maps 0–39 / 40–59 / 60–79 / 80–100 to `low` / `medium` / `high` / `xhigh`; without effort it uses native `high`. `-1` = adaptive/dynamic when available, else no-op. Levels clamp per model. Former `*think()` methods are removed — use `.effort(n).<model>()`. Kimi: `kimiK25()` / `kimiK26()`. Grok 4.20: `.grok420()` non-reasoning; `.effort(20+|-1).grok420()` selects reasoning.
 
 ## Available Model Shorthands
 
@@ -183,7 +183,7 @@ Use `.effort(n)` (or `config.effort`) to enable Anthropic thinking — e.g. `.ef
 `GLM46()`
 
 ### OpenRouter
-`qwen35397b()` `hermes470b()` `hermes4405b()` `qwen38max()` `GLM45()`
+`qwen35397b()` `qwen3827b()` `hermes470b()` `hermes4405b()` `qwen38max()` `GLM45()` `GLM53()`
 
 ### Multi-provider (auto-fallback across free/paid tiers)
 `hermes3()` `kimiK25()`
