@@ -1,13 +1,22 @@
 const { expect } = require('chai');
-const { ModelMix, MixOpenRouter } = require('../index.js');
+const { ModelMix, MixFireworks, MixOpenRouter, MixTogether } = require('../index.js');
 
 describe('Qwen Model Registration Tests', () => {
-    it('should register Fireworks Qwen 3.6 Plus by default', () => {
+    it('should register OpenRouter Qwen 3.6 Plus by default', () => {
+        const model = ModelMix.new().qwen36plus();
+
+        expect(model.models).to.have.length(1);
+        expect(model.models[0].key).to.equal('qwen/qwen3.6-plus');
+        expect(model.models[0].provider).to.be.instanceOf(MixOpenRouter);
+    });
+
+    it('should retain Fireworks Qwen 3.6 Plus as an explicit deployment option', () => {
         const model = ModelMix.new();
-        model.qwen36plus({ mix: { fireworks: true, together: false } });
+        model.qwen36plus({ mix: { fireworks: true, openrouter: false, together: false } });
 
         expect(model.models).to.have.length(1);
         expect(model.models[0].key).to.equal('accounts/fireworks/models/qwen3p6-plus');
+        expect(model.models[0].provider).to.be.instanceOf(MixFireworks);
     });
 
     it('should register Together Qwen 3.6 Plus when together mix is enabled', () => {
@@ -36,6 +45,26 @@ describe('Qwen Model Registration Tests', () => {
 
         expect(model.models).to.have.length(1);
         expect(model.models[0].key).to.equal('qwen/qwen3.7-plus');
+    });
+
+    it('should register Together Qwen 3.7 Plus when together mix is enabled', () => {
+        const model = ModelMix.new();
+        model.qwen37plus({ mix: { fireworks: false, openrouter: false, together: true } });
+
+        expect(model.models).to.have.length(1);
+        expect(model.models[0].key).to.equal('Qwen/Qwen3.7-Plus');
+        expect(model.models[0].provider).to.be.instanceOf(MixTogether);
+    });
+
+    it('should apply OpenRouter long-context pricing to Qwen 3.6 and 3.7 Plus', () => {
+        expect(ModelMix.calculateCost('qwen/qwen3.6-plus', {
+            input: 256_000,
+            output: 1_000_000
+        })).to.equal(4.2328);
+        expect(ModelMix.calculateCost('qwen/qwen3.7-plus', {
+            input: 256_000,
+            output: 1_000_000
+        })).to.equal(4.08576);
     });
 
     it('should register Fireworks Qwen 3.8 Max before the OpenRouter fallback by default', () => {

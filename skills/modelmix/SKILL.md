@@ -168,22 +168,25 @@ Use `.effort(n)` (or `config.effort`) to enable Anthropic thinking — e.g. `.ef
 `sonar()` `sonarPro()`
 
 ### Together
-`qwen36plus()` `GLM52()` `kimiK25()` `kimiK26()` `gptOss()`
+`museGlimmer30b()` `qwen36plus()` `qwen37plus()` `GLM52()` `kimiK25()` `kimiK26()` `kimiK27Code()` `kimiK3()` `minimaxM27()` `minimaxM3()` `gptOss()`
+
+### NVIDIA
+`museGlimmer30b()` `gptOss()` `minimaxM27()`
 
 ### Moonshot
-`kimiK3()` — requires `MOONSHOT_API_KEY`; use `{ mix: { moonshot: false, openrouter: true } }` for OpenRouter.
+`kimiK3()` — requires `MOONSHOT_API_KEY`; Fireworks, OpenRouter, and Together are available through `mix`.
 
 ### MiniMax
 `minimaxM27()` `minimaxM3()`
 
 ### Fireworks
-`qwen36plus()` `qwen37plus()` `qwen38max()` `deepseekV4Flash()` `deepseekV4Pro()` `kimiK26()`
+`museGlimmer30b()` `gptOss()` `qwen36plus()` (private/on-demand only) `qwen37plus()` `qwen38max()` `deepseekV4Flash()` `deepseekV4Pro()` `kimiK26()` `kimiK27Code()` `kimiK3()` `minimaxM27()` `minimaxM3()` `GLM52()`
 
 ### Cerebras
 `GLM46()`
 
 ### OpenRouter
-`qwen35397b()` `qwen3827b()` `hermes470b()` `hermes4405b()` `qwen38max()` `GLM45()` `GLM53()`
+`museGlimmer30b()` `gptOss()` `qwen35397b()` `qwen36plus()` `qwen37plus()` `qwen3827b()` `hermes470b()` `hermes4405b()` `qwen38max()` `kimiK27Code()` `kimiK3()` `minimaxM27()` `minimaxM3()` `GLM45()` `GLM52()` `GLM53()`
 
 ### Multi-provider (auto-fallback across free/paid tiers)
 `hermes3()` `kimiK25()`

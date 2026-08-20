@@ -490,6 +490,8 @@ class ModelMix {
     }
     gptOss({ options = {}, config = {}, mix = {} } = {}) {
         mix = { ...this.mix, ...mix };
+        if (mix.nvidia) this.attach('openai/gpt-oss-120b', new MixNVIDIA({ options, config }));
+        if (mix.fireworks) this.attach('accounts/fireworks/models/gpt-oss-120b', new MixFireworks({ options, config }));
         if (mix.together) this.attach('openai/gpt-oss-120b', new MixTogether({ options, config }));
         if (mix.cerebras) this.attach('gpt-oss-120b', new MixCerebras({ options, config }));
         if (mix.groq) this.attach('openai/gpt-oss-120b', new MixGroq({ options, config }));
@@ -574,6 +576,15 @@ class ModelMix {
         return this.attach('grok-4.20-0309', new MixGrok({ options, config }));
     }
 
+    museGlimmer30b({ options = {}, config = {}, mix = { fireworks: true } } = {}) {
+        mix = { ...this.mix, ...mix };
+        if (mix.nvidia) this.attach('meta/muse-glimmer-30b', new MixNVIDIA({ options, config }));
+        if (mix.fireworks) this.attach('accounts/fireworks/models/muse-glimmer-30b', new MixFireworks({ options, config }));
+        if (mix.openrouter) this.attach('meta/muse-glimmer-30b', new MixOpenRouter({ options, config }));
+        if (mix.together) this.attach('meta-models/Muse-Glimmer-30B', new MixTogether({ options, config }));
+        return this;
+    }
+
     qwen3({ options = {}, config = {}, mix = { together: true, cerebras: false } } = {}) {
         if (mix.together) this.attach('Qwen/Qwen3-235B-A22B-fp8-tput', new MixTogether({ options, config }));
         if (mix.cerebras) this.attach('qwen-3-32b', new MixCerebras({ options, config }));
@@ -584,9 +595,10 @@ class ModelMix {
         return this.attach('qwen/qwen3.5-397b-a17b', new MixOpenRouter({ options, config }));
     }
 
-    qwen36plus({ options = {}, config = {}, mix = { fireworks: true } } = {}) {
+    qwen36plus({ options = {}, config = {}, mix = { fireworks: false, openrouter: true } } = {}) {
         mix = { ...this.mix, ...mix };
         if (mix.fireworks) this.attach('accounts/fireworks/models/qwen3p6-plus', new MixFireworks({ options, config }));
+        if (mix.openrouter) this.attach('qwen/qwen3.6-plus', new MixOpenRouter({ options, config }));
         if (mix.together) this.attach('Qwen/Qwen3.6-Plus', new MixTogether({ options, config }));
         return this;
     }
@@ -595,6 +607,7 @@ class ModelMix {
         mix = { ...this.mix, ...mix };
         if (mix.fireworks) this.attach('accounts/fireworks/models/qwen3p7-plus', new MixFireworks({ options, config }));
         if (mix.openrouter) this.attach('qwen/qwen3.7-plus', new MixOpenRouter({ options, config }));
+        if (mix.together) this.attach('Qwen/Qwen3.7-Plus', new MixTogether({ options, config }));
         return this;
     }
 
@@ -635,13 +648,17 @@ class ModelMix {
     kimiK27Code({ options = {}, config = {}, mix = { together: true } } = {}) {
         mix = { ...this.mix, ...mix };
         if (mix.together) this.attach('moonshotai/Kimi-K2.7-Code', new MixTogether({ options, config }));
+        if (mix.fireworks) this.attach('accounts/fireworks/models/kimi-k2p7-code', new MixFireworks({ options, config }));
+        if (mix.openrouter) this.attach('moonshotai/kimi-k2.7-code', new MixOpenRouter({ options, config }));
         return this;
     }
 
     kimiK3({ options = {}, config = {}, mix = { moonshot: true, openrouter: false } } = {}) {
         mix = { ...this.mix, ...mix };
         if (mix.moonshot) this.attach('kimi-k3', new MixKimi({ options, config }));
+        if (mix.fireworks) this.attach('accounts/fireworks/models/kimi-k3', new MixFireworks({ options, config }));
         if (mix.openrouter) this.attach('moonshotai/kimi-k3', new MixOpenRouter({ options, config }));
+        if (mix.together) this.attach('moonshotai/Kimi-K3', new MixTogether({ options, config }));
         return this;
     }
 
@@ -661,14 +678,16 @@ class ModelMix {
     minimaxM27({ options = {}, config = {}, mix = { openrouter: true, minimax: true } } = {}) {
         mix = { ...this.mix, ...mix };
         if (mix.nvidia) this.attach('minimaxai/minimax-m2.7', new MixNVIDIA({ options, config }));
-        if (mix.openrouter) return this.attach('minimax/minimax-m2.7', new MixOpenRouter({ options, config }));
-        if (mix.minimax) return this.attach('MiniMax-M2.7', new MixMiniMax({ options, config }));
-        if (mix.together) return this.attach('MiniMaxAI/MiniMax-M2.7', new MixTogether({ options, config }));
+        if (mix.fireworks) this.attach('accounts/fireworks/models/minimax-m2p7', new MixFireworks({ options, config }));
+        if (mix.openrouter) this.attach('minimax/minimax-m2.7', new MixOpenRouter({ options, config }));
+        if (mix.minimax) this.attach('MiniMax-M2.7', new MixMiniMax({ options, config }));
+        if (mix.together) this.attach('MiniMaxAI/MiniMax-M2.7', new MixTogether({ options, config }));
         return this;
     }
 
     minimaxM3({ options = {}, config = {}, mix = { minimax: true, openrouter: false } } = {}) {
         mix = { ...this.mix, ...mix };
+        if (mix.fireworks) this.attach('accounts/fireworks/models/minimax-m3', new MixFireworks({ options, config }));
         if (mix.openrouter) this.attach('minimax/minimax-m3', new MixOpenRouter({ options, config }));
         if (mix.minimax) this.attach('MiniMax-M3', new MixMiniMax({ options, config }));
         if (mix.together) this.attach('MiniMaxAI/MiniMax-M3', new MixTogether({ options, config }));
@@ -719,6 +738,8 @@ class ModelMix {
     GLM52({ options = {}, config = {}, mix = { together: true } } = {}) {
         mix = { ...this.mix, ...mix };
         if (mix.together) this.attach('zai-org/GLM-5.2', new MixTogether({ options, config }));
+        if (mix.fireworks) this.attach('accounts/fireworks/models/glm-5p2', new MixFireworks({ options, config }));
+        if (mix.openrouter) this.attach('z-ai/glm-5.2', new MixOpenRouter({ options, config }));
         return this;
     }
 

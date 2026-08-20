@@ -496,6 +496,7 @@ export declare class ModelMix {
   grok420(args?: ModelAttachArgs): this;
 
   // Multi-provider
+  museGlimmer30b(args?: ModelAttachArgs): this;
   qwen3(args?: ModelAttachArgs): this;
   qwen35397b(args?: ModelAttachArgs): this;
   qwen36plus(args?: ModelAttachArgs): this;

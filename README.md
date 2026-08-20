@@ -151,7 +151,7 @@ ModelMix provides convenient shorthand methods for quickly accessing different A
 | `gpt51()` | OpenAI | gpt-5.1 | [\$1.25][1] | [\$10.00][1] |
 | `gpt5mini()` | OpenAI | gpt-5-mini | [\$0.25][1] | [\$2.00][1] |
 | `gpt5nano()` | OpenAI | gpt-5-nano | [\$0.05][1] | [\$0.40][1] |
-| `gptOss()` | Together | gpt-oss-120B | [\$0.15][7] | [\$0.60][7] |
+| `gptOss()` | Cerebras/Groq/OpenRouter | gpt-oss-120B | [\$0.15][7] | [\$0.60][7] |
 | `fable5()` | Anthropic | claude-fable-5 | [\$10.00][2] | [\$50.00][2] |
 | `opus5()` | Anthropic | claude-opus-5 | [\$5.00][2] | [\$25.00][2] |
 | `opus48()` | Anthropic | claude-opus-4-8 | [\$5.00][2] | [\$25.00][2] |
@@ -171,8 +171,9 @@ ModelMix provides convenient shorthand methods for quickly accessing different A
 | `grok43()` | Grok | grok-4.3 | [\$1.25][6] | [\$2.50][6] |
 | `grok420multiAgent()` | Grok | grok-4.20-multi-agent-0309 | [\$1.25][6] | [\$2.50][6] |
 | `grok420()` | Grok | grok-4.20-0309 (†) | [\$1.25][6] | [\$2.50][6] |
+| `museGlimmer30b()` | Fireworks | models/muse-glimmer-30b | [\$0.35][17] | [\$1.50][17] |
 | `qwen35397b()` | OpenRouter | qwen/qwen3.5-397b-a17b | [\$0.385][14] | [\$2.45][14] |
-| `qwen36plus()` | Fireworks | qwen3p6-plus | [\$0.50][10] | [\$3.00][10] |
+| `qwen36plus()` | OpenRouter | qwen/qwen3.6-plus | [\$0.325][18] | [\$1.95][18] |
 | `qwen37plus()` | Fireworks | models/qwen3p7-plus | [\$0.40][10] | [\$1.60][10] |
 | `qwen38max()` | Fireworks | qwen3p8-2p4t-a95b | [\$2.00][10] | [\$6.00][10] |
 | `qwen3827b()` | OpenRouter | qwen/qwen3.8-27b | [\$0.45][15] | [\$3.20][15] |
@@ -189,10 +190,15 @@ ModelMix provides convenient shorthand methods for quickly accessing different A
 | `hermes4405b()` | OpenRouter | nousresearch/hermes-4-405b | [\$1.00][13] | [\$3.00][13] |
 | `hermes3()` | Lambda | Hermes-3-Llama-3.1-405B-FP8 | [\$0.80][8] | [\$0.80][8] |
 | `kimiK3()` | Moonshot | kimi-k3 | [\$3.00][11] | [\$15.00][11] |
+| `kimiK27Code()` | Together | Kimi-K2.7-Code | [\$0.95][7] | [\$4.00][7] |
 | `kimiK25()` | Together | Kimi-K2.5 | [\$0.50][7] | [\$2.80][7] |
 | `kimiK26()` | Fireworks | models/kimi-k2p6 | [\$0.95][10] | [\$4.00][10] |
 
 Gemini 3.7 Flash and 3.6 Flash use Google's introductory standard pricing through December 31, 2026; standard rates double on January 1, 2027.
+
+`museGlimmer30b()` uses Fireworks first and OpenRouter as its default fallback. NVIDIA NIM and Together are also available through `mix.nvidia` and `mix.together`; disable either default provider with `mix.fireworks: false` or `mix.openrouter: false`.
+
+The multi-provider shortcuts also expose the current catalog alternatives: `gptOss()` supports NVIDIA and Fireworks; `qwen37plus()` supports Together; `kimiK27Code()` supports Fireworks and OpenRouter; `kimiK3()` supports Fireworks, OpenRouter, and Together; `GLM52()` supports Fireworks and OpenRouter; and both MiniMax shortcuts support Fireworks. `minimaxM27()` keeps every enabled provider in its fallback chain. `qwen36plus()` now defaults to OpenRouter because Fireworks retired its serverless deployment; Fireworks remains available explicitly for private or on-demand deployments.
 
 [1]: https://platform.openai.com/docs/pricing "Pricing | OpenAI"
 [2]: https://docs.anthropic.com/en/docs/about-claude/pricing "Pricing - Anthropic"
@@ -210,6 +216,8 @@ Gemini 3.7 Flash and 3.6 Flash use Google's introductory standard pricing throug
 [14]: https://openrouter.ai/qwen/qwen3.5-397b-a17b "Qwen3.5 397B A17B on OpenRouter"
 [15]: https://openrouter.ai/qwen/qwen3.8-27b "Qwen3.8 27B on OpenRouter"
 [16]: https://openrouter.ai/z-ai/glm-5.3 "GLM 5.3 on OpenRouter"
+[17]: https://fireworks.ai/models/fireworks/muse-glimmer-30b "Muse Glimmer 30B on Fireworks"
+[18]: https://openrouter.ai/qwen/qwen3.6-plus "Qwen 3.6 Plus on OpenRouter"
 
 Each method accepts optional `options`, `config`, and (for multi-provider methods) `mix` parameters to customize behavior.  
 

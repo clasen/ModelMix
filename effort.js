@@ -45,6 +45,9 @@ const OPENAI_MODEL_LEVELS = {
     'gpt-5.6-sol': ['none', 'low', 'medium', 'high', 'xhigh', 'max'],
     'gpt-5.6-terra': ['none', 'low', 'medium', 'high', 'xhigh', 'max'],
     'gpt-5.6-luna': ['none', 'low', 'medium', 'high', 'xhigh', 'max'],
+    'meta/muse-glimmer-30b': ['low', 'medium', 'high'],
+    'accounts/fireworks/models/muse-glimmer-30b': ['low', 'medium', 'high', 'xhigh'],
+    'meta-models/Muse-Glimmer-30B': ['low', 'medium', 'high', 'xhigh'],
     'accounts/fireworks/models/qwen3p8-2p4t-a95b': ['none', 'low', 'medium', 'high'],
     'qwen/qwen3.8-27b': ['low', 'medium', 'xhigh'],
     'z-ai/glm-5.3': ['low', 'high', 'max'],
@@ -55,6 +58,14 @@ const OPENAI_MODEL_LEVELS = {
     'gpt-5.3-codex': ['low', 'medium', 'high', 'xhigh'],
     'gpt-oss-120b': ['low', 'medium', 'high'],
     'openai/gpt-oss-120b': ['low', 'medium', 'high'],
+    'accounts/fireworks/models/gpt-oss-120b': ['low', 'medium', 'high'],
+    'kimi-k3': ['low', 'high', 'max'],
+    'moonshotai/kimi-k3': ['low', 'high', 'max'],
+    'accounts/fireworks/models/kimi-k3': ['low', 'high', 'max'],
+    'moonshotai/Kimi-K3': ['low', 'high', 'max'],
+    'zai-org/GLM-5.2': ['high', 'xhigh'],
+    'accounts/fireworks/models/glm-5p2': ['high', 'xhigh'],
+    'z-ai/glm-5.2': ['high', 'xhigh'],
 };
 
 /**

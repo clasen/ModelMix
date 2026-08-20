@@ -1,15 +1,32 @@
 const { expect } = require('chai');
 const nock = require('nock');
-const { ModelMix, MixKimi, MixOpenRouter, MixTogether } = require('../index.js');
+const { ModelMix, MixFireworks, MixKimi, MixOpenRouter, MixTogether } = require('../index.js');
 
 describe('Kimi Model Registration Tests', () => {
-    it('should register Together Kimi K2.7 Code by default', () => {
+    it('should register Together Kimi K2.7 Code before the OpenRouter fallback by default', () => {
         const model = ModelMix.new();
         model.kimiK27Code();
 
-        expect(model.models).to.have.length(1);
-        expect(model.models[0].key).to.equal('moonshotai/Kimi-K2.7-Code');
+        expect(model.models.map(({ key }) => key)).to.deep.equal([
+            'moonshotai/Kimi-K2.7-Code',
+            'moonshotai/kimi-k2.7-code'
+        ]);
         expect(model.models[0].provider).to.be.instanceOf(MixTogether);
+        expect(model.models[1].provider).to.be.instanceOf(MixOpenRouter);
+    });
+
+    it('should register every requested Kimi K2.7 Code provider', () => {
+        const model = ModelMix.new().kimiK27Code({
+            mix: { together: true, fireworks: true, openrouter: true }
+        });
+
+        expect(model.models.map(({ key }) => key)).to.deep.equal([
+            'moonshotai/Kimi-K2.7-Code',
+            'accounts/fireworks/models/kimi-k2p7-code',
+            'moonshotai/kimi-k2.7-code'
+        ]);
+        expect(model.models[1].provider).to.be.instanceOf(MixFireworks);
+        expect(model.models[2].provider).to.be.instanceOf(MixOpenRouter);
     });
 
     it('should register Kimi K3 with the native Moonshot provider by default', () => {
@@ -43,6 +60,19 @@ describe('Kimi Model Registration Tests', () => {
             if (originalOpenRouterApiKey === undefined) delete process.env.OPENROUTER_API_KEY;
             else process.env.OPENROUTER_API_KEY = originalOpenRouterApiKey;
         }
+    });
+
+    it('should register Fireworks and Together Kimi K3 when requested', () => {
+        const model = ModelMix.new().kimiK3({
+            mix: { moonshot: false, fireworks: true, openrouter: false, together: true }
+        });
+
+        expect(model.models.map(({ key }) => key)).to.deep.equal([
+            'accounts/fireworks/models/kimi-k3',
+            'moonshotai/Kimi-K3'
+        ]);
+        expect(model.models[0].provider).to.be.instanceOf(MixFireworks);
+        expect(model.models[1].provider).to.be.instanceOf(MixTogether);
     });
 
     it('should adapt Kimi K3 requests to its fixed sampling API', async () => {

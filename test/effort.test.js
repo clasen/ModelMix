@@ -96,6 +96,42 @@ describe('Unified effort scale', () => {
             expect(mapEffort('openai', 100, key)).to.deep.equal({ reasoning_effort: 'high' });
         });
 
+        it('maps the new GPT OSS providers to low, medium, and high reasoning', () => {
+            expect(mapEffort('openai', 0, 'accounts/fireworks/models/gpt-oss-120b')).to.deep.equal({
+                reasoning_effort: 'low'
+            });
+            expect(mapEffort('openai', 50, 'openai/gpt-oss-120b')).to.deep.equal({
+                reasoning_effort: 'medium'
+            });
+            expect(mapEffort('openai', 100, 'accounts/fireworks/models/gpt-oss-120b')).to.deep.equal({
+                reasoning_effort: 'high'
+            });
+        });
+
+        it('maps Kimi K3 and GLM 5.2 to their provider-supported levels', () => {
+            expect(mapEffort('openai', 100, 'moonshotai/Kimi-K3')).to.deep.equal({
+                reasoning_effort: 'max'
+            });
+            expect(mapEffort('openai', 0, 'accounts/fireworks/models/glm-5p2')).to.deep.equal({
+                reasoning_effort: 'high'
+            });
+            expect(mapEffort('openai', 100, 'z-ai/glm-5.2')).to.deep.equal({
+                reasoning_effort: 'xhigh'
+            });
+        });
+
+        it('maps Muse Glimmer 30B to provider-supported reasoning levels', () => {
+            expect(mapEffort('openai', 0, 'accounts/fireworks/models/muse-glimmer-30b')).to.deep.equal({
+                reasoning_effort: 'low'
+            });
+            expect(mapEffort('openai', 100, 'accounts/fireworks/models/muse-glimmer-30b')).to.deep.equal({
+                reasoning_effort: 'xhigh'
+            });
+            expect(mapEffort('openai', 100, 'meta/muse-glimmer-30b')).to.deep.equal({
+                reasoning_effort: 'high'
+            });
+        });
+
         it('maps Qwen 3.8 27B to its supported reasoning levels', () => {
             const key = 'qwen/qwen3.8-27b';
             expect(mapEffort('openai', 0, key)).to.deep.equal({ reasoning_effort: 'low' });
