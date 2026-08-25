@@ -64,7 +64,7 @@ describe('Provider Fallback Chain Tests', () => {
             for (const shortcut of [
                 'gpt41', 'gpt41mini', 'gpt41nano',
                 'gemini25flash', 'gemini25pro', 'gemini3pro', 'gemini3flash',
-                'minimaxM25'
+                'minimaxM25', 'qwen3', 'GLM51'
             ]) {
                 expect(model[shortcut]).to.equal(undefined);
                 expect(() => model.chain(shortcut))

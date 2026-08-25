@@ -181,7 +181,6 @@ ModelMix provides convenient shorthand methods for quickly accessing different A
 | `deepseekV4Pro()` | Fireworks | models/deepseek-v4-pro-0813 | [\$1.32][12] | [\$3.96][12] |
 | `GLM53()` | OpenRouter | z-ai/glm-5.3 | [\$1.40][16] | [\$4.40][16] |
 | `GLM52()` | Together | zai-org/GLM-5.2 | [\$1.40][7] | [\$4.40][7] |
-| `GLM51()` | Fireworks | models/glm-5p1 | [\$1.05][10] | [\$3.50][10] |
 | `minimaxM3()` | MiniMax | MiniMax-M3 | [\$0.30][9] | [\$1.20][9] |
 | `minimaxM27()` | MiniMax | MiniMax-M2.7 | [\$0.30][9] | [\$1.20][9] |
 | `sonar()` | Perplexity | sonar | [\$1.00][4] | [\$1.00][4] |

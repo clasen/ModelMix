@@ -50,7 +50,7 @@ class MixTogether extends MixCustom {
     }
 }
 
-mmix.attach('Qwen/Qwen3-235B-A22B-fp8-tput', new MixTogether());
+mmix.attach('Qwen/Qwen3.6-Plus', new MixTogether());
 
 let r = mmix.addText('hi there');
 r = await r.addText('do you like cats?').message();

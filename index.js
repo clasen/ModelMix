@@ -585,12 +585,6 @@ class ModelMix {
         return this;
     }
 
-    qwen3({ options = {}, config = {}, mix = { together: true, cerebras: false } } = {}) {
-        if (mix.together) this.attach('Qwen/Qwen3-235B-A22B-fp8-tput', new MixTogether({ options, config }));
-        if (mix.cerebras) this.attach('qwen-3-32b', new MixCerebras({ options, config }));
-        return this;
-    }
-
     qwen35397b({ options = {}, config = {} } = {}) {
         return this.attach('qwen/qwen3.5-397b-a17b', new MixOpenRouter({ options, config }));
     }
@@ -723,15 +717,6 @@ class ModelMix {
         if (mix.fireworks) this.attach('accounts/fireworks/models/deepseek-v4-flash', new MixFireworks({ options, config }));
         if (mix.openrouter) this.attach('deepseek/deepseek-v4-flash', new MixOpenRouter({ options, config }));
         if (mix.together) this.attach('deepseek-ai/DeepSeek-V4-Flash', new MixTogether({ options, config }));
-        return this;
-    }
-
-    GLM51({ options = {}, config = {}, mix = { fireworks: true } } = {}) {
-        mix = { ...this.mix, ...mix };
-        if (mix.nvidia) this.attach('z-ai/glm-5.1', new MixNVIDIA({ options, config }));
-        if (mix.fireworks) this.attach('accounts/fireworks/models/glm-5p1', new MixFireworks({ options, config }));
-        if (mix.openrouter) this.attach('z-ai/glm-5.1', new MixOpenRouter({ options, config }));
-        if (mix.together) this.attach('zai-org/GLM-5.1', new MixTogether({ options, config }));
         return this;
     }
 
