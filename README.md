@@ -151,7 +151,7 @@ ModelMix provides convenient shorthand methods for quickly accessing different A
 | `gpt51()` | OpenAI | gpt-5.1 | [\$1.25][1] | [\$10.00][1] |
 | `gpt5mini()` | OpenAI | gpt-5-mini | [\$0.25][1] | [\$2.00][1] |
 | `gpt5nano()` | OpenAI | gpt-5-nano | [\$0.05][1] | [\$0.40][1] |
-| `gptOss()` | Cerebras/Groq/OpenRouter | gpt-oss-120B | [\$0.15][7] | [\$0.60][7] |
+| `gptOss()` | Multi-provider | gpt-oss-120B | [\$0.15][7] | [\$0.60][7] |
 | `fable5()` | Anthropic | claude-fable-5 | [\$10.00][2] | [\$50.00][2] |
 | `opus5()` | Anthropic | claude-opus-5 | [\$5.00][2] | [\$25.00][2] |
 | `opus48()` | Anthropic | claude-opus-4-8 | [\$5.00][2] | [\$25.00][2] |
