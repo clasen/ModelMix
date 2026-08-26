@@ -50,7 +50,9 @@ const OPENAI_MODEL_LEVELS = {
     'meta-models/Muse-Glimmer-30B': ['low', 'medium', 'high', 'xhigh'],
     'accounts/fireworks/models/qwen3p8-2p4t-a95b': ['none', 'low', 'medium', 'high'],
     'qwen/qwen3.8-27b': ['low', 'medium', 'xhigh'],
+    'qwen/qwen3.8-flash': ['low', 'medium', 'xhigh'],
     'z-ai/glm-5.3': ['low', 'high', 'max'],
+    'z-ai/glm-5.3-flash': ['low', 'high', 'max'],
     'grok-4.6': ['low', 'medium', 'high', 'xhigh'],
     'gpt-5': ['minimal', 'low', 'medium', 'high'],
     'gpt-5-mini': ['minimal', 'low', 'medium', 'high'],
@@ -396,7 +398,7 @@ function mapEffort(providerFamily, effort, modelKey) {
             return null;
         }
         const supported = supportedOpenAILevels(modelKey);
-        const desired = modelKey === 'z-ai/glm-5.3'
+        const desired = modelKey === 'z-ai/glm-5.3' || modelKey === 'z-ai/glm-5.3-flash'
             ? levelFromBands(normalized, GLM53_BANDS)
             : normalized === 100 && supported.includes('max')
                 ? 'max'

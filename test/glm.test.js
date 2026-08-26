@@ -53,4 +53,24 @@ describe('GLM Model Registration Tests', () => {
         expect(model.models).to.have.length(1);
         expect(model.models[0].key).to.equal('z-ai/glm-5.3');
     });
+
+    it('should register GLM 5.3 Flash through OpenRouter', () => {
+        const model = ModelMix.new().GLM53Flash();
+
+        expect(model.models).to.have.length(1);
+        expect(model.models[0].key).to.equal('z-ai/glm-5.3-flash');
+        expect(model.models[0].provider).to.be.instanceOf(MixOpenRouter);
+        expect(ModelMix.calculateCost('z-ai/glm-5.3-flash', {
+            input: 1_000_000,
+            cached: 500_000,
+            output: 1_000_000
+        })).to.equal(0.295);
+    });
+
+    it('should support GLM 5.3 Flash in chain()', () => {
+        const model = ModelMix.new().chain('GLM53Flash');
+
+        expect(model.models).to.have.length(1);
+        expect(model.models[0].key).to.equal('z-ai/glm-5.3-flash');
+    });
 });

@@ -177,9 +177,11 @@ ModelMix provides convenient shorthand methods for quickly accessing different A
 | `qwen37plus()` | Fireworks | models/qwen3p7-plus | [\$0.40][10] | [\$1.60][10] |
 | `qwen38max()` | Fireworks | qwen3p8-2p4t-a95b | [\$2.00][10] | [\$6.00][10] |
 | `qwen3827b()` | OpenRouter | qwen/qwen3.8-27b | [\$0.45][15] | [\$3.20][15] |
+| `qwen38flash()` | OpenRouter | qwen/qwen3.8-flash | [\$0.16][19] | [\$0.47][19] |
 | `deepseekV4Flash()` | Fireworks | models/deepseek-v4-flash | [\$0.14][10] | [\$0.28][10] |
 | `deepseekV4Pro()` | Fireworks | models/deepseek-v4-pro-0813 | [\$1.32][12] | [\$3.96][12] |
 | `GLM53()` | OpenRouter | z-ai/glm-5.3 | [\$1.40][16] | [\$4.40][16] |
+| `GLM53Flash()` | OpenRouter | z-ai/glm-5.3-flash | [\$0.075][20] | [\$0.25][20] |
 | `GLM52()` | Together | zai-org/GLM-5.2 | [\$1.40][7] | [\$4.40][7] |
 | `minimaxM3()` | MiniMax | MiniMax-M3 | [\$0.30][9] | [\$1.20][9] |
 | `minimaxM27()` | MiniMax | MiniMax-M2.7 | [\$0.30][9] | [\$1.20][9] |
@@ -217,6 +219,8 @@ The multi-provider shortcuts also expose the current catalog alternatives: `gptO
 [16]: https://openrouter.ai/z-ai/glm-5.3 "GLM 5.3 on OpenRouter"
 [17]: https://fireworks.ai/models/fireworks/muse-glimmer-30b "Muse Glimmer 30B on Fireworks"
 [18]: https://openrouter.ai/qwen/qwen3.6-plus "Qwen 3.6 Plus on OpenRouter"
+[19]: https://openrouter.ai/qwen/qwen3.8-flash "Qwen3.8 Flash on OpenRouter"
+[20]: https://openrouter.ai/z-ai/glm-5.3-flash "GLM 5.3 Flash on OpenRouter"
 
 Each method accepts optional `options`, `config`, and (for multi-provider methods) `mix` parameters to customize behavior.  
 
@@ -257,8 +261,8 @@ ModelMix.new().effort(-1).minimaxM3().addText('...').message();
 
 - **Gemini:** Gemini 3+ uses bands 0–24 / 25–49 / 50–74 / 75–100. Gemini 3.7 Flash clamps these bands to `low` / `low` / `medium` / `high`; `-1` leaves its native `medium` default unchanged. Gemini 2.5 maps 0–100 to `thinkingBudget`.
 - **GPT-5.6:** `100` maps to `max`; 80–99 remains `xhigh`.
-- **Qwen 3.8 27B:** 0–39 / 40–79 / 80–100 map to `low` / `medium` / `xhigh`; `-1` leaves the native `xhigh` default unchanged.
-- **GLM 5.3:** reasoning is mandatory; 0–39 / 40–79 / 80–100 map to `low` / `high` / `max`; `-1` leaves the native `max` default unchanged.
+- **Qwen 3.8 27B and Flash:** 0–39 / 40–79 / 80–100 map to `low` / `medium` / `xhigh`; `-1` leaves the native `xhigh` default unchanged. Qwen 3.8 Flash is the managed production version based on the open-weight Flash-Next architecture.
+- **GLM 5.3 and GLM 5.3 Flash:** reasoning is mandatory; 0–39 / 40–79 / 80–100 map to `low` / `high` / `max`; `-1` leaves the native `max` default unchanged.
 - **DeepSeek:** `↑` means thinking is enabled; `off` means it is disabled.
 - **MiniMax:** `off` maps to `thinking.disabled`; `adaptive` maps to `thinking.type=adaptive`.
 - **Anthropic:** Claude 5, Fable, Opus 4.6+, and Sonnet 4.6+ use adaptive thinking with `output_config.effort`. Sonnet 4.5 and Haiku 4.5 use `thinking.type=enabled` with `budget_tokens`.

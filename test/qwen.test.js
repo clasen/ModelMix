@@ -110,6 +110,27 @@ describe('Qwen Model Registration Tests', () => {
         expect(model.models[0].key).to.equal('qwen/qwen3.8-27b');
     });
 
+    it('should register Qwen 3.8 Flash through OpenRouter', () => {
+        const model = ModelMix.new().qwen38flash();
+
+        expect(model.models).to.have.length(1);
+        expect(model.models[0].key).to.equal('qwen/qwen3.8-flash');
+        expect(model.models[0].provider).to.be.instanceOf(MixOpenRouter);
+        expect(ModelMix.calculateCost('qwen/qwen3.8-flash', {
+            input: 1_000_000,
+            cached: 250_000,
+            cacheWrite: 100_000,
+            output: 1_000_000
+        })).to.equal(0.598);
+    });
+
+    it('should support Qwen 3.8 Flash in chain()', () => {
+        const model = ModelMix.new().chain('qwen38flash');
+
+        expect(model.models).to.have.length(1);
+        expect(model.models[0].key).to.equal('qwen/qwen3.8-flash');
+    });
+
     it('should register Qwen 3.5 397B A17B through OpenRouter', () => {
         const model = ModelMix.new().qwen35397b();
 
