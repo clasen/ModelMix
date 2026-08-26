@@ -48,6 +48,48 @@ describe('public module boundary', () => {
         expect(model.models[0].provider.constructor).to.equal(api.MixOpenRouter);
     });
 
+    const explicitApiKeyCases = [
+        ['OpenAI', config => new api.MixOpenAIResponses({ config })],
+        ['OpenAI moderation', config => new api.MixOpenAIModeration({ config })],
+        ['Anthropic', config => new api.MixAnthropic({ config })],
+        ['Gemini', config => new api.MixGoogle({ config })],
+        ['MiniMax', config => new api.MixMiniMax({ config })],
+        ['MiMo', config => new api.MixMiMo({ config })],
+        ['Perplexity', config => new api.MixPerplexity({ config })],
+        ['Grok', config => new api.MixGrok({ config })],
+        ['Lambda', config => api.ModelMix.new({ mix: { openrouter: false, lambda: true } })
+            .hermes3({ config }).models[0].provider],
+        ['Groq', config => new api.MixGroq({ config })],
+        ['Together', config => new api.MixTogether({ config })],
+        ['Cerebras', config => new api.MixCerebras({ config })],
+        ['Fireworks', config => new api.MixFireworks({ config })],
+        ['NVIDIA', config => new api.MixNVIDIA({ config })],
+        ['OpenRouter', config => new api.MixOpenRouter({ config })],
+        ['Moonshot', config => new api.MixKimi({ config })]
+    ];
+
+    for (const [providerName, createProvider] of explicitApiKeyCases) {
+        it(`uses an explicit API key for ${providerName} without reading environment credentials`, () => {
+            const originalEnv = process.env;
+            process.env = new Proxy(originalEnv, {
+                get(target, property, receiver) {
+                    if (typeof property === 'string' && property.endsWith('_API_KEY')) {
+                        throw new Error(`${property} should not be read`);
+                    }
+                    return Reflect.get(target, property, receiver);
+                }
+            });
+
+            try {
+                const provider = createProvider({ apiKey: 'explicit-key' });
+
+                expect(provider.config.apiKey).to.equal('explicit-key');
+            } finally {
+                process.env = originalEnv;
+            }
+        });
+    }
+
     it('keeps the mutable pricing catalog private', () => {
         expect(require('../lib/token-usage')).to.not.have.property('MODEL_PRICING');
     });
