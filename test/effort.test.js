@@ -77,6 +77,7 @@ describe('Unified effort scale', () => {
             expect(mapEffort('openai', 99, 'gpt-5.6-luna')).to.deep.equal({ reasoning_effort: 'xhigh' });
             for (const model of ['gpt-5.6-sol', 'gpt-5.6-terra', 'gpt-5.6-luna']) {
                 expect(mapEffort('openai', 100, model)).to.deep.equal({ reasoning_effort: 'max' });
+                expect(mapEffort('openai', 100, `openai/${model}`)).to.deep.equal({ reasoning_effort: 'max' });
             }
         });
 
@@ -87,6 +88,8 @@ describe('Unified effort scale', () => {
 
         it('clamps OpenAI to model-supported levels', () => {
             expect(mapEffort('openai', 10, 'gpt-5.3-codex')).to.deep.equal({ reasoning_effort: 'low' });
+            expect(mapEffort('openai', 10, 'openai/gpt-5.3-codex')).to.deep.equal({ reasoning_effort: 'low' });
+            expect(mapEffort('openai', 0, 'openai/gpt-5')).to.deep.equal({ reasoning_effort: 'minimal' });
             expect(mapEffort('openai', 10, 'gpt-oss-120b')).to.deep.equal({ reasoning_effort: 'low' });
         });
 
@@ -132,6 +135,16 @@ describe('Unified effort scale', () => {
             });
         });
 
+        it('maps Muse Spark 1.2 Contributor to every supported reasoning level', () => {
+            const key = 'meta/muse-spark-1.2-contributor';
+            expect(mapEffort('openai', 0, key)).to.deep.equal({ reasoning_effort: 'minimal' });
+            expect(mapEffort('openai', 20, key)).to.deep.equal({ reasoning_effort: 'low' });
+            expect(mapEffort('openai', 40, key)).to.deep.equal({ reasoning_effort: 'medium' });
+            expect(mapEffort('openai', 60, key)).to.deep.equal({ reasoning_effort: 'high' });
+            expect(mapEffort('openai', 80, key)).to.deep.equal({ reasoning_effort: 'xhigh' });
+            expect(mapEffort('openai', -1, key)).to.equal(null);
+        });
+
         it('maps Qwen 3.8 27B to its supported reasoning levels', () => {
             const key = 'qwen/qwen3.8-27b';
             expect(mapEffort('openai', 0, key)).to.deep.equal({ reasoning_effort: 'low' });
@@ -171,7 +184,7 @@ describe('Unified effort scale', () => {
                 thinking: { type: 'adaptive', display: 'summarized' },
                 output_config: { effort: 'low' }
             });
-            expect(mapEffort('anthropic', 90, 'claude-fable-5')).to.deep.equal({
+            expect(mapEffort('anthropic', 90, 'claude-fable-5-1')).to.deep.equal({
                 thinking: { type: 'adaptive', display: 'summarized' },
                 output_config: { effort: 'max' }
             });
@@ -179,6 +192,16 @@ describe('Unified effort scale', () => {
                 thinking: { type: 'adaptive', display: 'summarized' },
                 output_config: { effort: 'high' }
             });
+        });
+
+        it('maps OpenRouter Claude Fable 5.1 to Anthropic effort levels', () => {
+            const key = 'anthropic/claude-fable-5.1';
+            expect(mapEffort('openai', 0, key)).to.deep.equal({ reasoning_effort: 'low' });
+            expect(mapEffort('openai', 20, key)).to.deep.equal({ reasoning_effort: 'medium' });
+            expect(mapEffort('openai', 40, key)).to.deep.equal({ reasoning_effort: 'high' });
+            expect(mapEffort('openai', 60, key)).to.deep.equal({ reasoning_effort: 'xhigh' });
+            expect(mapEffort('openai', 80, key)).to.deep.equal({ reasoning_effort: 'max' });
+            expect(mapEffort('openai', -1, key)).to.equal(null);
         });
 
         it('maps Anthropic manual models to thinking.type=enabled + budget_tokens', () => {

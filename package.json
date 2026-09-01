@@ -1,6 +1,6 @@
 {
   "name": "modelmix",
-  "version": "5.1.10",
+  "version": "5.1.12",
   "description": "🧬 Reliable interface with automatic fallback for AI LLMs.",
   "main": "index.js",
   "types": "index.d.ts",
@@ -27,6 +27,7 @@
     "gpt5",
     "opus50",
     "opus5",
+    "fable51",
     "fable50",
     "fable",
     "sonnet",

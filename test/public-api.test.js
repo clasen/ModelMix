@@ -14,6 +14,7 @@ describe('public module boundary', () => {
             'MixGroq',
             'MixKimi',
             'MixLMStudio',
+            'MixLambda',
             'MixMiMo',
             'MixMiniMax',
             'MixModeration',
@@ -57,8 +58,7 @@ describe('public module boundary', () => {
         ['MiMo', config => new api.MixMiMo({ config })],
         ['Perplexity', config => new api.MixPerplexity({ config })],
         ['Grok', config => new api.MixGrok({ config })],
-        ['Lambda', config => api.ModelMix.new({ mix: { openrouter: false, lambda: true } })
-            .hermes3({ config }).models[0].provider],
+        ['Lambda', config => new api.MixLambda({ config })],
         ['Groq', config => new api.MixGroq({ config })],
         ['Together', config => new api.MixTogether({ config })],
         ['Cerebras', config => new api.MixCerebras({ config })],

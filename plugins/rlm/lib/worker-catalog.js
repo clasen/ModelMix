@@ -1,8 +1,4 @@
-function isPlainObject(value) {
-    if (!value || typeof value !== 'object' || Array.isArray(value)) return false;
-    const prototype = Object.getPrototypeOf(value);
-    return prototype === Object.prototype || prototype === null;
-}
+const { isPlainObject } = require('./validation');
 
 function finiteRating(value, path) {
     if (!Number.isFinite(value) || value < 0) {

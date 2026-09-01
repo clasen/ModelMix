@@ -1,16 +1,11 @@
+const { positiveInteger } = require('./validation');
+
 class RlmLimitError extends Error {
     constructor(limit, message) {
         super(message);
         this.name = 'RlmLimitError';
         this.limit = limit;
     }
-}
-
-function positiveInteger(value, name) {
-    if (!Number.isInteger(value) || value <= 0) {
-        throw new TypeError(`${name} must be a positive integer.`);
-    }
-    return value;
 }
 
 function validateRuntimeLimits(limits) {

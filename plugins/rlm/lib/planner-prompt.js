@@ -1,14 +1,8 @@
 const path = require('path');
 const { describeVariables } = require('./variable-descriptors');
+const { positiveInteger } = require('./validation');
 
 const PLANNER_SYSTEM_TEMPLATE = path.resolve(__dirname, '../prompts/planner.md');
-
-function positiveInteger(value, name) {
-    if (!Number.isInteger(value) || value <= 0) {
-        throw new TypeError(`${name} must be a positive integer.`);
-    }
-    return value;
-}
 
 function planningHint(name, descriptor, maxQueryBytes) {
     const payloadBytes = descriptor.utf8Bytes ?? descriptor.estimatedBytes;

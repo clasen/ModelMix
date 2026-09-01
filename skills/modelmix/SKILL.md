@@ -151,12 +151,16 @@ ModelMix.new({ config: { effort: 80 } })
 
 Use `ModerationMix.new().openai()` with `.raw()` to classify text and images through OpenAI's Moderations endpoint. Read the results from `raw.moderation`. `ModerationMix` accepts moderation providers as ordered fallbacks, rejects generative providers, and does not generate text or support streaming.
 
-`gpt52()` `gpt52chat()` `gpt51()` `gpt5()` `gpt5mini()` `gpt5nano()` `gpt45()` `o3()` `o4mini()`
+`gpt56sol()` `gpt56terra()` `gpt56luna()` `gpt55()` `gpt55pro()` `gpt54()` `gpt54mini()` `gpt54nano()` `gpt54pro()` `gpt53codex()` `gpt53chat()` `gpt52()` `gpt51()` `gpt5()` `gpt5mini()` `gpt5nano()` `gptRealtime()` `gptRealtimeMini()` `gptOss()`
+
+Every textual GPT-5 shortcut registers only the official OpenAI model by default. Pass `mix: { openrouter: true }` to `ModelMix.new()` or to an individual shortcut to append its `openai/*` OpenRouter route as a fallback. `gpt53chat()` uses `gpt-5.3-chat-latest` officially and `openai/gpt-5.3-chat` through OpenRouter. Both API keys are required when that fallback is enabled. Realtime shortcuts remain official-only.
 
 ### Anthropic
-`fable50()` `opus50()` `opus48()` `opus47()` `opus46()` `sonnet5()` `sonnet46()` `sonnet45()` `haiku45()`
+`fable51()` `fable50()` `opus50()` `opus48()` `opus47()` `opus46()` `sonnet5()` `sonnet46()` `sonnet45()` `haiku45()`
 
 Use `.effort(n)` (or `config.effort`) to enable Anthropic thinking — e.g. `.effort(100).opus50()`. `fable5()` and `opus5()` remain available as compatibility aliases.
+
+`fable51()` registers `claude-fable-5-1` through Anthropic by default. Pass `mix: { openrouter: true }` to append `anthropic/claude-fable-5.1` as its fallback.
 
 ### Google
 `gemini31pro()` `gemini37flash()` `gemini36flash()` `gemini35flash()` `gemini35flashLite()` `gemini31flashLite()`
@@ -186,7 +190,7 @@ Use `.effort(n)` (or `config.effort`) to enable Anthropic thinking — e.g. `.ef
 `GLM46()`
 
 ### OpenRouter
-`museGlimmer30b()` `gptOss()` `qwen35397b()` `qwen36plus()` `qwen37plus()` `qwen3827b()` `qwen38flash()` `hermes470b()` `hermes4405b()` `qwen38max()` `kimiK27Code()` `kimiK3()` `minimaxM27()` `minimaxM3()` `GLM45()` `GLM52()` `GLM53()` `GLM53Flash()`
+`museGlimmer30b()` `museSpark12Contributor()` `gptOss()` `qwen35397b()` `qwen36plus()` `qwen37plus()` `qwen3827b()` `qwen38flash()` `hermes470b()` `hermes4405b()` `qwen38max()` `kimiK27Code()` `kimiK3()` `minimaxM27()` `minimaxM3()` `GLM45()` `GLM52()` `GLM53()` `GLM53Flash()`
 
 ### Multi-provider (auto-fallback across free/paid tiers)
 `hermes3()` `kimiK25()`
@@ -551,10 +555,9 @@ For full debug output, also set: `DEBUG=ModelMix* node script.js`
 ### Free-tier models
 
 ```javascript
-const model = ModelMix.new({ mix: { openrouter: false } })
+const model = ModelMix.new()
     .gptOss()
     .kimiK25()
-    .hermes3()
     .addText("What is the capital of France?");
 console.log(await model.message());
 ```
@@ -568,7 +571,8 @@ Some model shorthands register the same model across multiple providers for maxi
 ```javascript
 const model = ModelMix.new({
     mix: {
-        openrouter: true,   // default: true
+        anthropic: true,    // fable51() default: true
+        openrouter: false,  // fallback default: false
         cerebras: true,      // default: true
         groq: true,          // default: true
         together: false,     // default: false

@@ -119,10 +119,9 @@ console.log(ETH.price);
 
 **This example uses providers with free quotas (Groq, Cerebras, and Together). OpenRouter is disabled because its GPT-OSS 120B route is no longer free. If one model runs out of quota, ModelMix automatically falls back to the next model in the chain.**
 ```javascript
-ModelMix.new({ mix: { openrouter: false } })
+ModelMix.new()
   .gptOss()
   .kimiK25()
-  .hermes3()
   .addText('What is the capital of France?');
 ```
 
@@ -143,15 +142,20 @@ ModelMix provides convenient shorthand methods for quickly accessing different A
 | `gpt56terra()` | OpenAI | gpt-5.6-terra | [\$2.00][1] | [\$12.00][1] |
 | `gpt56luna()` | OpenAI | gpt-5.6-luna | [\$0.20][1] | [\$1.20][1] |
 | `gpt55()` | OpenAI | gpt-5.5 | [\$5.00][1] | [\$30.00][1] |
+| `gpt55pro()` | OpenAI | gpt-5.5-pro | [\$30.00][1] | [\$180.00][1] |
 | `gpt54()` | OpenAI | gpt-5.4 | [\$2.50][1] | [\$15.00][1] |
 | `gpt54mini()` | OpenAI | gpt-5.4-mini | [\$0.75][1] | [\$4.50][1] |
 | `gpt54nano()` | OpenAI | gpt-5.4-nano | [\$0.20][1] | [\$1.25][1] |
-| `gpt53codex()` | OpenAI | gpt-5.3-codex | [\$1.25][1] | [\$14.00][1] |
+| `gpt54pro()` | OpenAI | gpt-5.4-pro | [\$30.00][1] | [\$180.00][1] |
+| `gpt53codex()` | OpenAI | gpt-5.3-codex | [\$1.75][1] | [\$14.00][1] |
+| `gpt53chat()` | OpenAI | gpt-5.3-chat-latest | [\$1.75][1] | [\$14.00][1] |
 | `gpt52()` | OpenAI | gpt-5.2 | [\$1.75][1] | [\$14.00][1] |
 | `gpt51()` | OpenAI | gpt-5.1 | [\$1.25][1] | [\$10.00][1] |
+| `gpt5()` | OpenAI | gpt-5 | [\$1.25][1] | [\$10.00][1] |
 | `gpt5mini()` | OpenAI | gpt-5-mini | [\$0.25][1] | [\$2.00][1] |
 | `gpt5nano()` | OpenAI | gpt-5-nano | [\$0.05][1] | [\$0.40][1] |
 | `gptOss()` | Multi-provider | gpt-oss-120B | [\$0.15][7] | [\$0.60][7] |
+| `fable51()` | Anthropic | claude-fable-5-1 | [\$10.00][2] | [\$50.00][2] |
 | `fable5()` | Anthropic | claude-fable-5 | [\$10.00][2] | [\$50.00][2] |
 | `opus5()` | Anthropic | claude-opus-5 | [\$5.00][2] | [\$25.00][2] |
 | `opus48()` | Anthropic | claude-opus-4-8 | [\$5.00][2] | [\$25.00][2] |
@@ -172,6 +176,7 @@ ModelMix provides convenient shorthand methods for quickly accessing different A
 | `grok420multiAgent()` | Grok | grok-4.20-multi-agent-0309 | [\$1.25][6] | [\$2.50][6] |
 | `grok420()` | Grok | grok-4.20-0309 (†) | [\$1.25][6] | [\$2.50][6] |
 | `museGlimmer30b()` | Fireworks | models/muse-glimmer-30b | [\$0.35][17] | [\$1.50][17] |
+| `museSpark12Contributor()` | OpenRouter | meta/muse-spark-1.2-contributor | [\$0.10][22] | [\$0.20][22] |
 | `qwen35397b()` | OpenRouter | qwen/qwen3.5-397b-a17b | [\$0.385][14] | [\$2.45][14] |
 | `qwen36plus()` | OpenRouter | qwen/qwen3.6-plus | [\$0.325][18] | [\$1.95][18] |
 | `qwen37plus()` | Fireworks | models/qwen3p7-plus | [\$0.40][10] | [\$1.60][10] |
@@ -197,9 +202,13 @@ ModelMix provides convenient shorthand methods for quickly accessing different A
 
 Gemini 3.7 Flash and 3.6 Flash use Google's introductory standard pricing through December 31, 2026; standard rates double on January 1, 2027.
 
-`museGlimmer30b()` uses Fireworks first and OpenRouter as its default fallback. NVIDIA NIM and Together are also available through `mix.nvidia` and `mix.together`; disable either default provider with `mix.fireworks: false` or `mix.openrouter: false`.
+`museGlimmer30b()` uses Fireworks by default. OpenRouter, NVIDIA NIM, and Together are available through `mix.openrouter`, `mix.nvidia`, and `mix.together`.
 
-The multi-provider shortcuts also expose the current catalog alternatives: `gptOss()` supports NVIDIA and Fireworks; `qwen37plus()` supports Together; `kimiK27Code()` supports Fireworks and OpenRouter; `kimiK3()` supports Fireworks, OpenRouter, and Together; `GLM52()` supports Fireworks and OpenRouter; and both MiniMax shortcuts support Fireworks. `minimaxM27()` keeps every enabled provider in its fallback chain. `qwen36plus()` now defaults to OpenRouter because Fireworks retired its serverless deployment; Fireworks remains available explicitly for private or on-demand deployments.
+`fable51()` uses the official Anthropic API by default (`claude-fable-5-1`). Pass `mix: { openrouter: true }` to append [`anthropic/claude-fable-5.1`][21] as its fallback.
+
+Every textual GPT-5 shortcut in the table uses the official OpenAI API by default. Pass `mix: { openrouter: true }` to `ModelMix.new()` or to an individual shortcut to append the matching [`openai/*` OpenRouter route][23] as its fallback. `gpt53chat()` maps the official `gpt-5.3-chat-latest` alias to `openai/gpt-5.3-chat`. Realtime shortcuts remain official-only because they use OpenAI's WebSocket transport.
+
+OpenRouter fallbacks are disabled globally by default and are appended only with `mix.openrouter: true`. Shortcuts whose primary provider is OpenRouter, such as `qwen36plus()`, are unaffected. The multi-provider shortcuts also expose the current catalog alternatives: `gptOss()` supports NVIDIA and Fireworks; `qwen37plus()` supports Together; `kimiK27Code()` supports Fireworks and OpenRouter; `kimiK3()` supports Fireworks, OpenRouter, and Together; `GLM52()` supports Fireworks and OpenRouter; and both MiniMax shortcuts support Fireworks. `minimaxM27()` keeps every explicitly enabled provider in its fallback chain.
 
 [1]: https://platform.openai.com/docs/pricing "Pricing | OpenAI"
 [2]: https://docs.anthropic.com/en/docs/about-claude/pricing "Pricing - Anthropic"
@@ -221,6 +230,9 @@ The multi-provider shortcuts also expose the current catalog alternatives: `gptO
 [18]: https://openrouter.ai/qwen/qwen3.6-plus "Qwen 3.6 Plus on OpenRouter"
 [19]: https://openrouter.ai/qwen/qwen3.8-flash "Qwen3.8 Flash on OpenRouter"
 [20]: https://openrouter.ai/z-ai/glm-5.3-flash "GLM 5.3 Flash on OpenRouter"
+[21]: https://openrouter.ai/anthropic/claude-fable-5.1 "Claude Fable 5.1 on OpenRouter"
+[22]: https://openrouter.ai/meta/muse-spark-1.2-contributor "Muse Spark 1.2 Contributor on OpenRouter"
+[23]: https://openrouter.ai/openai "OpenAI Models on OpenRouter"
 
 Each method accepts optional `options`, `config`, and (for multi-provider methods) `mix` parameters to customize behavior.  
 

@@ -7,7 +7,7 @@
  */
 
 const OPENAI_LEVELS = ['none', 'low', 'medium', 'high', 'xhigh'];
-const OPENAI_LEVEL_LADDER = [...OPENAI_LEVELS, 'max'];
+const OPENAI_LEVEL_LADDER = ['none', 'minimal', 'low', 'medium', 'high', 'xhigh', 'max'];
 const ANTHROPIC_LEVELS = ['low', 'medium', 'high', 'xhigh', 'max'];
 const GEMINI_LEVELS = ['minimal', 'low', 'medium', 'high'];
 
@@ -45,9 +45,11 @@ const OPENAI_MODEL_LEVELS = {
     'gpt-5.6-sol': ['none', 'low', 'medium', 'high', 'xhigh', 'max'],
     'gpt-5.6-terra': ['none', 'low', 'medium', 'high', 'xhigh', 'max'],
     'gpt-5.6-luna': ['none', 'low', 'medium', 'high', 'xhigh', 'max'],
+    'anthropic/claude-fable-5.1': ['low', 'medium', 'high', 'xhigh', 'max'],
     'meta/muse-glimmer-30b': ['low', 'medium', 'high'],
     'accounts/fireworks/models/muse-glimmer-30b': ['low', 'medium', 'high', 'xhigh'],
     'meta-models/Muse-Glimmer-30B': ['low', 'medium', 'high', 'xhigh'],
+    'meta/muse-spark-1.2-contributor': ['minimal', 'low', 'medium', 'high', 'xhigh'],
     'accounts/fireworks/models/qwen3p8-2p4t-a95b': ['none', 'low', 'medium', 'high'],
     'qwen/qwen3.8-27b': ['low', 'medium', 'xhigh'],
     'qwen/qwen3.8-flash': ['low', 'medium', 'xhigh'],
@@ -87,7 +89,6 @@ const DEEPSEEK_BANDS = [
  * MiniMax M3 (OpenAI-compatible): thinking.type disabled | adaptive.
  * @see https://platform.minimax.io/docs/api-reference/text-openai-api
  */
-const MINIMAX_LEVELS = ['disabled', 'adaptive'];
 const MINIMAX_BANDS = [
     [0, 19, 'disabled'],
     [20, 100, 'adaptive'],
@@ -203,8 +204,11 @@ function pickNearestLevel(desired, ladder, supported) {
 }
 
 function supportedOpenAILevels(modelKey) {
-    if (modelKey && OPENAI_MODEL_LEVELS[modelKey]) {
-        return OPENAI_MODEL_LEVELS[modelKey];
+    const canonicalModelKey = typeof modelKey === 'string' && modelKey.startsWith('openai/')
+        ? modelKey.slice('openai/'.length)
+        : modelKey;
+    if (canonicalModelKey && OPENAI_MODEL_LEVELS[canonicalModelKey]) {
+        return OPENAI_MODEL_LEVELS[canonicalModelKey];
     }
     return OPENAI_LEVELS;
 }
@@ -400,9 +404,11 @@ function mapEffort(providerFamily, effort, modelKey) {
         const supported = supportedOpenAILevels(modelKey);
         const desired = modelKey === 'z-ai/glm-5.3' || modelKey === 'z-ai/glm-5.3-flash'
             ? levelFromBands(normalized, GLM53_BANDS)
-            : normalized === 100 && supported.includes('max')
-                ? 'max'
-                : levelFromBands(normalized, OPENAI_BANDS);
+            : modelKey === 'anthropic/claude-fable-5.1'
+                ? levelFromBands(normalized, ANTHROPIC_BANDS)
+                : normalized === 100 && supported.includes('max')
+                    ? 'max'
+                    : levelFromBands(normalized, OPENAI_BANDS);
         const level = pickNearestLevel(desired, OPENAI_LEVEL_LADDER, supported);
         return { reasoning_effort: level };
     }

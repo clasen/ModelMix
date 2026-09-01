@@ -76,6 +76,7 @@ export interface ModelMixConfig {
 }
 
 export interface ModelMixMixFlags {
+  anthropic?: boolean;
   openrouter?: boolean;
   cerebras?: boolean;
   groq?: boolean;
@@ -462,6 +463,7 @@ export declare class ModelMix {
   gptOss(args?: ModelAttachArgs): this;
 
   // Anthropic
+  fable51(args?: ModelAttachArgs): this;
   fable50(args?: ModelAttachArgs): this;
   fable5(args?: ModelAttachArgs): this;
   opus50(args?: ModelAttachArgs): this;
@@ -497,6 +499,7 @@ export declare class ModelMix {
 
   // Multi-provider
   museGlimmer30b(args?: ModelAttachArgs): this;
+  museSpark12Contributor(args?: ModelAttachArgs): this;
   qwen35397b(args?: ModelAttachArgs): this;
   qwen36plus(args?: ModelAttachArgs): this;
   qwen37plus(args?: ModelAttachArgs): this;

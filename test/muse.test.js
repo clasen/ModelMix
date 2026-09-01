@@ -7,16 +7,14 @@ const {
     MixTogether
 } = require('../index.js');
 
-describe('Muse Glimmer Model Registration Tests', () => {
-    it('registers Fireworks before the OpenRouter fallback by default', () => {
+describe('Muse Model Registration Tests', () => {
+    it('registers only Fireworks by default', () => {
         const model = ModelMix.new().museGlimmer30b();
 
         expect(model.models.map(({ key }) => key)).to.deep.equal([
-            'accounts/fireworks/models/muse-glimmer-30b',
-            'meta/muse-glimmer-30b'
+            'accounts/fireworks/models/muse-glimmer-30b'
         ]);
         expect(model.models[0].provider).to.be.instanceOf(MixFireworks);
-        expect(model.models[1].provider).to.be.instanceOf(MixOpenRouter);
     });
 
     it('registers every supported provider in fallback order', () => {
@@ -54,8 +52,27 @@ describe('Muse Glimmer Model Registration Tests', () => {
         const model = ModelMix.new().chain('museGlimmer30b');
 
         expect(model.models.map(({ key }) => key)).to.deep.equal([
-            'accounts/fireworks/models/muse-glimmer-30b',
-            'meta/muse-glimmer-30b'
+            'accounts/fireworks/models/muse-glimmer-30b'
         ]);
+    });
+
+    it('registers Muse Spark 1.2 Contributor through OpenRouter', () => {
+        const model = ModelMix.new().museSpark12Contributor();
+
+        expect(model.models).to.have.length(1);
+        expect(model.models[0].key).to.equal('meta/muse-spark-1.2-contributor');
+        expect(model.models[0].provider).to.be.instanceOf(MixOpenRouter);
+        expect(ModelMix.calculateCost('meta/muse-spark-1.2-contributor', {
+            input: 1_000_000,
+            cached: 250_000,
+            output: 1_000_000
+        })).to.equal(0.2755);
+    });
+
+    it('supports Muse Spark 1.2 Contributor in chain()', () => {
+        const model = ModelMix.new().chain('museSpark12Contributor');
+
+        expect(model.models).to.have.length(1);
+        expect(model.models[0].key).to.equal('meta/muse-spark-1.2-contributor');
     });
 });

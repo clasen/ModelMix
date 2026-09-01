@@ -247,7 +247,7 @@ describe('Rate Limiting with Bottleneck Tests', () => {
         });
 
         it('should handle rate limiting with API errors', async () => {
-            model.gpt51();
+            model.gpt51({ mix: { openrouter: false } });
             
             nock('https://api.openai.com')
                 .post('/v1/responses')

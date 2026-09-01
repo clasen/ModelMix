@@ -9,6 +9,23 @@ const {
 } = require('../index.js');
 
 describe('Provider expansion regressions', () => {
+    it('should keep OpenRouter fallbacks disabled by default', () => {
+        const originalMiniMaxApiKey = process.env.MINIMAX_API_KEY;
+        process.env.MINIMAX_API_KEY = 'test-minimax-key';
+
+        try {
+            const gptOss = ModelMix.new().gptOss();
+            const minimax = ModelMix.new().minimaxM27();
+
+            expect(gptOss.models.some(({ provider }) => provider instanceof MixOpenRouter)).to.equal(false);
+            expect(minimax.models.map(({ key }) => key)).to.deep.equal(['MiniMax-M2.7']);
+            expect(minimax.models[0].provider).to.be.instanceOf(MixMiniMax);
+        } finally {
+            if (originalMiniMaxApiKey === undefined) delete process.env.MINIMAX_API_KEY;
+            else process.env.MINIMAX_API_KEY = originalMiniMaxApiKey;
+        }
+    });
+
     it('should retain every enabled GPT OSS provider, including shared model keys', () => {
         const model = ModelMix.new().gptOss({
             mix: {

@@ -3,16 +3,12 @@ const nock = require('nock');
 const { ModelMix, MixFireworks, MixKimi, MixOpenRouter, MixTogether } = require('../index.js');
 
 describe('Kimi Model Registration Tests', () => {
-    it('should register Together Kimi K2.7 Code before the OpenRouter fallback by default', () => {
+    it('should register only Together Kimi K2.7 Code by default', () => {
         const model = ModelMix.new();
         model.kimiK27Code();
 
-        expect(model.models.map(({ key }) => key)).to.deep.equal([
-            'moonshotai/Kimi-K2.7-Code',
-            'moonshotai/kimi-k2.7-code'
-        ]);
+        expect(model.models.map(({ key }) => key)).to.deep.equal(['moonshotai/Kimi-K2.7-Code']);
         expect(model.models[0].provider).to.be.instanceOf(MixTogether);
-        expect(model.models[1].provider).to.be.instanceOf(MixOpenRouter);
     });
 
     it('should register every requested Kimi K2.7 Code provider', () => {

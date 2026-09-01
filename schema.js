@@ -122,31 +122,3 @@ function generateJsonSchema(example, descriptions = {}) {
 }
 
 module.exports = generateJsonSchema;
-
-// const example = {
-//     name: 'Alice',
-//     age: 30,
-//     email: 'alice@example.com',
-//     birthDate: '1990-01-01',
-//     isAdmin: false,
-//     preferences: {
-//         theme: 'dark',
-//         notifications: true
-//     },
-//     tags: ['admin', 'user']
-// };
-
-// const descriptions = {
-//     name: 'Full name of the user',
-//     age: 'Age must be 0 or greater',
-//     email: 'User email address',
-//     // birthDate: 'User birth date in YYYY-MM-DD format',
-//     preferences: {
-//         theme: 'Theme preference (light/dark)',
-//         notifications: 'Whether notifications are enabled'
-//     }
-// };
-
-// const schema = generateJsonSchema(example);
-
-// console.log(JSON.stringify(schema, null, 2));

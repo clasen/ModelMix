@@ -2,16 +2,12 @@ const { expect } = require('chai');
 const { ModelMix, MixFireworks, MixOpenRouter, MixTogether } = require('../index.js');
 
 describe('GLM Model Registration Tests', () => {
-    it('should register Together GLM 5.2 before the OpenRouter fallback by default', () => {
+    it('should register only Together GLM 5.2 by default', () => {
         const model = ModelMix.new();
         model.GLM52();
 
-        expect(model.models.map(({ key }) => key)).to.deep.equal([
-            'zai-org/GLM-5.2',
-            'z-ai/glm-5.2'
-        ]);
+        expect(model.models.map(({ key }) => key)).to.deep.equal(['zai-org/GLM-5.2']);
         expect(model.models[0].provider).to.be.instanceOf(MixTogether);
-        expect(model.models[1].provider).to.be.instanceOf(MixOpenRouter);
     });
 
     it('should register every requested GLM 5.2 provider', () => {

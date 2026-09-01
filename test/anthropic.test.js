@@ -1,8 +1,84 @@
 const { expect } = require('chai');
 const nock = require('nock');
-const { ModelMix, MixAnthropic } = require('../index.js');
+const { ModelMix, MixAnthropic, MixOpenRouter } = require('../index.js');
 
 describe('Anthropic Model Registration Tests', () => {
+    it('should register Claude Fable 5.1 through Anthropic by default', () => {
+        const model = ModelMix.new().fable51();
+
+        expect(model.models.map(({ key }) => key)).to.deep.equal(['claude-fable-5-1']);
+        expect(model.models[0].provider).to.be.instanceOf(MixAnthropic);
+    });
+
+    it('should allow enabling or selecting the OpenRouter Claude Fable 5.1 route', () => {
+        const both = ModelMix.new().fable51({ mix: { openrouter: true } });
+        const routed = ModelMix.new().fable51({
+            mix: { anthropic: false, openrouter: true }
+        });
+
+        expect(both.models.map(({ key }) => key)).to.deep.equal([
+            'claude-fable-5-1',
+            'anthropic/claude-fable-5.1'
+        ]);
+        expect(both.models[1].provider).to.be.instanceOf(MixOpenRouter);
+        expect(routed.models.map(({ key }) => key)).to.deep.equal(['anthropic/claude-fable-5.1']);
+        expect(routed.models[0].provider).to.be.instanceOf(MixOpenRouter);
+    });
+
+    it('should strip unsupported sampling params from OpenRouter Claude Fable 5.1 requests', async () => {
+        const provider = new MixOpenRouter();
+        let requestBody;
+        nock('https://openrouter.ai')
+            .post('/api/v1/chat/completions', body => {
+                requestBody = body;
+                return true;
+            })
+            .reply(200, {
+                choices: [{ message: { content: 'Done' } }],
+                usage: { prompt_tokens: 1, completion_tokens: 1 }
+            });
+
+        await provider.create({
+            config: { system: 'You are an assistant.' },
+            options: {
+                model: 'anthropic/claude-fable-5.1',
+                messages: [{ role: 'user', content: 'Hello' }],
+                max_tokens: 100,
+                temperature: 1,
+                top_p: 0.9,
+                top_k: 40
+            }
+        });
+
+        expect(requestBody).to.not.have.property('temperature');
+        expect(requestBody).to.not.have.property('top_p');
+        expect(requestBody).to.not.have.property('top_k');
+        expect(requestBody.model).to.equal('anthropic/claude-fable-5.1');
+    });
+
+    it('should price Claude Fable 5.1 cache usage equally across providers', () => {
+        const tokens = {
+            input: 3_000_000,
+            uncachedInput: 1_000_000,
+            cached: 1_000_000,
+            cacheWrite: 1_000_000,
+            cacheWrite5m: 1_000_000,
+            output: 1_000_000
+        };
+        const expected = {
+            uncachedInput: 10,
+            cachedInput: 0.25,
+            cacheWrite: 12.5,
+            cacheWrite5m: 12.5,
+            cacheWrite1h: 0,
+            output: 50,
+            total: 72.75
+        };
+
+        expect(ModelMix.calculateCostBreakdown('claude-fable-5-1', tokens)).to.deep.equal(expected);
+        expect(ModelMix.calculateCostBreakdown('anthropic/claude-fable-5.1', tokens)).to.deep.equal(expected);
+    });
+
     it('should register Claude Fable 5', () => {
         const model = ModelMix.new();
         model.fable50();

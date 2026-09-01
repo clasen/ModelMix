@@ -9,12 +9,7 @@ const {
     sumTokens
 } = require('./runtime');
 const { createWorkerCatalog } = require('./worker-catalog');
-
-function isPlainObject(value) {
-    if (!value || typeof value !== 'object' || Array.isArray(value)) return false;
-    const prototype = Object.getPrototypeOf(value);
-    return prototype === Object.prototype || prototype === null;
-}
+const { isPlainObject } = require('./validation');
 
 function validateSandbox(sandbox) {
     if (!sandbox || typeof sandbox !== 'object' || typeof sandbox.execute !== 'function') {

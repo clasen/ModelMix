@@ -144,7 +144,7 @@ class ModelMix {
         if (this.config.effort !== undefined && this.config.effort !== null) {
             this.config.effort = normalizeEffort(this.config.effort);
         }
-        const freeMix = { openrouter: true, cerebras: true, groq: true, together: false, lambda: false };
+        const freeMix = { openrouter: false, cerebras: true, groq: true, together: false, lambda: false };
         this.mix = { ...freeMix, ...mix };
 
         this.limiter = new Bottleneck(this.config.bottleneck);
@@ -434,47 +434,59 @@ class ModelMix {
         return this;
     }
 
-    gpt5({ options = {}, config = {} } = {}) {
-        return this.attach('gpt-5', new MixOpenAI({ options, config }));
+    _attachOpenAIWithOpenRouter(officialKey, Provider, {
+        options = {},
+        config = {},
+        mix = {},
+        openRouterKey = `openai/${officialKey}`
+    } = {}) {
+        mix = { ...this.mix, ...mix };
+        this.attach(officialKey, new Provider({ options, config }));
+        if (mix.openrouter) this.attach(openRouterKey, new MixOpenRouter({ options, config }));
+        return this;
     }
-    gpt5mini({ options = {}, config = {} } = {}) {
-        return this.attach('gpt-5-mini', new MixOpenAI({ options, config }));
+
+    gpt5(args = {}) {
+        return this._attachOpenAIWithOpenRouter('gpt-5', MixOpenAI, args);
     }
-    gpt5nano({ options = {}, config = {} } = {}) {
-        return this.attach('gpt-5-nano', new MixOpenAI({ options, config }));
+    gpt5mini(args = {}) {
+        return this._attachOpenAIWithOpenRouter('gpt-5-mini', MixOpenAI, args);
     }
-    gpt51({ options = {}, config = {} } = {}) {
-        return this.attach('gpt-5.1', new MixOpenAIResponses({ options, config }));
+    gpt5nano(args = {}) {
+        return this._attachOpenAIWithOpenRouter('gpt-5-nano', MixOpenAI, args);
     }
-    gpt52({ options = {}, config = {} } = {}) {
-        return this.attach('gpt-5.2', new MixOpenAIResponses({ options, config }));
+    gpt51(args = {}) {
+        return this._attachOpenAIWithOpenRouter('gpt-5.1', MixOpenAIResponses, args);
     }
-    gpt54({ options = {}, config = {} } = {}) {
-        return this.attach('gpt-5.4', new MixOpenAIResponses({ options, config }));
+    gpt52(args = {}) {
+        return this._attachOpenAIWithOpenRouter('gpt-5.2', MixOpenAIResponses, args);
     }
-    gpt54mini({ options = {}, config = {} } = {}) {
-        return this.attach('gpt-5.4-mini', new MixOpenAIResponses({ options, config }));
+    gpt54(args = {}) {
+        return this._attachOpenAIWithOpenRouter('gpt-5.4', MixOpenAIResponses, args);
     }
-    gpt54nano({ options = {}, config = {} } = {}) {
-        return this.attach('gpt-5.4-nano', new MixOpenAIResponses({ options, config }));
-    }        
-    gpt54pro({ options = {}, config = {} } = {}) {
-        return this.attach('gpt-5.4-pro', new MixOpenAIResponses({ options, config }));
+    gpt54mini(args = {}) {
+        return this._attachOpenAIWithOpenRouter('gpt-5.4-mini', MixOpenAIResponses, args);
     }
-    gpt55({ options = {}, config = {} } = {}) {
-        return this.attach('gpt-5.5', new MixOpenAIResponses({ options, config }));
+    gpt54nano(args = {}) {
+        return this._attachOpenAIWithOpenRouter('gpt-5.4-nano', MixOpenAIResponses, args);
     }
-    gpt55pro({ options = {}, config = {} } = {}) {
-        return this.attach('gpt-5.5-pro', new MixOpenAIResponses({ options, config }));
+    gpt54pro(args = {}) {
+        return this._attachOpenAIWithOpenRouter('gpt-5.4-pro', MixOpenAIResponses, args);
     }
-    gpt56sol({ options = {}, config = {} } = {}) {
-        return this.attach('gpt-5.6-sol', new MixOpenAIResponses({ options, config }));
+    gpt55(args = {}) {
+        return this._attachOpenAIWithOpenRouter('gpt-5.5', MixOpenAIResponses, args);
     }
-    gpt56terra({ options = {}, config = {} } = {}) {
-        return this.attach('gpt-5.6-terra', new MixOpenAIResponses({ options, config }));
+    gpt55pro(args = {}) {
+        return this._attachOpenAIWithOpenRouter('gpt-5.5-pro', MixOpenAIResponses, args);
     }
-    gpt56luna({ options = {}, config = {} } = {}) {
-        return this.attach('gpt-5.6-luna', new MixOpenAIResponses({ options, config }));
+    gpt56sol(args = {}) {
+        return this._attachOpenAIWithOpenRouter('gpt-5.6-sol', MixOpenAIResponses, args);
+    }
+    gpt56terra(args = {}) {
+        return this._attachOpenAIWithOpenRouter('gpt-5.6-terra', MixOpenAIResponses, args);
+    }
+    gpt56luna(args = {}) {
+        return this._attachOpenAIWithOpenRouter('gpt-5.6-luna', MixOpenAIResponses, args);
     }
     gptRealtime({ options = {}, config = {} } = {}) {
         return this.attach('gpt-realtime', new MixOpenAIWebSocket({ options, config }));
@@ -482,11 +494,14 @@ class ModelMix {
     gptRealtimeMini({ options = {}, config = {} } = {}) {
         return this.attach('gpt-realtime-mini', new MixOpenAIWebSocket({ options, config }));
     }
-    gpt53codex({ options = {}, config = {} } = {}) {
-        return this.attach('gpt-5.3-codex', new MixOpenAIResponses({ options, config }));
-    }          
-    gpt53chat({ options = {}, config = {} } = {}) {
-        return this.attach('gpt-5.3-chat-latest', new MixOpenAIResponses({ options, config }));
+    gpt53codex(args = {}) {
+        return this._attachOpenAIWithOpenRouter('gpt-5.3-codex', MixOpenAIResponses, args);
+    }
+    gpt53chat(args = {}) {
+        return this._attachOpenAIWithOpenRouter('gpt-5.3-chat-latest', MixOpenAIResponses, {
+            ...args,
+            openRouterKey: 'openai/gpt-5.3-chat'
+        });
     }
     gptOss({ options = {}, config = {}, mix = {} } = {}) {
         mix = { ...this.mix, ...mix };
@@ -503,6 +518,12 @@ class ModelMix {
     }
     fable5(args = {}) {
         return this.fable50(args);
+    }
+    fable51({ options = {}, config = {}, mix = {} } = {}) {
+        mix = { anthropic: true, ...this.mix, ...mix };
+        if (mix.anthropic) this.attach('claude-fable-5-1', new MixAnthropic({ options, config }));
+        if (mix.openrouter) this.attach('anthropic/claude-fable-5.1', new MixOpenRouter({ options, config }));
+        return this;
     }
     opus50({ options = {}, config = {} } = {}) {
         return this.attach('claude-opus-5', new MixAnthropic({ options, config }));
@@ -585,6 +606,10 @@ class ModelMix {
         return this;
     }
 
+    museSpark12Contributor({ options = {}, config = {} } = {}) {
+        return this.attach('meta/muse-spark-1.2-contributor', new MixOpenRouter({ options, config }));
+    }
+
     qwen35397b({ options = {}, config = {} } = {}) {
         return this.attach('qwen/qwen3.5-397b-a17b', new MixOpenRouter({ options, config }));
     }
@@ -628,7 +653,7 @@ class ModelMix {
         return this.attach('nousresearch/hermes-4-405b', new MixOpenRouter({ options, config }));
     }
 
-    hermes3({ options = {}, config = {}, mix = {} } = {}) {
+    hermes3({ options = {}, config = {}, mix = { openrouter: true } } = {}) {
         mix = { ...this.mix, ...mix };
         if (mix.lambda) this.attach('Hermes-3-Llama-3.1-405B-FP8', new MixLambda({ options, config }));
         if (mix.openrouter) this.attach('nousresearch/hermes-3-llama-3.1-405b:free', new MixOpenRouter({ options, config }));
@@ -673,7 +698,7 @@ class ModelMix {
     }
 
 
-    minimaxM27({ options = {}, config = {}, mix = { openrouter: true, minimax: true } } = {}) {
+    minimaxM27({ options = {}, config = {}, mix = { minimax: true } } = {}) {
         mix = { ...this.mix, ...mix };
         if (mix.nvidia) this.attach('minimaxai/minimax-m2.7', new MixNVIDIA({ options, config }));
         if (mix.fireworks) this.attach('accounts/fireworks/models/minimax-m2p7', new MixFireworks({ options, config }));
@@ -786,20 +811,21 @@ class ModelMix {
         return this;
     }
 
-    addImageFromBuffer(buffer, { role = "user", cache } = {}) {
+    _addImageSource(source, { role = "user", cache } = {}) {
         const contentCache = normalizeContentCache(cache);
         this.messages.push({
             role,
             content: [{
                 type: "image",
-                source: {
-                    type: "buffer",
-                    data: buffer
-                },
+                source,
                 ...(contentCache !== undefined && { cache: contentCache })
             }]
         });
         return this;
+    }
+
+    addImageFromBuffer(buffer, { role = "user", cache } = {}) {
+        return this._addImageSource({ type: "buffer", data: buffer }, { role, cache });
     }
 
     addImage(filePath, { role = "user", cache } = {}) {
@@ -809,19 +835,7 @@ class ModelMix {
             throw new Error(`Image file not found: ${filePath}`);
         }
 
-        const contentCache = normalizeContentCache(cache);
-        this.messages.push({
-            role,
-            content: [{
-                type: "image",
-                source: {
-                    type: "file",
-                    data: filePath
-                },
-                ...(contentCache !== undefined && { cache: contentCache })
-            }]
-        });
-        return this;
+        return this._addImageSource({ type: "file", data: filePath }, { role, cache });
     }
 
     addImageFromUrl(url, { role = "user", cache } = {}) {
@@ -845,17 +859,7 @@ class ModelMix {
             };
         }
 
-        const contentCache = normalizeContentCache(cache);
-        this.messages.push({
-            role,
-            content: [{
-                type: "image",
-                source,
-                ...(contentCache !== undefined && { cache: contentCache })
-            }]
-        });
-
-        return this;
+        return this._addImageSource(source, { role, cache });
     }
 
     async processImages() {
@@ -1096,10 +1100,6 @@ class ModelMix {
             const shouldNotGroup = ModelMix.hasToolInteraction(currentMessage);
 
             if (index === 0 || currentMessage.role !== messages[index - 1].role || shouldNotGroup) {
-                // acc.push({
-                //     role: currentMessage.role,
-                //     content: currentMessage.content
-                // });
                 acc.push(currentMessage);
             } else {
                 acc[acc.length - 1].content = acc[acc.length - 1].content.concat(currentMessage.content);
@@ -1865,4 +1865,4 @@ class ModelMix {
     log
 }));
 
-module.exports = { MixCustom, ModelMix, ModerationMix, MixModeration, MixAnthropic, MixKimi, MixMiniMax, MixMiMo, MixOpenAI, MixOpenAIResponses, MixOpenAIModeration, MixOpenAIWebSocket, MixOpenRouter, MixPerplexity, MixOllama, MixLMStudio, MixGroq, MixTogether, MixGrok, MixCerebras, MixGoogle, MixFireworks, MixNVIDIA, normalizeEffort, applyUnifiedEffort, resolveProviderFamily };
+module.exports = { MixCustom, ModelMix, ModerationMix, MixModeration, MixAnthropic, MixKimi, MixMiniMax, MixMiMo, MixOpenAI, MixOpenAIResponses, MixOpenAIModeration, MixOpenAIWebSocket, MixOpenRouter, MixPerplexity, MixOllama, MixLambda, MixLMStudio, MixGroq, MixTogether, MixGrok, MixCerebras, MixGoogle, MixFireworks, MixNVIDIA, normalizeEffort, applyUnifiedEffort, resolveProviderFamily };

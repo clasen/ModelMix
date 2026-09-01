@@ -67,13 +67,12 @@ describe('Qwen Model Registration Tests', () => {
         })).to.equal(4.08576);
     });
 
-    it('should register Fireworks Qwen 3.8 Max before the OpenRouter fallback by default', () => {
+    it('should register only Fireworks Qwen 3.8 Max by default', () => {
         const model = ModelMix.new();
         model.qwen38max();
 
         expect(model.models.map(({ key }) => key)).to.deep.equal([
-            'accounts/fireworks/models/qwen3p8-2p4t-a95b',
-            'qwen/qwen3.8-max'
+            'accounts/fireworks/models/qwen3p8-2p4t-a95b'
         ]);
         expect(ModelMix.calculateCost('accounts/fireworks/models/qwen3p8-2p4t-a95b', {
             input: 1_000_000,

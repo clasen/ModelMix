@@ -321,32 +321,47 @@ describe('Token Usage Tracking', () => {
     });
 
     it('should register GPT-5.5 shortcuts with OpenAI Responses provider', function () {
-        const model = ModelMix.new()
+        const model = ModelMix.new({ mix: { openrouter: true } })
             .gpt55()
             .gpt55pro();
 
-        expect(model.models).to.have.length(2);
-        expect(model.models[0].key).to.equal('gpt-5.5');
-        expect(model.models[1].key).to.equal('gpt-5.5-pro');
+        expect(model.models.map(({ key }) => key)).to.deep.equal([
+            'gpt-5.5',
+            'openai/gpt-5.5',
+            'gpt-5.5-pro',
+            'openai/gpt-5.5-pro'
+        ]);
         expect(model.models[0].provider).to.be.instanceOf(MixOpenAIResponses);
-        expect(model.models[1].provider).to.be.instanceOf(MixOpenAIResponses);
+        expect(model.models[1].provider).to.be.instanceOf(MixOpenRouter);
+        expect(model.models[2].provider).to.be.instanceOf(MixOpenAIResponses);
+        expect(model.models[3].provider).to.be.instanceOf(MixOpenRouter);
     });
 
     it('should register GPT-5.6 shortcuts with OpenAI Responses provider', function () {
-        const model = ModelMix.new()
+        const model = ModelMix.new({ mix: { openrouter: true } })
             .gpt56sol()
             .gpt56terra()
             .gpt56luna();
 
         expect(model.models.map(({ key }) => key)).to.deep.equal([
             'gpt-5.6-sol',
+            'openai/gpt-5.6-sol',
             'gpt-5.6-terra',
-            'gpt-5.6-luna'
+            'openai/gpt-5.6-terra',
+            'gpt-5.6-luna',
+            'openai/gpt-5.6-luna'
         ]);
-        expect(model.models.every(({ provider }) => provider instanceof MixOpenAIResponses)).to.equal(true);
+        expect(model.models[0].provider).to.be.instanceOf(MixOpenAIResponses);
+        expect(model.models[1].provider).to.be.instanceOf(MixOpenRouter);
+        expect(model.models[2].provider).to.be.instanceOf(MixOpenAIResponses);
+        expect(model.models[3].provider).to.be.instanceOf(MixOpenRouter);
+        expect(model.models[4].provider).to.be.instanceOf(MixOpenAIResponses);
+        expect(model.models[5].provider).to.be.instanceOf(MixOpenRouter);
         expect(ModelMix.calculateCost('gpt-5.6-sol', { input: 1_000_000, output: 1_000_000 })).to.equal(55);
+        expect(ModelMix.calculateCost('openai/gpt-5.6-sol', { input: 1_000_000, output: 1_000_000 })).to.equal(55);
         expect(ModelMix.calculateCost('gpt-5.6-terra', { input: 1_000_000, output: 1_000_000 })).to.equal(22);
         expect(ModelMix.calculateCost('gpt-5.6-luna', { input: 1_000_000, output: 1_000_000 })).to.equal(2.2);
+        expect(ModelMix.calculateCost('openai/gpt-5.3-chat', { input: 1_000_000, output: 1_000_000 })).to.equal(15.75);
     });
 
     it('should calculate GPT-5.6 cache reads and writes at their actual rates', function () {

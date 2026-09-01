@@ -3,7 +3,14 @@ const sinon = require('sinon');
 const nock = require('nock');
 const { EventEmitter } = require('events');
 const Module = require('module');
-const { MixCustom, MixGoogle, ModelMix } = require('../index.js');
+const {
+    MixCustom,
+    MixGoogle,
+    MixOpenAI,
+    MixOpenAIResponses,
+    MixOpenRouter,
+    ModelMix
+} = require('../index.js');
 
 describe('Provider Fallback Chain Tests', () => {
     
@@ -45,6 +52,99 @@ describe('Provider Fallback Chain Tests', () => {
             expect(model.config.effort).to.equal(60);
             expect(model.models[0].provider.config).to.not.have.property('effort');
             expect(model.models[1].provider.config.effort).to.equal(20);
+        });
+
+        it('should register every supported OpenAI text shortcut with its OpenRouter fallback', () => {
+            expect(ModelMix.new().mix.openrouter).to.equal(false);
+            const shortcuts = [
+                ['gpt5', 'gpt-5', 'openai/gpt-5', MixOpenAI],
+                ['gpt5mini', 'gpt-5-mini', 'openai/gpt-5-mini', MixOpenAI],
+                ['gpt5nano', 'gpt-5-nano', 'openai/gpt-5-nano', MixOpenAI],
+                ['gpt51', 'gpt-5.1', 'openai/gpt-5.1', MixOpenAIResponses],
+                ['gpt52', 'gpt-5.2', 'openai/gpt-5.2', MixOpenAIResponses],
+                ['gpt53codex', 'gpt-5.3-codex', 'openai/gpt-5.3-codex', MixOpenAIResponses],
+                ['gpt53chat', 'gpt-5.3-chat-latest', 'openai/gpt-5.3-chat', MixOpenAIResponses],
+                ['gpt54', 'gpt-5.4', 'openai/gpt-5.4', MixOpenAIResponses],
+                ['gpt54mini', 'gpt-5.4-mini', 'openai/gpt-5.4-mini', MixOpenAIResponses],
+                ['gpt54nano', 'gpt-5.4-nano', 'openai/gpt-5.4-nano', MixOpenAIResponses],
+                ['gpt54pro', 'gpt-5.4-pro', 'openai/gpt-5.4-pro', MixOpenAIResponses],
+                ['gpt55', 'gpt-5.5', 'openai/gpt-5.5', MixOpenAIResponses],
+                ['gpt55pro', 'gpt-5.5-pro', 'openai/gpt-5.5-pro', MixOpenAIResponses],
+                ['gpt56sol', 'gpt-5.6-sol', 'openai/gpt-5.6-sol', MixOpenAIResponses],
+                ['gpt56terra', 'gpt-5.6-terra', 'openai/gpt-5.6-terra', MixOpenAIResponses],
+                ['gpt56luna', 'gpt-5.6-luna', 'openai/gpt-5.6-luna', MixOpenAIResponses]
+            ];
+
+            for (const [shortcut, officialKey, openRouterKey, OfficialProvider] of shortcuts) {
+                const official = ModelMix.new()[shortcut]();
+                expect(official.models.map(({ key }) => key)).to.deep.equal([officialKey]);
+                expect(official.models[0].provider).to.be.instanceOf(OfficialProvider);
+
+                const routed = ModelMix.new()[shortcut]({ mix: { openrouter: true } });
+                expect(routed.models.map(({ key }) => key)).to.deep.equal([officialKey, openRouterKey]);
+                expect(routed.models[0].provider).to.be.instanceOf(OfficialProvider);
+                expect(routed.models[1].provider).to.be.instanceOf(MixOpenRouter);
+
+                const globallyRouted = ModelMix.new({ mix: { openrouter: true } })[shortcut]();
+                expect(globallyRouted.models.map(({ key }) => key)).to.deep.equal([officialKey, openRouterKey]);
+            }
+
+            const locallyDisabled = ModelMix.new({ mix: { openrouter: true } })
+                .gpt56sol({ mix: { openrouter: false } });
+            expect(locallyDisabled.models.map(({ key }) => key)).to.deep.equal(['gpt-5.6-sol']);
+
+            const inherited = ModelMix.new({ mix: { openrouter: true } }).new().gpt5();
+            expect(inherited.models.map(({ key }) => key)).to.deep.equal([
+                'gpt-5',
+                'openai/gpt-5'
+            ]);
+        });
+
+        it('should append OpenRouter GPT fallbacks in chain() only when enabled globally', () => {
+            const official = ModelMix.new().chain('gpt56sol@100');
+            expect(official.models.map(({ key }) => key)).to.deep.equal(['gpt-5.6-sol']);
+
+            const routed = ModelMix.new({ mix: { openrouter: true } }).chain('gpt56sol@100');
+            expect(routed.models.map(({ key }) => key)).to.deep.equal([
+                'gpt-5.6-sol',
+                'openai/gpt-5.6-sol'
+            ]);
+            expect(routed.models.map(({ provider }) => provider.config.effort)).to.deep.equal([100, 100]);
+        });
+
+        it('should fallback from the official GPT-5.6 Sol endpoint to OpenRouter', async () => {
+            let openRouterRequest;
+            model.gpt56sol({ mix: { openrouter: true } }).addText('Hello');
+
+            nock('https://api.openai.com')
+                .post('/v1/responses')
+                .reply(503, { error: 'Service unavailable' });
+
+            nock('https://openrouter.ai')
+                .post('/api/v1/chat/completions', body => {
+                    openRouterRequest = body;
+                    return true;
+                })
+                .reply(200, {
+                    choices: [{
+                        message: {
+                            role: 'assistant',
+                            content: 'Hello from GPT-5.6 Sol through OpenRouter!'
+                        }
+                    }]
+                });
+
+            expect(await model.message()).to.equal('Hello from GPT-5.6 Sol through OpenRouter!');
+            expect(openRouterRequest.model).to.equal('openai/gpt-5.6-sol');
+            expect(openRouterRequest.max_completion_tokens).to.equal(8192);
+            expect(openRouterRequest).to.not.have.property('temperature');
+        });
+
+        it('should keep the default fable51 chain on Anthropic', () => {
+            model.chain('fable51@80');
+
+            expect(model.models.map(({ key }) => key)).to.deep.equal(['claude-fable-5-1']);
+            expect(model.models[0].provider.config.effort).to.equal(80);
         });
 
         it('should reject invalid chains before attaching any model', () => {
