@@ -573,6 +573,9 @@ class ModelMix {
     gemini31pro({ options = {}, config = {} } = {}) {
         return this.attach('gemini-3.1-pro-preview', new MixGoogle({ options, config }));
     }    
+    gemini38flash({ options = {}, config = {} } = {}) {
+        return this.attach('gemini-3.8-flash', new MixGoogle({ options, config }));
+    }
     gemini37flash({ options = {}, config = {} } = {}) {
         return this.attach('gemini-3.7-flash', new MixGoogle({ options, config }));
     }

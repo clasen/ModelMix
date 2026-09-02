@@ -12,9 +12,9 @@ const mmix = new ModelMix({
     }
 });
 
-// Using Gemini 3.7 Flash with the built-in method
-console.log("\n" + '--------| gemini37flash() |--------');
-const flash = await mmix.gemini37flash()
+// Using Gemini 3.8 Flash with the built-in method
+console.log("\n" + '--------| gemini38flash() |--------');
+const flash = await mmix.gemini38flash()
     .addText('Hi there! Do you like cats?')
     .message();
 

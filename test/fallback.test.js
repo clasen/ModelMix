@@ -34,12 +34,12 @@ describe('Provider Fallback Chain Tests', () => {
         });
 
         it('should attach chain shortcuts from arguments with optional per-model effort', () => {
-            model.chain('sonnet5', 'gpt56luna@20', 'gemini37flash@-1');
+            model.chain('sonnet5', 'gpt56luna@20', 'gemini38flash@-1');
 
             expect(model.models.map(({ key }) => key)).to.deep.equal([
                 'claude-sonnet-5',
                 'gpt-5.6-luna',
-                'gemini-3.7-flash'
+                'gemini-3.8-flash'
             ]);
             expect(model.models[0].provider.config).to.not.have.property('effort');
             expect(model.models[1].provider.config.effort).to.equal(20);

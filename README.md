@@ -88,7 +88,7 @@ const setup = {
 const model = await ModelMix.new(setup)
     .sonnet5() // (main model) Anthropic claude-sonnet-5
     .gpt56luna() // (fallback 2) OpenAI gpt-5.6-luna
-    .gemini37flash() // (fallback 3) Google gemini-3.7-flash
+    .gemini38flash() // (fallback 3) Google gemini-3.8-flash
     .grok46() // (fallback 4) Grok grok-4.6
     .addText("What's your name?");
 
@@ -122,7 +122,7 @@ has no configured effort:
 
 ```javascript
 const model = ModelMix.new(setup)
-    .chain('sonnet5', 'gpt56luna@20', 'gemini37flash@-1')
+    .chain('sonnet5', 'gpt56luna@20', 'gemini38flash@-1')
     .addText("What's your name?");
 
 console.log(await model.message());
@@ -185,6 +185,7 @@ ModelMix provides convenient shorthand methods for quickly accessing different A
 | `sonnet46()` | Anthropic | claude-sonnet-4-6 | [\$3.00][2] | [\$15.00][2] |
 | `haiku45()` | Anthropic | claude-haiku-4-5-20251001 | [\$1.00][2] | [\$5.00][2] |
 | `gemini31pro()` | Google | gemini-3.1-pro-preview | [\$2.00][3] | [\$12.00][3] |
+| `gemini38flash()` | Google | gemini-3.8-flash | [\$0.75][3] | [\$3.75][3] |
 | `gemini37flash()` | Google | gemini-3.7-flash | [\$0.75][3] | [\$3.75][3] |
 | `gemini36flash()` | Google | gemini-3.6-flash | [\$0.75][3] | [\$3.75][3] |
 | `gemini35flash()` | Google | gemini-3.5-flash | [\$0.75][3] | [\$4.50][3] |
@@ -220,7 +221,7 @@ ModelMix provides convenient shorthand methods for quickly accessing different A
 | `kimiK25()` | Together | Kimi-K2.5 | [\$0.50][7] | [\$2.80][7] |
 | `kimiK26()` | Fireworks | models/kimi-k2p6 | [\$0.95][10] | [\$4.00][10] |
 
-Gemini 3.7 Flash and 3.6 Flash use Google's introductory standard pricing through December 31, 2026; standard rates double on January 1, 2027.
+Gemini 3.8 Flash, 3.7 Flash, and 3.6 Flash use Google's introductory standard pricing through December 31, 2026; standard rates double on January 1, 2027.
 
 `museGlimmer30b()` uses Fireworks by default. OpenRouter, NVIDIA NIM, and Together are available through `mix.openrouter`, `mix.nvidia`, and `mix.together`.
 
@@ -291,7 +292,7 @@ ModelMix.new().effort(-1).minimaxM3().addText('...').message();
 
 ### Provider-specific behavior
 
-- **Gemini:** Gemini 3+ uses bands 0–24 / 25–49 / 50–74 / 75–100. Gemini 3.7 Flash clamps these bands to `low` / `low` / `medium` / `high`; `-1` leaves its native `medium` default unchanged. Gemini 2.5 maps 0–100 to `thinkingBudget`.
+- **Gemini:** Gemini 3+ uses bands 0–24 / 25–49 / 50–74 / 75–100. Gemini 3.8 Flash and 3.7 Flash clamp these bands to `low` / `low` / `medium` / `high`; `-1` leaves their native `medium` default unchanged. Gemini 2.5 maps 0–100 to `thinkingBudget`.
 - **GPT-5.6:** `100` maps to `max`; 80–99 remains `xhigh`.
 - **Qwen 3.8 27B and Flash:** 0–39 / 40–79 / 80–100 map to `low` / `medium` / `xhigh`; `-1` leaves the native `xhigh` default unchanged. Qwen 3.8 Flash is the managed production version based on the open-weight Flash-Next architecture.
 - **GLM 5.3 and GLM 5.3 Flash:** reasoning is mandatory; 0–39 / 40–79 / 80–100 map to `low` / `high` / `max`; `-1` leaves the native `max` default unchanged.

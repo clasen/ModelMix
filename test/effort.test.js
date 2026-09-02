@@ -242,6 +242,19 @@ describe('Unified effort scale', () => {
             expect(mapEffort('google', -1, 'gemini-3.7-flash')).to.equal(null);
         });
 
+        it('clamps Gemini 3.8 Flash to low, medium, and high', () => {
+            expect(mapEffort('google', 0, 'gemini-3.8-flash')).to.deep.equal({
+                thinkingConfig: { thinkingLevel: 'low' }
+            });
+            expect(mapEffort('google', 50, 'gemini-3.8-flash')).to.deep.equal({
+                thinkingConfig: { thinkingLevel: 'medium' }
+            });
+            expect(mapEffort('google', 100, 'gemini-3.8-flash')).to.deep.equal({
+                thinkingConfig: { thinkingLevel: 'high' }
+            });
+            expect(mapEffort('google', -1, 'gemini-3.8-flash')).to.equal(null);
+        });
+
         it('clamps Gemini levels for models with fewer steps', () => {
             expect(mapEffort('google', 10, 'gemini-3-pro-preview')).to.deep.equal({
                 thinkingConfig: { thinkingLevel: 'low' }

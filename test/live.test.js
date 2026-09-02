@@ -59,7 +59,7 @@ describe('Live Integration Tests', function () {
         });
 
         it('should process images with Google Gemini', async function () {
-            const model = ModelMix.new(setup).gemini37flash();
+            const model = ModelMix.new(setup).gemini38flash();
 
             model.addImageFromUrl(blueSquareBase64)
                 .addText('What color is this image? Answer in one word only.');
@@ -120,7 +120,7 @@ describe('Live Integration Tests', function () {
         });
 
         it('should return structured JSON with Google Gemini', async function () {
-            const model = ModelMix.new(setup).gemini37flash();
+            const model = ModelMix.new(setup).gemini38flash();
 
             model.addText('Generate information about a fictional city.');
 

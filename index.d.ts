@@ -482,6 +482,7 @@ export declare class ModelMix {
 
   // Google
   gemini31pro(args?: ModelAttachArgs): this;
+  gemini38flash(args?: ModelAttachArgs): this;
   gemini37flash(args?: ModelAttachArgs): this;
   gemini36flash(args?: ModelAttachArgs): this;
   gemini35flash(args?: ModelAttachArgs): this;

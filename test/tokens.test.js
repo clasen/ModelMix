@@ -517,26 +517,29 @@ describe('Token Usage Tracking', () => {
 
     it('should register Gemini Flash shortcuts with Google provider', function () {
         const model = ModelMix.new()
+            .gemini38flash()
             .gemini37flash()
             .gemini36flash()
             .gemini35flash()
             .gemini35flashLite();
 
         expect(model.models.map(({ key }) => key)).to.deep.equal([
+            'gemini-3.8-flash',
             'gemini-3.7-flash',
             'gemini-3.6-flash',
             'gemini-3.5-flash',
             'gemini-3.5-flash-lite'
         ]);
         expect(model.models.every(({ provider }) => provider instanceof MixGoogle)).to.equal(true);
+        expect(ModelMix.calculateCost('gemini-3.8-flash', { input: 1_000_000, output: 1_000_000 })).to.equal(4.5);
         expect(ModelMix.calculateCost('gemini-3.7-flash', { input: 1_000_000, output: 1_000_000 })).to.equal(4.5);
         expect(ModelMix.calculateCost('gemini-3.6-flash', { input: 1_000_000, output: 1_000_000 })).to.equal(4.5);
         expect(ModelMix.calculateCost('gemini-3.5-flash', { input: 1_000_000, output: 1_000_000 })).to.equal(5.25);
         expect(ModelMix.calculateCost('gemini-3.5-flash-lite', { input: 1_000_000, output: 1_000_000 })).to.equal(2.8);
     });
 
-    it('should calculate Gemini 3.7 Flash cache reads at the introductory rate', function () {
-        expect(ModelMix.calculateCostBreakdown('gemini-3.7-flash', {
+    it('should calculate Gemini 3.8 Flash cache reads and thinking at the introductory rate', function () {
+        expect(ModelMix.calculateCostBreakdown('gemini-3.8-flash', {
             input: 1_000_000,
             output: 1_000_000,
             thinking: 500_000,
@@ -552,10 +555,10 @@ describe('Token Usage Tracking', () => {
         });
     });
 
-    it('should forward options and config through gemini37flash()', function () {
+    it('should forward options and config through gemini38flash()', function () {
         const options = { thinkingLevel: 'high' };
         const config = { max_history: 3 };
-        const model = ModelMix.new().gemini37flash({ options, config });
+        const model = ModelMix.new().gemini38flash({ options, config });
 
         expect(model.models[0].provider).to.be.instanceOf(MixGoogle);
         expect(model.models[0].provider.options).to.deep.equal(options);
@@ -687,7 +690,7 @@ describe('Token Usage Tracking', () => {
         this.timeout(30000);
 
         const model = ModelMix.new()
-            .gemini37flash()
+            .gemini38flash()
             .addText('Say hi');
 
         const result = await model.raw();
@@ -750,7 +753,7 @@ describe('Token Usage Tracking', () => {
         const providers = [
             { name: 'OpenAI', create: (m) => m.gpt56luna() },
             { name: 'Anthropic', create: (m) => m.haiku45() },
-            { name: 'Google', create: (m) => m.gemini37flash() }
+            { name: 'Google', create: (m) => m.gemini38flash() }
         ];
 
         for (const provider of providers) {

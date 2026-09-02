@@ -86,11 +86,11 @@ Chain shorthand methods to attach providers. First model is primary; others are 
 const model = ModelMix.new()
     .sonnet46()        // primary
     .gpt52()           // fallback 1
-    .gemini37flash()   // fallback 2
+    .gemini38flash()   // fallback 2
     .addText("Hello!")
 ```
 
-If `sonnet46` fails, it automatically tries `gpt52`, then `gemini37flash`.
+If `sonnet46` fails, it automatically tries `gpt52`, then `gemini38flash`.
 
 The equivalent `chain()` form accepts public shortcut names directly in the
 same order. Append `@effort` for a per-model unified effort override (`-1` or
@@ -99,7 +99,7 @@ provider default when no chain effort is configured:
 
 ```javascript
 const model = ModelMix.new()
-    .chain('sonnet46', 'gpt52@20', 'gemini37flash@-1')
+    .chain('sonnet46', 'gpt52@20', 'gemini38flash@-1')
     .addText('Hello!');
 ```
 
@@ -143,7 +143,7 @@ ModelMix.new({ config: { effort: 80 } })
 | DeepSeek V4 | off | `low`↑ | `high`↑ | `high`↑ | `max`↑ | — |
 | MiniMax M3 | off | adaptive | adaptive | adaptive | adaptive | adaptive |
 
-\* GPT-5.6 maps `100` to `max`; 80–99 remains `xhigh`. Qwen 3.8 27B and Flash map 0–39 / 40–79 / 80–100 to `low` / `medium` / `xhigh`; Qwen 3.8 Flash is the managed production version based on Flash-Next. GLM 5.3 and GLM 5.3 Flash require reasoning and map those bands to `low` / `high` / `max`. Gemini bands: 0–24 / 25–49 / 50–74 / 75–100. Gemini 3.7 Flash supports only `low` / `medium` / `high`, so the first two bands clamp to `low`; `-1` keeps its native `medium` default. DeepSeek `↑` = thinking on; `off` = thinking disabled. MiniMax `off`/`adaptive` = `thinking.disabled` / `thinking.type=adaptive`. Gemini 2.5 maps 0–100 to `thinkingBudget`. Anthropic: adaptive + `output_config.effort` on Claude 5 / Fable / Opus 4.6+ / Sonnet 4.6+; Sonnet 4.5 / Haiku 4.5 use `thinking.type=enabled` + `budget_tokens`. Grok 4.6 maps 0–39 / 40–59 / 60–79 / 80–100 to `low` / `medium` / `high` / `xhigh`; without effort it uses native `high`. `-1` = adaptive/dynamic when available, else no-op. Levels clamp per model. Former `*think()` methods are removed — use `.effort(n).<model>()`. Kimi: `kimiK25()` / `kimiK26()`. Grok 4.20: `.grok420()` non-reasoning; `.effort(20+|-1).grok420()` selects reasoning.
+\* GPT-5.6 maps `100` to `max`; 80–99 remains `xhigh`. Qwen 3.8 27B and Flash map 0–39 / 40–79 / 80–100 to `low` / `medium` / `xhigh`; Qwen 3.8 Flash is the managed production version based on Flash-Next. GLM 5.3 and GLM 5.3 Flash require reasoning and map those bands to `low` / `high` / `max`. Gemini bands: 0–24 / 25–49 / 50–74 / 75–100. Gemini 3.8 Flash and 3.7 Flash support only `low` / `medium` / `high`, so the first two bands clamp to `low`; `-1` keeps their native `medium` default. DeepSeek `↑` = thinking on; `off` = thinking disabled. MiniMax `off`/`adaptive` = `thinking.disabled` / `thinking.type=adaptive`. Gemini 2.5 maps 0–100 to `thinkingBudget`. Anthropic: adaptive + `output_config.effort` on Claude 5 / Fable / Opus 4.6+ / Sonnet 4.6+; Sonnet 4.5 / Haiku 4.5 use `thinking.type=enabled` + `budget_tokens`. Grok 4.6 maps 0–39 / 40–59 / 60–79 / 80–100 to `low` / `medium` / `high` / `xhigh`; without effort it uses native `high`. `-1` = adaptive/dynamic when available, else no-op. Levels clamp per model. Former `*think()` methods are removed — use `.effort(n).<model>()`. Kimi: `kimiK25()` / `kimiK26()`. Grok 4.20: `.grok420()` non-reasoning; `.effort(20+|-1).grok420()` selects reasoning.
 
 ## Available Model Shorthands
 
@@ -163,7 +163,7 @@ Use `.effort(n)` (or `config.effort`) to enable Anthropic thinking — e.g. `.ef
 `fable51()` registers `claude-fable-5-1` through Anthropic by default. Pass `mix: { openrouter: true }` to append `anthropic/claude-fable-5.1` as its fallback.
 
 ### Google
-`gemini31pro()` `gemini37flash()` `gemini36flash()` `gemini35flash()` `gemini35flashLite()` `gemini31flashLite()`
+`gemini31pro()` `gemini38flash()` `gemini37flash()` `gemini36flash()` `gemini35flash()` `gemini35flashLite()` `gemini31flashLite()`
 
 ### Grok
 `grok46()` `grok45()` `grok43()` `grok420multiAgent()` `grok420()`
@@ -485,7 +485,7 @@ Omit all weights for equal probabilities. Otherwise every option needs a positiv
 const pool = ModelMix.new({ config: { roundRobin: true } })
     .gpt5mini()
     .sonnet45()
-    .gemini37flash();
+    .gemini38flash();
 
 const r1 = await pool.new().addText("Request 1").message();
 const r2 = await pool.new().addText("Request 2").message();

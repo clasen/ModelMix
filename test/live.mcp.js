@@ -181,8 +181,8 @@ describe('Live MCP Integration Tests', function () {
             }
         });
 
-        it('should use custom MCP tools with Gemini 3.7 Flash', async function () {
-            const model = ModelMix.new(setup).gemini37flash();
+        it('should use custom MCP tools with Gemini 3.8 Flash', async function () {
+            const model = ModelMix.new(setup).gemini38flash();
 
             // Add password generator tool
             model.addTool({
@@ -220,7 +220,7 @@ describe('Live MCP Integration Tests', function () {
             model.addText('Generate a secure password of 16 characters with symbols.');
 
             const response = await model.message();
-            console.log(`Gemini 3.7 Flash with MCP tools: ${response}`);
+            console.log(`Gemini 3.8 Flash with MCP tools: ${response}`);
 
             expect(response).to.be.a('string');
             // Check password is mentioned and a generated password string is present
@@ -407,8 +407,8 @@ describe('Live MCP Integration Tests', function () {
             expect(result.factorial_result).to.equal(120);
         });
 
-        it('should use MCP tools with JSON output using Gemini 3.7 Flash', async function () {
-            const model = ModelMix.new(setup).gemini37flash();
+        it('should use MCP tools with JSON output using Gemini 3.8 Flash', async function () {
+            const model = ModelMix.new(setup).gemini38flash();
 
             // Add system info tool
             model.addTool({
@@ -447,7 +447,7 @@ describe('Live MCP Integration Tests', function () {
                 generated_at: ""
             });
 
-            console.log(`Gemini 3.7 Flash with MCP tools JSON result:`, result);
+            console.log(`Gemini 3.8 Flash with MCP tools JSON result:`, result);
 
             expect(result).to.be.an('object');
             expect(result.timestamp).to.be.a('number');
