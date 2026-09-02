@@ -197,7 +197,7 @@ ModelMix provides convenient shorthand methods for quickly accessing different A
 | `grok420multiAgent()` | Grok | grok-4.20-multi-agent-0309 | [\$1.25][6] | [\$2.50][6] |
 | `grok420()` | Grok | grok-4.20-0309 (†) | [\$1.25][6] | [\$2.50][6] |
 | `museGlimmer30b()` | Fireworks | models/muse-glimmer-30b | [\$0.35][17] | [\$1.50][17] |
-| `museSpark12Contributor()` | OpenRouter | meta/muse-spark-1.2-contributor | [\$0.10][22] | [\$0.20][22] |
+| `museSpark12()` | OpenRouter | meta/muse-spark-1.2-contributor | [\$0.10][22] | [\$0.20][22] |
 | `qwen35397b()` | OpenRouter | qwen/qwen3.5-397b-a17b | [\$0.385][14] | [\$2.45][14] |
 | `qwen36plus()` | OpenRouter | qwen/qwen3.6-plus | [\$0.325][18] | [\$1.95][18] |
 | `qwen37plus()` | Fireworks | models/qwen3p7-plus | [\$0.40][10] | [\$1.60][10] |

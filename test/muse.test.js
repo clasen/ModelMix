@@ -57,7 +57,7 @@ describe('Muse Model Registration Tests', () => {
     });
 
     it('registers Muse Spark 1.2 Contributor through OpenRouter', () => {
-        const model = ModelMix.new().museSpark12Contributor();
+        const model = ModelMix.new().museSpark12();
 
         expect(model.models).to.have.length(1);
         expect(model.models[0].key).to.equal('meta/muse-spark-1.2-contributor');
@@ -70,7 +70,7 @@ describe('Muse Model Registration Tests', () => {
     });
 
     it('supports Muse Spark 1.2 Contributor in chain()', () => {
-        const model = ModelMix.new().chain('museSpark12Contributor');
+        const model = ModelMix.new().chain('museSpark12');
 
         expect(model.models).to.have.length(1);
         expect(model.models[0].key).to.equal('meta/muse-spark-1.2-contributor');

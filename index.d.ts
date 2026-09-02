@@ -503,7 +503,7 @@ export declare class ModelMix {
 
   // Multi-provider
   museGlimmer30b(args?: ModelAttachArgs): this;
-  museSpark12Contributor(args?: ModelAttachArgs): this;
+  museSpark12(args?: ModelAttachArgs): this;
   qwen35397b(args?: ModelAttachArgs): this;
   qwen36plus(args?: ModelAttachArgs): this;
   qwen37plus(args?: ModelAttachArgs): this;

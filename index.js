@@ -624,7 +624,7 @@ class ModelMix {
         return this;
     }
 
-    museSpark12Contributor({ options = {}, config = {} } = {}) {
+    museSpark12({ options = {}, config = {} } = {}) {
         return this.attach('meta/muse-spark-1.2-contributor', new MixOpenRouter({ options, config }));
     }
 

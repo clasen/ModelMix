@@ -21,7 +21,7 @@ const mmix = await ModelMix.new(setup)
     .GLM53() // (fallback 10) OpenRouter z-ai/glm-5.3
     .GLM53Flash() // (fallback 11) OpenRouter z-ai/glm-5.3-flash
     .museGlimmer30b({ mix: { fireworks: false, openrouter: true } }) // (fallback 12) OpenRouter meta/muse-glimmer-30b
-    .museSpark12Contributor() // (fallback 13) OpenRouter meta/muse-spark-1.2-contributor
+    .museSpark12() // (fallback 13) OpenRouter meta/muse-spark-1.2-contributor
     .hermes470b() // (fallback 14) OpenRouter nousresearch/hermes-4-70b
     .hermes4405b() // (fallback 15) OpenRouter nousresearch/hermes-4-405b
     .addText("What's your name?");
