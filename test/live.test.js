@@ -181,7 +181,9 @@ describe('Live Integration Tests', function () {
     describe('Additional Model Tests', function () {
 
         it('should work with GPT-OSS model', async function () {
-            const model = ModelMix.new(setup).gptOss();
+            const model = ModelMix.new(setup).gptOss({
+                options: { max_tokens: 128 }
+            });
 
             model.addText('Say "gptoss test successful" and nothing else.');
 
@@ -241,8 +243,11 @@ describe('Live Integration Tests', function () {
 
     describe('JSON Structured Output for New Models', function () {
 
-        it('should return structured JSON with KimiK25 Thinking', async function () {
-            const model = ModelMix.new(setup).kimiK25();
+        it('should return structured JSON with Kimi K3', async function () {
+            const model = ModelMix.new(setup).kimiK3({
+                options: { max_tokens: 512 },
+                mix: { moonshot: false, together: true }
+            });
 
             model.addText('Generate information about a fictional vehicle.');
 
@@ -253,7 +258,7 @@ describe('Live Integration Tests', function () {
                 manufacturer: "Future Motors"
             });
 
-            console.log(`KimiK25 JSON result:`, result);
+            console.log(`Kimi K3 JSON result:`, result);
 
             expect(result).to.be.an('object');
             expect(result).to.have.property('name');
