@@ -36,14 +36,16 @@ class MCPToolsManager {
         }
     }
 
-    async executeTool(name, args) {
+    async executeTool(name, args, signal) {
         const callback = this.callbacks.get(name);
         if (!callback) {
             throw new Error(`Tool not found: ${name}`);
         }
 
         try {
-            const result = await callback(args);
+            signal?.throwIfAborted();
+            const result = await callback(args, signal);
+            signal?.throwIfAborted();
             // For primitive values (numbers, booleans), convert to string
             // For objects/arrays, stringify them
             let textResult;
@@ -62,6 +64,7 @@ class MCPToolsManager {
                 }]
             };
         } catch (error) {
+            signal?.throwIfAborted();
             log.error(`Error executing tool ${name}:`, error);
             return {
                 content: [{ 

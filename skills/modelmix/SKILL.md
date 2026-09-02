@@ -105,7 +105,7 @@ const model = ModelMix.new()
 
 ### Instance plugins
 
-Register middleware with `.use({ name, execute })`. Plugins are scoped to the instance, run in registration order, and receive the rendered provider-neutral request. They may edit `context.request`, call `next()`, or return a complete ModelMix result.
+Register middleware with `.use({ name, execute })`. Plugins are scoped to the instance, run in registration order, and receive the rendered provider-neutral request. They may edit `context.request`, call `next()`, or return a complete ModelMix result. `context.signal` is the current execution's `AbortSignal` and is inherited by `context.invoke()` children.
 
 ```javascript
 model.use({
@@ -331,6 +331,24 @@ const raw = await ModelMix.new()
     .raw();
 // raw.message, raw.think, raw.tokens, raw.toolCalls, raw.response
 ```
+
+### Cancel one execution
+
+Pass an `AbortSignal` directly to the terminal method:
+
+```javascript
+const controller = new AbortController();
+const pending = model.message(controller.signal);
+controller.abort(new Error('Request cancelled'));
+await pending;
+```
+
+The other forms are `raw(signal)`, `stream(callback, signal)`,
+`block(options, signal)`, and `json(example, description, jsonOptions, signal)`.
+For `execute()`, use the top-level `{ signal }` field. Never place `signal` in
+`config` or `options`; ModelMix rejects those reusable/payload-bearing locations.
+Plugins read `context.signal`, child invocations inherit it, and local tool
+callbacks receive it as their second argument.
 
 ### Access full response with lastRaw
 
@@ -614,12 +632,12 @@ const model = ModelMix.new({
 | `.assign({})` | `this` | Assign EJS template data |
 | `.assignKey(key, value)` | `this` | Assign one EJS template-data value |
 | `.assignKeyFromFile(key, path)` | `this` | Assign the rendered output of an EJS file to one key |
-| `.message()` | `Promise<string>` | Get text response |
-| `.json(example, desc?, opts?)` | `Promise<object\|array>` | Get structured JSON |
-| `.raw()` | `Promise<{message, think, toolCalls, tokens, response}>` | Full response |
+| `.message(signal?)` | `Promise<string>` | Get text response |
+| `.json(example, desc?, opts?, signal?)` | `Promise<object\|array>` | Get structured JSON |
+| `.raw(signal?)` | `Promise<{message, think, toolCalls, tokens, response}>` | Full response |
 | `.lastRaw` | `object \| null` | Full response from last call |
-| `.stream(callback)` | `Promise` | Stream response |
-| `.block({addSystemExtra?})` | `Promise<string>` | Extract code block from response |
+| `.stream(callback, signal?)` | `Promise` | Stream response |
+| `.block({addSystemExtra?}, signal?)` | `Promise<string>` | Extract code block from response |
 | `.addMCP(package)` | `Promise` | Add MCP server tools |
 | `.addTool(def, callback)` | `this` | Register custom local tool |
 | `.addTools([{tool, callback}])` | `this` | Register multiple tools |

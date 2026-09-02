@@ -21,7 +21,8 @@ function sandboxSource(code) {
 
 function createIsolatedVmSandbox() {
     return {
-        async execute({ code, variables, query, limits, timeoutMs }) {
+        async execute({ code, variables, query, limits, signal, timeoutMs }) {
+            signal?.throwIfAborted();
             if (limits.sandboxMemoryBytes < MINIMUM_ISOLATE_MEMORY_BYTES) {
                 throw new TypeError(
                     `limits.sandboxMemoryBytes must be at least ${MINIMUM_ISOLATE_MEMORY_BYTES}.`
@@ -35,6 +36,10 @@ function createIsolatedVmSandbox() {
                 timedOut = true;
                 if (!isolate.isDisposed) isolate.dispose();
             }, timeoutMs);
+            const onAbort = () => {
+                if (!isolate.isDisposed) isolate.dispose();
+            };
+            signal?.addEventListener('abort', onAbort, { once: true });
 
             try {
                 const context = await isolate.createContext();
@@ -68,6 +73,7 @@ function createIsolatedVmSandbox() {
                     timeout: timeoutMs
                 });
             } catch (error) {
+                signal?.throwIfAborted();
                 if (memoryError(error)) {
                     throw new RlmLimitError(
                         'sandboxMemoryBytes',
@@ -78,6 +84,7 @@ function createIsolatedVmSandbox() {
                 throw error;
             } finally {
                 clearTimeout(timeout);
+                signal?.removeEventListener('abort', onAbort);
                 if (!isolate.isDisposed) isolate.dispose();
             }
         }

@@ -159,6 +159,7 @@ export interface RlmSandbox {
       parentExecutionId: string | null;
       depth: number;
     };
+    signal?: AbortSignal;
     timeoutMs: number;
   }): Promise<unknown>;
 }

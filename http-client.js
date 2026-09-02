@@ -45,8 +45,8 @@ async function buildHttpError(url, response) {
     return error;
 }
 
-async function fetchJsonResponse(url, { method = 'POST', headers = {}, body } = {}) {
-    const response = await fetch(url, { method, headers, body });
+async function fetchJsonResponse(url, { method = 'POST', headers = {}, body, signal } = {}) {
+    const response = await fetch(url, { method, headers, body, signal });
     if (!response.ok) {
         throw await buildHttpError(url, response);
     }
@@ -58,8 +58,8 @@ async function fetchJsonResponse(url, { method = 'POST', headers = {}, body } = 
     };
 }
 
-async function fetchBinaryResponse(url, { method = 'GET', headers = {}, body } = {}) {
-    const response = await fetch(url, { method, headers, body });
+async function fetchBinaryResponse(url, { method = 'GET', headers = {}, body, signal } = {}) {
+    const response = await fetch(url, { method, headers, body, signal });
     if (!response.ok) {
         throw await buildHttpError(url, response);
     }
@@ -71,8 +71,8 @@ async function fetchBinaryResponse(url, { method = 'GET', headers = {}, body } =
     };
 }
 
-async function fetchStreamResponse(url, { method = 'POST', headers = {}, body } = {}) {
-    const response = await fetch(url, { method, headers, body });
+async function fetchStreamResponse(url, { method = 'POST', headers = {}, body, signal } = {}) {
+    const response = await fetch(url, { method, headers, body, signal });
     if (!response.ok) {
         throw await buildHttpError(url, response);
     }

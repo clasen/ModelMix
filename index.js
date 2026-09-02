@@ -12,6 +12,13 @@ const { Client } = require("@modelcontextprotocol/sdk/client/index.js");
 const { StdioClientTransport } = require("@modelcontextprotocol/sdk/client/stdio.js");
 const { MCPToolsManager } = require('./mcp-tools');
 const { fetchBinaryResponse } = require('./http-client');
+const {
+    assertAbortSignal,
+    assertNoStoredSignal,
+    raceWithSignal,
+    sleepWithSignal,
+    throwIfAborted
+} = require('./lib/abort-signal');
 const { isPlainObject } = require('./lib/object-utils');
 const { normalizeContentCache } = require('./lib/content-cache');
 const tokenUsage = require('./lib/token-usage');
@@ -59,10 +66,6 @@ function getErrorStatusCode(error) {
     return error?.statusCode ?? error?.response?.status ?? error?.response?.statusCode ?? null;
 }
 
-function sleep(ms) {
-    return new Promise(resolve => setTimeout(resolve, ms));
-}
-
 function clonePluginValue(value, seen = new WeakMap()) {
     if (value === null || typeof value !== 'object') return value;
     if (Buffer.isBuffer(value)) return Buffer.from(value);
@@ -96,6 +99,8 @@ function validatePluginResult(result, pluginName) {
 class ModelMix {
 
     constructor({ options = {}, config = {}, mix = {} } = {}) {
+        assertNoStoredSignal(options, 'options');
+        assertNoStoredSignal(config, 'config');
         this.models = [];
         this.messages = [];
         this.tools = {};
@@ -255,12 +260,15 @@ class ModelMix {
             : this.plugins.filter(plugin => !uniqueNames.has(plugin.name));
     }
 
-    async _invokeChild(input, parentExecution) {
+    async _invokeChild(input, parentExecution, signal) {
         if (!isPlainObject(input)) {
             throw new TypeError('Child invocation must be a plain object.');
         }
         if (input.history !== undefined && input.history !== false) {
             throw new TypeError('Child invocations currently require history: false.');
+        }
+        if (Object.prototype.hasOwnProperty.call(input, 'signal')) {
+            throw new TypeError('Child invocations inherit the parent AbortSignal and cannot override it.');
         }
 
         const {
@@ -276,6 +284,9 @@ class ModelMix {
             plugins = 'inherit',
             outputMode = 'raw'
         } = input;
+        assertNoStoredSignal(options, 'options');
+        assertNoStoredSignal(config, 'config');
+        throwIfAborted(signal);
         if (!Array.isArray(messages)) {
             throw new TypeError('Child invocation messages must be an array.');
         }
@@ -318,6 +329,7 @@ class ModelMix {
         };
         const result = await child.execute({
             outputMode,
+            signal,
             _executionMetadata: execution
         });
         return { ...result, execution };
@@ -420,6 +432,9 @@ class ModelMix {
     }
 
     attach(key, provider) {
+
+        assertNoStoredSignal(provider?.options, 'provider.options');
+        assertNoStoredSignal(provider?.config, 'provider.config');
 
         if (this.models.some(model => model.key === key
             && model.provider.constructor === provider.constructor)) {
@@ -862,21 +877,25 @@ class ModelMix {
         return this._addImageSource(source, { role, cache });
     }
 
-    async processImages() {
-        for (let i = 0; i < this.messages.length; i++) {
-            const message = this.messages[i];
+    async processImages(signal) {
+        assertAbortSignal(signal);
+        const preparedContent = [];
+        for (const message of this.messages) {
             if (!Array.isArray(message.content)) continue;
+            const nextContent = [];
 
-            for (let j = 0; j < message.content.length; j++) {
-                const content = message.content[j];
-                if (content.type !== 'image' || content.source.type === 'base64') continue;
+            for (const content of message.content) {
+                if (content.type !== 'image' || content.source.type === 'base64') {
+                    nextContent.push(content);
+                    continue;
+                }
 
                 try {
                     let buffer, mimeType;
 
                     switch (content.source.type) {
                         case 'url':
-                            const response = await fetchBinaryResponse(content.source.data);
+                            const response = await fetchBinaryResponse(content.source.data, { signal });
                             buffer = response.data;
                             mimeType = response.headers['content-type'];
                             break;
@@ -890,6 +909,8 @@ class ModelMix {
                             break;
                     }
 
+                    throwIfAborted(signal);
+
                     // Detect mimeType if not provided
                     if (!mimeType) {
                         if (typeof detectFileTypeFromBuffer !== 'function') {
@@ -902,32 +923,33 @@ class ModelMix {
                         mimeType = detectedType.mime;
                     }
 
-                    // Update the content with processed image
-                    message.content[j] = {
+                    nextContent.push({
                         ...content,
                         source: {
                             type: "base64",
                             media_type: mimeType,
                             data: buffer.toString('base64')
                         }
-                    };
+                    });
 
                 } catch (error) {
+                    throwIfAborted(signal);
                     console.error(`Error processing image:`, error);
-                    // Remove failed image from content
-                    message.content.splice(j, 1);
-                    j--;
                 }
             }
+            preparedContent.push({ message, content: nextContent });
         }
+        throwIfAborted(signal);
+        for (const prepared of preparedContent) prepared.message.content = prepared.content;
     }
 
-    async message() {
-        let raw = await this.execute({ options: { stream: false }, outputMode: 'message' });
+    async message(signal) {
+        let raw = await this.execute({ options: { stream: false }, outputMode: 'message', signal });
         return raw.message;
     }
 
-    async json(schemaExample = null, schemaDescription = {}, { type = 'json_object', addExample = false, addSchema = true, addNote = false } = {}) {
+    async json(schemaExample = null, schemaDescription = {}, { type = 'json_object', addExample = false, addSchema = true, addNote = false } = {}, signal) {
+        assertAbortSignal(signal);
 
         let isArrayWrap = false;
         if (Array.isArray(schemaExample)) {
@@ -959,7 +981,7 @@ class ModelMix {
                 systemSuffix += "\n\nOutput JSON Escape: double quotes, backslashes, and control characters inside JSON strings.\nEnsure the output contains no comments.";
             }
         }
-        const { message } = await this.execute({ options, config, systemSuffix, outputMode: 'json' });
+        const { message } = await this.execute({ options, config, systemSuffix, outputMode: 'json', signal });
         const parsed = JSON.parse(this._extractBlock(message));
         return isArrayWrap ? parsed.out : parsed;
     }
@@ -969,25 +991,28 @@ class ModelMix {
         return block ? block[1].trim() : response.trim();
     }
 
-    async block({ addSystemExtra = true } = {}) {
+    async block({ addSystemExtra = true } = {}, signal) {
+        assertAbortSignal(signal);
         const systemSuffix = addSystemExtra
             ? "\nReturn the result of the task between triple backtick block code tags ```"
             : '';
         const { message } = await this.execute({
             options: { stream: false },
             systemSuffix,
-            outputMode: 'block'
+            outputMode: 'block',
+            signal
         });
         return this._extractBlock(message);
     }
 
-    async raw() {
-        return this.execute({ options: { stream: false }, outputMode: 'raw' });
+    async raw(signal) {
+        return this.execute({ options: { stream: false }, outputMode: 'raw', signal });
     }
 
-    async stream(callback) {
+    async stream(callback, signal) {
+        assertAbortSignal(signal);
         this.streamCallback = callback;
-        return this.execute({ options: { stream: true }, outputMode: 'stream' });
+        return this.execute({ options: { stream: true }, outputMode: 'stream', signal });
     }
 
     assignKeyFromFile(key, filePath) {
@@ -1144,8 +1169,8 @@ class ModelMix {
         }
     }
 
-    async prepareMessages(renderContext = createTemplateRenderContext(() => this._choiceRandom())) {
-        await this.processImages();
+    async prepareMessages(renderContext = createTemplateRenderContext(() => this._choiceRandom()), signal) {
+        await this.processImages(signal);
 
         let messages = this.messages;
 
@@ -1237,13 +1262,13 @@ class ModelMix {
     async _executePlugins({
         config,
         options,
+        signal,
         systemSuffix,
         outputMode,
         templateContext,
-        executionMetadata,
-        isRootExecution
+        executionMetadata
     }) {
-        const preparedMessages = await this.prepareMessages(templateContext);
+        const preparedMessages = await this.prepareMessages(templateContext, signal);
         this._requirePreparedMessages(preparedMessages);
 
         const request = {
@@ -1266,6 +1291,7 @@ class ModelMix {
                 return this.execute({
                     config,
                     options,
+                    signal,
                     systemSuffix,
                     outputMode,
                     _templateContext: templateContext,
@@ -1275,6 +1301,7 @@ class ModelMix {
                 });
             }
 
+            throwIfAborted(signal);
             const plugin = this.plugins[index];
             let nextCalled = false;
             const next = () => {
@@ -1287,9 +1314,11 @@ class ModelMix {
             const context = {
                 request,
                 execution: Object.freeze({ ...metadata }),
-                invoke: input => this._invokeChild(input, metadata)
+                signal,
+                invoke: input => this._invokeChild(input, metadata, signal)
             };
             const result = await plugin.execute(context, next);
+            throwIfAborted(signal);
             return validatePluginResult(result, plugin.name);
         };
 
@@ -1302,7 +1331,6 @@ class ModelMix {
                 this._addText(result.message, { role: 'assistant' });
             }
         }
-        if (isRootExecution) this._commitTemplateRenderContext(templateContext);
         return result;
     }
 
@@ -1349,6 +1377,8 @@ class ModelMix {
         currentConfig.system = pluginRequest
             ? pluginRequest.system
             : this._renderSystem(config, provider.config, systemSuffix, templateContext);
+        assertNoStoredSignal(currentOptions, 'options');
+        assertNoStoredSignal(currentConfig, 'config');
 
         const resolvedModelKey = resolveGrok420ModelKey(
             currentModel.key,
@@ -1385,7 +1415,7 @@ class ModelMix {
         }
     }
 
-    async _invokeProviderWithRetry(provider, currentOptions, currentConfig, resolvedModelKey) {
+    async _invokeProviderWithRetry(provider, currentOptions, currentConfig, resolvedModelKey, signal) {
         if (currentOptions.stream && this.streamCallback) {
             provider.streamCallback = this.streamCallback;
         }
@@ -1404,9 +1434,12 @@ class ModelMix {
         while (true) {
             const startTime = Date.now();
             try {
-                const result = await provider.create({ options: currentOptions, config: currentConfig });
+                throwIfAborted(signal);
+                const result = await provider.create({ options: currentOptions, config: currentConfig, signal });
+                throwIfAborted(signal);
                 return { result, elapsedMs: Date.now() - startTime };
             } catch (error) {
+                throwIfAborted(signal);
                 const statusCode = getErrorStatusCode(error);
                 if (attempt >= retries || !retryableStatusCodes.has(statusCode)) throw error;
 
@@ -1414,7 +1447,7 @@ class ModelMix {
                     console.log(`↺ Retrying [${resolvedModelKey}] due to status ${statusCode} (${attempt + 2}/${retries + 1})`);
                 }
                 const delay = Math.min(baseDelayMs * Math.pow(2, attempt), maxDelayMs);
-                await sleep(delay);
+                await sleepWithSignal(delay, signal);
                 attempt += 1;
             }
         }
@@ -1438,9 +1471,10 @@ class ModelMix {
     }
 
     async _continueToolCalls(result, pluginRequest, execution) {
+        const originalMessages = this.messages;
         const toolMessages = pluginRequest
             ? clonePluginValue(pluginRequest.messages)
-            : this.messages;
+            : clonePluginValue(this.messages);
         if (result.assistantMessage) {
             toolMessages.push(result.assistantMessage);
         } else if (result.message) {
@@ -1464,7 +1498,7 @@ class ModelMix {
         if (!result.assistantMessage) {
             toolMessages.push({ role: 'assistant', content: null, tool_calls: result.toolCalls });
         }
-        const toolResults = await this.processToolCalls(result.toolCalls);
+        const toolResults = await this.processToolCalls(result.toolCalls, execution.signal);
         for (const toolResult of toolResults) {
             toolMessages.push({
                 role: 'tool',
@@ -1475,12 +1509,17 @@ class ModelMix {
         }
         this.messages = toolMessages;
 
-        return this.execute({
-            ...execution,
-            _pluginRequest: pluginRequest
-                ? { ...pluginRequest, messages: toolMessages }
-                : null
-        });
+        try {
+            return await this.execute({
+                ...execution,
+                _pluginRequest: pluginRequest
+                    ? { ...pluginRequest, messages: toolMessages }
+                    : null
+            });
+        } catch (error) {
+            if (execution.signal?.aborted) this.messages = originalMessages;
+            throw error;
+        }
     }
 
     _logProviderSuccess(result, currentConfig) {
@@ -1555,6 +1594,7 @@ class ModelMix {
     async _executeProviderChain({
         config,
         options,
+        signal,
         systemSuffix,
         outputMode,
         templateContext,
@@ -1564,7 +1604,7 @@ class ModelMix {
     }) {
         const preparedMessages = pluginRequest
             ? pluginRequest.messages
-            : await this.prepareMessages(templateContext);
+            : await this.prepareMessages(templateContext, signal);
         this._requirePreparedMessages(preparedMessages);
 
         const finalConfig = pluginRequest ? pluginRequest.config : this._mergeRequestConfig(config);
@@ -1598,7 +1638,8 @@ class ModelMix {
                     providerAttempt.provider,
                     providerAttempt.currentOptions,
                     providerAttempt.currentConfig,
-                    providerAttempt.resolvedModelKey
+                    providerAttempt.resolvedModelKey,
+                    signal
                 );
                 this._enrichResultTokens(result, providerAttempt.resolvedModelKey, elapsedMs);
 
@@ -1606,6 +1647,7 @@ class ModelMix {
                     return this._continueToolCalls(result, pluginRequest, {
                         options,
                         config,
+                        signal,
                         systemSuffix,
                         outputMode,
                         _templateContext: templateContext,
@@ -1618,6 +1660,7 @@ class ModelMix {
                 this._recordProviderResult(result);
                 return result;
             } catch (error) {
+                throwIfAborted(signal);
                 lastError = error;
                 this._logProviderFailure(error, currentModel.key, attempt, modelsToTry);
             }
@@ -1630,6 +1673,7 @@ class ModelMix {
     async execute({
         config = {},
         options = {},
+        signal,
         systemSuffix = '',
         outputMode = 'raw',
         _templateContext = null,
@@ -1637,43 +1681,56 @@ class ModelMix {
         _executionMetadata = null,
         _pluginsApplied = false
     } = {}) {
+        assertAbortSignal(signal);
+        assertNoStoredSignal(this.config, 'config');
+        assertNoStoredSignal(this.options, 'options');
+        assertNoStoredSignal(config, 'config');
+        assertNoStoredSignal(options, 'options');
+        for (const model of this.models) {
+            assertNoStoredSignal(model.provider?.config, 'provider.config');
+            assertNoStoredSignal(model.provider?.options, 'provider.options');
+        }
         const isRootExecution = _templateContext === null;
         const templateContext = _templateContext || createTemplateRenderContext(() => this._choiceRandom());
+        let execution;
 
         if (!_pluginsApplied && this.plugins.length > 0) {
-            return this._executePlugins({
+            execution = this._executePlugins({
                 config,
                 options,
+                signal,
                 systemSuffix,
                 outputMode,
                 templateContext,
-                executionMetadata: _executionMetadata,
-                isRootExecution
+                executionMetadata: _executionMetadata
+            });
+        } else {
+            if (!this.models || this.models.length === 0) {
+                throw new Error('No models specified. Use methods like .gpt5(), .sonnet46() first.');
+            }
+            execution = this.limiter.schedule(() => {
+                throwIfAborted(signal);
+                return this._executeProviderChain({
+                    config,
+                    options,
+                    signal,
+                    systemSuffix,
+                    outputMode,
+                    templateContext,
+                    pluginRequest: _pluginRequest,
+                    executionMetadata: _executionMetadata,
+                    pluginsApplied: _pluginsApplied
+                });
             });
         }
 
-        if (!this.models || this.models.length === 0) {
-            throw new Error('No models specified. Use methods like .gpt5(), .sonnet46() first.');
-        }
-
-        const execution = this.limiter.schedule(() => this._executeProviderChain({
-            config,
-            options,
-            systemSuffix,
-            outputMode,
-            templateContext,
-            pluginRequest: _pluginRequest,
-            executionMetadata: _executionMetadata,
-            pluginsApplied: _pluginsApplied
-        }));
-
-        if (!isRootExecution) return execution;
-
-        const result = await execution;
-        this._commitTemplateRenderContext(templateContext);
+        const result = await raceWithSignal(execution, signal);
+        throwIfAborted(signal);
+        if (isRootExecution) this._commitTemplateRenderContext(templateContext);
         return result;
     }
-    async processToolCalls(toolCalls) {
+    async processToolCalls(toolCalls, signal) {
+        assertAbortSignal(signal);
         const result = []
 
         for (const toolCall of toolCalls) {
@@ -1706,7 +1763,8 @@ class ModelMix {
 
                 // Verificar si es una herramienta local registrada
                 if (this.mcpToolsManager.hasTool(toolName)) {
-                    const response = await this.mcpToolsManager.executeTool(toolName, toolArgs);
+                    const response = await this.mcpToolsManager.executeTool(toolName, toolArgs, signal);
+                    throwIfAborted(signal);
                     result.push({
                         name: toolName,
                         tool_call_id: toolId,
@@ -1722,7 +1780,8 @@ class ModelMix {
                     const response = await client.callTool({
                         name: toolName,
                         arguments: toolArgs
-                    });
+                    }, undefined, signal ? { signal } : undefined);
+                    throwIfAborted(signal);
 
                     result.push({
                         name: toolName,
@@ -1731,6 +1790,7 @@ class ModelMix {
                     });
                 }
             } catch (error) {
+                throwIfAborted(signal);
                 console.error(`Error processing tool call ${toolName}:`, error);
                 result.push({
                     name: toolName || 'unknown',

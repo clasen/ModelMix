@@ -13,7 +13,7 @@ const { isPlainObject } = require('./validation');
 
 function validateSandbox(sandbox) {
     if (!sandbox || typeof sandbox !== 'object' || typeof sandbox.execute !== 'function') {
-        throw new TypeError('sandbox must define execute({ code, variables, query, limits }).');
+        throw new TypeError('sandbox must define execute({ code, variables, query, limits, signal }).');
     }
     return sandbox;
 }
@@ -91,9 +91,11 @@ function executionInput(context, configuredVariables) {
     };
 }
 
-function runWithTimeout(operation, timeoutMs) {
+function runWithTimeout(operation, timeoutMs, signal) {
+    signal?.throwIfAborted();
     let timeout;
-    return Promise.race([
+    let onAbort;
+    const promises = [
         operation(),
         new Promise((_, reject) => {
             timeout = setTimeout(() => reject(new RlmLimitError(
@@ -101,7 +103,17 @@ function runWithTimeout(operation, timeoutMs) {
                 'RLM wall-time limit exceeded.'
             )), timeoutMs);
         })
-    ]).finally(() => clearTimeout(timeout));
+    ];
+    if (signal) {
+        promises.push(new Promise((_, reject) => {
+            onAbort = () => reject(signal.reason);
+            signal.addEventListener('abort', onAbort, { once: true });
+        }));
+    }
+    return Promise.race(promises).finally(() => {
+        clearTimeout(timeout);
+        if (onAbort) signal.removeEventListener('abort', onAbort);
+    });
 }
 
 function rlm({ maxDepth, variables = {}, documents, workers, limits, sandbox } = {}) {
@@ -122,6 +134,7 @@ function rlm({ maxDepth, variables = {}, documents, workers, limits, sandbox } =
     return {
         name: 'rlm',
         async execute(context) {
+            context.signal?.throwIfAborted();
             if (context.request.outputMode === 'stream') {
                 throw new Error('RLM streaming is not supported; use a buffered output mode.');
             }
@@ -145,6 +158,7 @@ function rlm({ maxDepth, variables = {}, documents, workers, limits, sandbox } =
                         outputSchema: context.request.config.schema || null
                     })
                 ));
+                context.signal?.throwIfAborted();
                 state.record('planner', plannerResult, {
                     worker: null,
                     elapsedMs: Date.now() - plannerStartedAt
@@ -167,10 +181,13 @@ function rlm({ maxDepth, variables = {}, documents, workers, limits, sandbox } =
                         query,
                         limits: validatedLimits,
                         execution: context.execution,
+                        signal: context.signal,
                         timeoutMs
                     }),
-                    timeoutMs
+                    timeoutMs,
+                    context.signal
                 );
+                context.signal?.throwIfAborted();
                 const message = serializeResult(value);
                 state.budget.accountFinalOutput(message);
                 return {
@@ -179,6 +196,7 @@ function rlm({ maxDepth, variables = {}, documents, workers, limits, sandbox } =
                     rlm: state.diagnostics(context.execution)
                 };
             } catch (error) {
+                context.signal?.throwIfAborted();
                 error.rlm = state.diagnostics(
                     context.execution,
                     error.limit ? `limit:${error.limit}` : 'error'

@@ -95,6 +95,26 @@ const model = await ModelMix.new(setup)
 console.log(await model.message());
 ```
 
+**Cancel one execution with AbortSignal**
+
+Pass the signal directly to the terminal method. ModelMix propagates it through
+queued work, retries, fallbacks, provider transports, plugins, child executions,
+and tool calls:
+
+```javascript
+const controller = new AbortController();
+const response = model.message(controller.signal);
+
+controller.abort(new Error('Request cancelled'));
+await response;
+```
+
+Use `raw(signal)`, `stream(callback, signal)`, `block(options, signal)`, or
+`json(example, description, jsonOptions, signal)` for the other output modes.
+`execute()` accepts it as the top-level `signal` field. Never put a signal in
+ModelMix or provider `config`/`options`; those locations are rejected because
+they are reusable and may become provider payload fields.
+
 The same ordered chain can be attached by passing model shortcuts directly to
 `chain()`. Add `@effort` to override unified effort for one model; entries
 without it inherit the chain effort, or use the provider default when the chain
@@ -939,7 +959,7 @@ const model = ModelMix.new()
     .addText('Summarize this request.');
 ```
 
-A plugin may edit `context.request`, call `next()`, or return a complete ModelMix result itself. It can also create history-free child executions with `context.invoke()` and choose plugin inheritance:
+A plugin may edit `context.request`, call `next()`, or return a complete ModelMix result itself. The current execution signal is available as `context.signal`, and child executions created with `context.invoke()` inherit it automatically. Local tool callbacks receive the same signal as their second argument. A plugin can also choose plugin inheritance:
 
 ```javascript
 const child = await context.invoke({
@@ -1050,8 +1070,8 @@ new ModelMix(args = { options: {}, config: {} })
 - `assign(keyValues)`: Assigns EJS data for messages and system prompts.
 - `assignKey(key, value)`: Assigns one EJS data value.
 - `assignKeyFromFile(key, filePath)`: Renders an EJS file through `include` and assigns its output to one key.
-- `message()`: Sends the message and returns the response.
-- `raw()`: Sends the message and returns the complete response data including:
+- `message(signal?)`: Sends the message and returns the response.
+- `raw(signal?)`: Sends the message and returns the complete response data including:
   - `message`: The text response from the model
   - `think`: Reasoning/thinking content (if available)
   - `toolCalls`: Array of tool calls made by the model (if any)
@@ -1069,8 +1089,8 @@ new ModelMix(args = { options: {}, config: {} })
 
   if (profile.flagged) throw new Error('Profile rejected by moderation');
   ```
-- `stream(callback)`: Sends the message and streams the response, invoking the callback with each streamed part.
-- `json(schemaExample, descriptions = {}, options = {})`: Forces the model to return a response in a specific JSON format.
+- `stream(callback, signal?)`: Sends the message and streams the response, invoking the callback with each streamed part.
+- `json(schemaExample, descriptions = {}, options = {}, signal?)`: Forces the model to return a response in a specific JSON format.
   - `schemaExample`: Example of the JSON structure to be returned. Top-level arrays are auto-wrapped for better LLM compatibility.
   - `descriptions`: Descriptions for each field — can be strings or descriptor objects with `{ description, required, enum, default }`.
   - `options`: `{ addSchema: true, addExample: false, addNote: false }`

@@ -259,6 +259,7 @@ export interface PluginExecutionContext {
     outputMode: ModelMixOutputMode;
   };
   execution: Readonly<PluginExecutionMetadata>;
+  signal?: AbortSignal;
   invoke(input: ChildInvocation): Promise<ModelMixResult>;
 }
 
@@ -312,7 +313,8 @@ export interface ToolDefinition {
 }
 
 export type ToolCallback = (
-  args: Record<string, unknown>
+  args: Record<string, unknown>,
+  signal?: AbortSignal
 ) => unknown | Promise<unknown>;
 
 export interface ToolWithCallback {
@@ -343,6 +345,7 @@ export interface ProviderConstructorArgs {
 export interface CreateArgs {
   config?: ModelMixConfig;
   options?: ModelMixOptions;
+  signal?: AbortSignal;
   outputMode?: ModelMixOutputMode;
 }
 
@@ -533,15 +536,16 @@ export declare class ModelMix {
   addImageFromUrl(url: string, options?: RoleOptions): Promise<this>;
   processImages(): Promise<void>;
 
-  message(): Promise<string>;
+  message(signal?: AbortSignal): Promise<string>;
   json<T = unknown>(
     schemaExample?: T | T[] | null,
     schemaDescription?: SchemaDescription,
-    options?: JsonMethodOptions
+    options?: JsonMethodOptions,
+    signal?: AbortSignal
   ): Promise<T>;
-  block(options?: BlockOptions): Promise<string>;
-  raw(): Promise<ModelMixResult>;
-  stream(callback: StreamCallback): Promise<ModelMixResult>;
+  block(options?: BlockOptions, signal?: AbortSignal): Promise<string>;
+  raw(signal?: AbortSignal): Promise<ModelMixResult>;
+  stream(callback: StreamCallback, signal?: AbortSignal): Promise<ModelMixResult>;
 
   assignKeyFromFile(key: string, filePath: string): this;
   groupByRoles(messages: ChatMessage[]): ChatMessage[];

@@ -69,6 +69,29 @@ describe('RLM isolated-vm sandbox', () => {
         expect(failure.limit).to.equal('maxWallTimeMs');
     });
 
+    it('disposes an in-flight isolate and preserves the abort reason', async () => {
+        const controller = new AbortController();
+        const reason = new Error('stop sandbox');
+        const execution = createIsolatedVmSandbox().execute({
+            code: '(async () => { while (true) {} })()',
+            variables: {},
+            query: async () => '',
+            limits: limits(),
+            signal: controller.signal,
+            timeoutMs: 1000
+        });
+
+        setTimeout(() => controller.abort(reason), 20);
+
+        let failure;
+        try {
+            await execution;
+        } catch (error) {
+            failure = error;
+        }
+        expect(failure).to.equal(reason);
+    });
+
     it('rejects memory limits below the isolated-vm minimum', async () => {
         let failure;
         try {
