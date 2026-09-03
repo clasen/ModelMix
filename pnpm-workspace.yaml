@@ -6,16 +6,18 @@ allowBuilds:
 
 minimumReleaseAgeExclude:
   - ws@8.21.0
-  - fast-uri@3.1.5
+  - fast-uri@3.1.6
   - hono@4.12.34
   - ip-address@10.3.1
   - js-yaml@4.3.1
   - brace-expansion@5.0.9
+  - qs@6.16.0
 overrides:
   brace-expansion: 5.0.9
   diff: 8.0.4
-  fast-uri: 3.1.5
+  fast-uri: 3.1.6
   hono: 4.12.34
   ip-address: 10.3.1
   js-yaml: 4.3.1
+  qs: 6.16.0
   serialize-javascript: 7.0.5
