@@ -190,7 +190,9 @@ Use `.effort(n)` (or `config.effort`) to enable Anthropic thinking — e.g. `.ef
 `GLM46()`
 
 ### OpenRouter
-`museGlimmer30b()` `museSpark12()` `gptOss()` `qwen35397b()` `qwen36plus()` `qwen37plus()` `qwen3827b()` `qwen38flash()` `hermes470b()` `hermes4405b()` `qwen38max()` `kimiK27Code()` `kimiK3()` `minimaxM27()` `minimaxM3()` `GLM45()` `GLM52()` `GLM53()` `GLM53Flash()`
+`museGlimmer30b()` `museSpark12()` `museSpark12c()` `museSpark13()` `museSpark13c()` `gptOss()` `qwen35397b()` `qwen36plus()` `qwen37plus()` `qwen3827b()` `qwen38flash()` `hermes470b()` `hermes4405b()` `qwen38max()` `kimiK27Code()` `kimiK3()` `minimaxM27()` `minimaxM3()` `GLM45()` `GLM52()` `GLM53()` `GLM53Flash()`
+
+Muse Spark: the `c` suffix selects Contributor, where prompts and outputs may be used to improve Meta products. Without `c`, the standard tier is selected. Use `museSpark12c()` for the former `museSpark12()` Contributor behavior.
 
 ### Multi-provider (auto-fallback across free/paid tiers)
 `hermes3()` `kimiK25()`

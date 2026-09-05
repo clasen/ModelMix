@@ -625,7 +625,19 @@ class ModelMix {
     }
 
     museSpark12({ options = {}, config = {} } = {}) {
+        return this.attach('meta/muse-spark-1.2', new MixOpenRouter({ options, config }));
+    }
+
+    museSpark12c({ options = {}, config = {} } = {}) {
         return this.attach('meta/muse-spark-1.2-contributor', new MixOpenRouter({ options, config }));
+    }
+
+    museSpark13({ options = {}, config = {} } = {}) {
+        return this.attach('meta/muse-spark-1.3', new MixOpenRouter({ options, config }));
+    }
+
+    museSpark13c({ options = {}, config = {} } = {}) {
+        return this.attach('meta/muse-spark-1.3-contributor', new MixOpenRouter({ options, config }));
     }
 
     qwen35397b({ options = {}, config = {} } = {}) {

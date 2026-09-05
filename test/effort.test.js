@@ -135,14 +135,18 @@ describe('Unified effort scale', () => {
             });
         });
 
-        it('maps Muse Spark 1.2 Contributor to every supported reasoning level', () => {
-            const key = 'meta/muse-spark-1.2-contributor';
-            expect(mapEffort('openai', 0, key)).to.deep.equal({ reasoning_effort: 'minimal' });
-            expect(mapEffort('openai', 20, key)).to.deep.equal({ reasoning_effort: 'low' });
-            expect(mapEffort('openai', 40, key)).to.deep.equal({ reasoning_effort: 'medium' });
-            expect(mapEffort('openai', 60, key)).to.deep.equal({ reasoning_effort: 'high' });
-            expect(mapEffort('openai', 80, key)).to.deep.equal({ reasoning_effort: 'xhigh' });
-            expect(mapEffort('openai', -1, key)).to.equal(null);
+        it('maps every Muse Spark variant to supported reasoning levels', () => {
+            for (const key of [
+                'meta/muse-spark-1.2', 'meta/muse-spark-1.2-contributor',
+                'meta/muse-spark-1.3', 'meta/muse-spark-1.3-contributor'
+            ]) {
+                expect(mapEffort('openai', 0, key)).to.deep.equal({ reasoning_effort: 'minimal' });
+                expect(mapEffort('openai', 20, key)).to.deep.equal({ reasoning_effort: 'low' });
+                expect(mapEffort('openai', 40, key)).to.deep.equal({ reasoning_effort: 'medium' });
+                expect(mapEffort('openai', 60, key)).to.deep.equal({ reasoning_effort: 'high' });
+                expect(mapEffort('openai', 80, key)).to.deep.equal({ reasoning_effort: 'xhigh' });
+                expect(mapEffort('openai', -1, key)).to.equal(null);
+            }
         });
 
         it('maps Qwen 3.8 27B to its supported reasoning levels', () => {

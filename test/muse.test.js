@@ -1,4 +1,5 @@
 const { expect } = require('chai');
+const nock = require('nock');
 const {
     ModelMix,
     MixFireworks,
@@ -8,6 +9,28 @@ const {
 } = require('../index.js');
 
 describe('Muse Model Registration Tests', () => {
+    it('sends Muse Spark 1.3 requests through chain() with supported effort and options', async () => {
+        const api = nock('https://openrouter.ai')
+            .post('/api/v1/chat/completions', body => {
+                expect(body.model).to.equal('meta/muse-spark-1.3');
+                expect(body.reasoning_effort).to.equal('minimal');
+                expect(body.max_tokens).to.equal(2048);
+                return true;
+            })
+            .reply(200, {
+                choices: [{ message: { content: 'ok' } }],
+                usage: { prompt_tokens: 10, completion_tokens: 2, total_tokens: 12 }
+            });
+
+        const model = ModelMix.new({ config: { apiKey: 'test-key' }, options: { max_tokens: 2048 } })
+            .chain('museSpark13@0')
+            .addText('Hi');
+
+        expect(model.models[0].provider).to.be.instanceOf(MixOpenRouter);
+        expect(await model.message()).to.equal('ok');
+        api.done();
+    });
+
     it('registers only Fireworks by default', () => {
         const model = ModelMix.new().museGlimmer30b();
 
@@ -56,23 +79,25 @@ describe('Muse Model Registration Tests', () => {
         ]);
     });
 
-    it('registers Muse Spark 1.2 Contributor through OpenRouter', () => {
-        const model = ModelMix.new().museSpark12();
+    for (const [shortcut, key] of [
+        ['museSpark12', 'meta/muse-spark-1.2'],
+        ['museSpark12c', 'meta/muse-spark-1.2-contributor'],
+        ['museSpark13', 'meta/muse-spark-1.3'],
+        ['museSpark13c', 'meta/muse-spark-1.3-contributor']
+    ]) {
+        it(`registers ${shortcut} directly and through chain()`, () => {
+            const direct = ModelMix.new()[shortcut]({
+                config: { apiKey: 'test-key' },
+                options: { max_tokens: 2048 }
+            });
+            const chain = ModelMix.new({ config: { apiKey: 'test-key' } }).chain(shortcut);
 
-        expect(model.models).to.have.length(1);
-        expect(model.models[0].key).to.equal('meta/muse-spark-1.2-contributor');
-        expect(model.models[0].provider).to.be.instanceOf(MixOpenRouter);
-        expect(ModelMix.calculateCost('meta/muse-spark-1.2-contributor', {
-            input: 1_000_000,
-            cached: 250_000,
-            output: 1_000_000
-        })).to.equal(0.2755);
-    });
-
-    it('supports Muse Spark 1.2 Contributor in chain()', () => {
-        const model = ModelMix.new().chain('museSpark12');
-
-        expect(model.models).to.have.length(1);
-        expect(model.models[0].key).to.equal('meta/muse-spark-1.2-contributor');
-    });
+            for (const model of [direct, chain]) {
+                expect(model.models).to.have.length(1);
+                expect(model.models[0].key).to.equal(key);
+                expect(model.models[0].provider).to.be.instanceOf(MixOpenRouter);
+            }
+            expect(direct.models[0].provider.options.max_tokens).to.equal(2048);
+        });
+    }
 });

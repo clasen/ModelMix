@@ -197,7 +197,10 @@ ModelMix provides convenient shorthand methods for quickly accessing different A
 | `grok420multiAgent()` | Grok | grok-4.20-multi-agent-0309 | [\$1.25][6] | [\$2.50][6] |
 | `grok420()` | Grok | grok-4.20-0309 (†) | [\$1.25][6] | [\$2.50][6] |
 | `museGlimmer30b()` | Fireworks | models/muse-glimmer-30b | [\$0.35][17] | [\$1.50][17] |
-| `museSpark12()` | OpenRouter | meta/muse-spark-1.2-contributor | [\$0.10][22] | [\$0.20][22] |
+| `museSpark12()` | OpenRouter | meta/muse-spark-1.2 | [\$1.25][25] | [\$4.25][25] |
+| `museSpark12c()` | OpenRouter | meta/muse-spark-1.2-contributor | [\$0.10][22] | [\$0.20][22] |
+| `museSpark13()` | OpenRouter | meta/muse-spark-1.3 | [\$1.25][24] | [\$4.25][24] |
+| `museSpark13c()` | OpenRouter | meta/muse-spark-1.3-contributor | [\$0.10][26] | [\$0.20][26] |
 | `qwen35397b()` | OpenRouter | qwen/qwen3.5-397b-a17b | [\$0.385][14] | [\$2.45][14] |
 | `qwen36plus()` | OpenRouter | qwen/qwen3.6-plus | [\$0.325][18] | [\$1.95][18] |
 | `qwen37plus()` | Fireworks | models/qwen3p7-plus | [\$0.40][10] | [\$1.60][10] |
@@ -254,6 +257,12 @@ OpenRouter fallbacks are disabled globally by default and are appended only with
 [21]: https://openrouter.ai/anthropic/claude-fable-5.1 "Claude Fable 5.1 on OpenRouter"
 [22]: https://openrouter.ai/meta/muse-spark-1.2-contributor "Muse Spark 1.2 Contributor on OpenRouter"
 [23]: https://openrouter.ai/openai "OpenAI Models on OpenRouter"
+[24]: https://openrouter.ai/meta/muse-spark-1.3 "Muse Spark 1.3 on OpenRouter"
+
+[25]: https://openrouter.ai/meta/muse-spark-1.2 "Muse Spark 1.2 on OpenRouter"
+[26]: https://openrouter.ai/meta/muse-spark-1.3-contributor "Muse Spark 1.3 Contributor on OpenRouter"
+
+Muse Spark methods ending in `c` select Contributor: prompts and outputs may be used to improve Meta products. Methods without `c` select the standard tier. `museSpark12()` now selects standard; use `museSpark12c()` for the previous Contributor behavior.
 
 Each method accepts optional `options`, `config`, and (for multi-provider methods) `mix` parameters to customize behavior.  
 
