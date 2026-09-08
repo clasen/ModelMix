@@ -337,6 +337,14 @@ describe('Token Usage Tracking', () => {
         expect(model.models[3].provider).to.be.instanceOf(MixOpenRouter);
     });
 
+    it('should account for Astra cache usage and the long-context boundary', function () {
+        for (const key of ['gpt-6-astra', 'openai/gpt-6-astra']) {
+            const tokens = { input: 272_000, cached: 100_000, cacheWrite: 20_000, output: 1_000 };
+            expect(ModelMix.calculateCost(key, tokens)).to.be.closeTo(1.92, 1e-10);
+            expect(ModelMix.calculateCost(key, { ...tokens, input: 272_001 })).to.be.closeTo(3.81502, 1e-10);
+        }
+    });
+
     it('should register GPT-5.6 shortcuts with OpenAI Responses provider', function () {
         const model = ModelMix.new({ mix: { openrouter: true } })
             .gpt56sol()

@@ -73,6 +73,15 @@ describe('Unified effort scale', () => {
             expect(mapEffort('openai', 100)).to.deep.equal({ reasoning_effort: 'xhigh' });
         });
 
+        it('clamps GPT-6 Astra effort to its supported range', () => {
+            for (const key of ['gpt-6-astra', 'openai/gpt-6-astra']) {
+                for (const [effort, level] of [[0, 'low'], [39, 'low'], [40, 'medium'], [60, 'high'], [80, 'xhigh'], [99, 'xhigh'], [100, 'max']]) {
+                    expect(mapEffort('openai', effort, key)).to.deep.equal({ reasoning_effort: level });
+                }
+                expect(mapEffort('openai', -1, key)).to.equal(null);
+            }
+        });
+
         it('maps GPT-5.6 maximum unified effort to max', () => {
             expect(mapEffort('openai', 99, 'gpt-5.6-luna')).to.deep.equal({ reasoning_effort: 'xhigh' });
             for (const model of ['gpt-5.6-sol', 'gpt-5.6-terra', 'gpt-5.6-luna']) {

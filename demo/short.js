@@ -27,6 +27,7 @@ const mmix = await ModelMix.new(setup)
     .museSpark13() // (fallback 16) OpenRouter meta/muse-spark-1.3
     .museSpark12() // (fallback 17) OpenRouter meta/muse-spark-1.2
     .museSpark13c() // (fallback 18) OpenRouter meta/muse-spark-1.3-contributor
+    .gpt6astra() // (fallback 19) OpenAI gpt-6-astra
     .addText("What's your name?");
 
 console.log(await mmix.message());

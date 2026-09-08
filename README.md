@@ -158,6 +158,7 @@ ModelMix provides convenient shorthand methods for quickly accessing different A
 
 | Method | Provider | Model | Input / 1M | Output / 1M |
 | --- | --- | --- | ---: | ---: |
+| `gpt6astra()` | OpenAI | gpt-6-astra | [\$10.00][1] | [\$50.00][1] |
 | `gpt56sol()` | OpenAI | gpt-5.6-sol | [\$5.00][1] | [\$30.00][1] |
 | `gpt56terra()` | OpenAI | gpt-5.6-terra | [\$2.00][1] | [\$12.00][1] |
 | `gpt56luna()` | OpenAI | gpt-5.6-luna | [\$0.20][1] | [\$1.20][1] |
@@ -230,7 +231,7 @@ Gemini 3.8 Flash, 3.7 Flash, and 3.6 Flash use Google's introductory standard pr
 
 `fable51()` uses the official Anthropic API by default (`claude-fable-5-1`). Pass `mix: { openrouter: true }` to append [`anthropic/claude-fable-5.1`][21] as its fallback.
 
-Every textual GPT-5 shortcut in the table uses the official OpenAI API by default. Pass `mix: { openrouter: true }` to `ModelMix.new()` or to an individual shortcut to append the matching [`openai/*` OpenRouter route][23] as its fallback. `gpt53chat()` maps the official `gpt-5.3-chat-latest` alias to `openai/gpt-5.3-chat`. Realtime shortcuts remain official-only because they use OpenAI's WebSocket transport.
+Every textual GPT-5 and GPT-6 shortcut in the table uses the official OpenAI API by default. Pass `mix: { openrouter: true }` to `ModelMix.new()` or to an individual shortcut to append the matching [`openai/*` OpenRouter route][23] as its fallback. `gpt53chat()` maps the official `gpt-5.3-chat-latest` alias to `openai/gpt-5.3-chat`. Realtime shortcuts remain official-only because they use OpenAI's WebSocket transport.
 
 OpenRouter fallbacks are disabled globally by default and are appended only with `mix.openrouter: true`. Shortcuts whose primary provider is OpenRouter, such as `qwen36plus()`, are unaffected. The multi-provider shortcuts also expose the current catalog alternatives: `gptOss()` supports NVIDIA and Fireworks; `qwen37plus()` supports Together; `kimiK27Code()` supports Fireworks and OpenRouter; `kimiK3()` supports Fireworks, OpenRouter, and Together; `GLM52()` supports Fireworks and OpenRouter; and both MiniMax shortcuts support Fireworks. `minimaxM27()` keeps every explicitly enabled provider in its fallback chain.
 
@@ -302,6 +303,7 @@ ModelMix.new().effort(-1).minimaxM3().addText('...').message();
 ### Provider-specific behavior
 
 - **Gemini:** Gemini 3+ uses bands 0–24 / 25–49 / 50–74 / 75–100. Gemini 3.8 Flash and 3.7 Flash clamp these bands to `low` / `low` / `medium` / `high`; `-1` leaves their native `medium` default unchanged. Gemini 2.5 maps 0–100 to `thinkingBudget`.
+- **GPT-6 Astra:** 0–39 maps to `low`, 40–59 to `medium`, 60–79 to `high`, 80–99 to `xhigh`, and 100 to `max`. [Model details](https://developers.openai.com/api/docs/models/gpt-6-astra). Cache reads cost $1.00 and cache writes $12.50 per 1M tokens; requests over 272K input tokens apply 2× input/cache and 1.5× output rates.
 - **GPT-5.6:** `100` maps to `max`; 80–99 remains `xhigh`.
 - **Qwen 3.8 27B and Flash:** 0–39 / 40–79 / 80–100 map to `low` / `medium` / `xhigh`; `-1` leaves the native `xhigh` default unchanged. Qwen 3.8 Flash is the managed production version based on the open-weight Flash-Next architecture.
 - **GLM 5.3 and GLM 5.3 Flash:** reasoning is mandatory; 0–39 / 40–79 / 80–100 map to `low` / `high` / `max`; `-1` leaves the native `max` default unchanged.

@@ -57,6 +57,7 @@ describe('Provider Fallback Chain Tests', () => {
         it('should register every supported OpenAI text shortcut with its OpenRouter fallback', () => {
             expect(ModelMix.new().mix.openrouter).to.equal(false);
             const shortcuts = [
+                ['gpt6astra', 'gpt-6-astra', 'openai/gpt-6-astra', MixOpenAIResponses],
                 ['gpt5', 'gpt-5', 'openai/gpt-5', MixOpenAI],
                 ['gpt5mini', 'gpt-5-mini', 'openai/gpt-5-mini', MixOpenAI],
                 ['gpt5nano', 'gpt-5-nano', 'openai/gpt-5-nano', MixOpenAI],
@@ -101,13 +102,13 @@ describe('Provider Fallback Chain Tests', () => {
         });
 
         it('should append OpenRouter GPT fallbacks in chain() only when enabled globally', () => {
-            const official = ModelMix.new().chain('gpt56sol@100');
-            expect(official.models.map(({ key }) => key)).to.deep.equal(['gpt-5.6-sol']);
+            const official = ModelMix.new().chain('gpt6astra@100');
+            expect(official.models.map(({ key }) => key)).to.deep.equal(['gpt-6-astra']);
 
-            const routed = ModelMix.new({ mix: { openrouter: true } }).chain('gpt56sol@100');
+            const routed = ModelMix.new({ mix: { openrouter: true } }).chain('gpt6astra@100');
             expect(routed.models.map(({ key }) => key)).to.deep.equal([
-                'gpt-5.6-sol',
-                'openai/gpt-5.6-sol'
+                'gpt-6-astra',
+                'openai/gpt-6-astra'
             ]);
             expect(routed.models.map(({ provider }) => provider.config.effort)).to.deep.equal([100, 100]);
         });
@@ -136,6 +137,40 @@ describe('Provider Fallback Chain Tests', () => {
 
             expect(await model.message()).to.equal('Hello from GPT-5.6 Sol through OpenRouter!');
             expect(openRouterRequest.model).to.equal('openai/gpt-5.6-sol');
+            expect(openRouterRequest.max_completion_tokens).to.equal(8192);
+            expect(openRouterRequest).to.not.have.property('temperature');
+        });
+
+        it('should fallback from the official GPT-6 Astra endpoint to OpenRouter', async () => {
+            let openRouterRequest;
+            model.effort(100).gpt6astra({ mix: { openrouter: true } }).addText('Hello');
+
+            nock('https://api.openai.com')
+                .post('/v1/responses', body => {
+                    expect(body.model).to.equal('gpt-6-astra');
+                    expect(body.reasoning).to.deep.equal({ effort: 'max' });
+                    expect(body.max_output_tokens).to.equal(8192);
+                    expect(body).to.not.have.property('temperature');
+                    return true;
+                })
+                .reply(503, { error: 'Service unavailable' });
+
+            nock('https://openrouter.ai')
+                .post('/api/v1/chat/completions', body => {
+                    openRouterRequest = body;
+                    return true;
+                })
+                .reply(200, {
+                    choices: [{
+                        message: {
+                            role: 'assistant',
+                            content: 'Hello from GPT-6 Astra through OpenRouter!'
+                        }
+                    }]
+                });
+
+            expect(await model.message()).to.equal('Hello from GPT-6 Astra through OpenRouter!');
+            expect(openRouterRequest.model).to.equal('openai/gpt-6-astra');
             expect(openRouterRequest.max_completion_tokens).to.equal(8192);
             expect(openRouterRequest).to.not.have.property('temperature');
         });
