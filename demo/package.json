@@ -6,6 +6,8 @@
   "main": "index.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
+    "benchmark": "node benchmark.js",
+    "benchmark:template-engine": "node benchmark.js prompts/template-engine.txt",
     "rlm-basic": "node rlm-basic.js",
     "rlm-simple": "node rlm-simple.js",
     "repl-powers": "node repl-powers.js"

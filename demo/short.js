@@ -28,6 +28,8 @@ const mmix = await ModelMix.new(setup)
     .museSpark12() // (fallback 17) OpenRouter meta/muse-spark-1.2
     .museSpark13c() // (fallback 18) OpenRouter meta/muse-spark-1.3-contributor
     .gpt6astra() // (fallback 19) OpenAI gpt-6-astra
+    .deepseekV41Flash({ mix: { deepseek: true, fireworks: true, openrouter: true } }) // (fallback 20 + provider fallback) DeepSeek/Fireworks/OpenRouter V4.1 Flash
+    .deepseekPro() // (fallback 21) OpenRouter ~deepseek/deepseek-pro-latest
     .addText("What's your name?");
 
 console.log(await mmix.message());

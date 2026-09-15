@@ -125,6 +125,7 @@ const PROVIDER_FAMILY_BY_CLASS = {
     MixKimi: 'openai',
     MixMiniMax: 'openai',
     MixMiMo: 'openai',
+    MixDeepSeek: 'openai',
     MixGrok: 'openai',
     MixGroq: 'openai',
     MixTogether: 'openai',
@@ -232,7 +233,8 @@ function isGemini25(modelKey) {
 function isDeepSeekV4(modelKey) {
     if (typeof modelKey !== 'string') return false;
     const key = modelKey.toLowerCase();
-    return key.includes('deepseek-v4') || key.includes('deepseek_v4');
+    return key === 'deepseek-flash' || key === '~deepseek/deepseek-pro-latest'
+        || key.includes('deepseek-v4') || key.includes('deepseek_v4');
 }
 
 function isMiniMax(modelKey) {

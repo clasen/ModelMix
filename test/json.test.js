@@ -17,6 +17,34 @@ describe('JSON Schema and Structured Output Tests', () => {
         sinon.restore();
     });
 
+    describe('JSON response formatting', () => {
+        for (const suffix of ['', '```', '\n```\n']) {
+            it(`preserves embedded Markdown with trailing delimiter ${JSON.stringify(suffix)}`, async () => {
+                const value = { text: 'Use ```text\ncontent\n``` here.' };
+                const message = JSON.stringify(value) + suffix;
+                const mix = ModelMix.new();
+                const result = { message };
+                sinon.stub(mix, 'execute').resolves(result);
+                expect(await mix.json()).to.deep.equal(value);
+                expect(result.message).to.equal(message);
+            });
+        }
+
+        for (const message of ['{"ok":true} explanation```', '{"ok":true}{"other":true}```', '{"ok"":true}```']) {
+            it(`rejects invalid content even with a closing delimiter: ${message}`, async () => {
+                const mix = ModelMix.new();
+                sinon.stub(mix, 'execute').resolves({ message });
+                let failure;
+                try {
+                    await mix.json();
+                } catch (error) {
+                    failure = error;
+                }
+                expect(failure).to.be.instanceOf(SyntaxError);
+            });
+        }
+    });
+
     describe('JSON Schema Generation', () => {
         it('should generate schema for simple object', () => {
             const example = {

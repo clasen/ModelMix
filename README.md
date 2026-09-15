@@ -53,6 +53,7 @@ OPENAI_API_KEY="sk-proj-..."
 OPENROUTER_API_KEY="sk-or-..."
 MOONSHOT_API_KEY="your-moonshot-key..."
 MINIMAX_API_KEY="your-minimax-key..."
+DEEPSEEK_API_KEY="your-deepseek-key..."
 NVIDIA_API_KEY="nvapi-..."
 ...
 GEMINI_API_KEY="AIza..."
@@ -209,7 +210,9 @@ ModelMix provides convenient shorthand methods for quickly accessing different A
 | `qwen3827b()` | OpenRouter | qwen/qwen3.8-27b | [\$0.45][15] | [\$3.20][15] |
 | `qwen38flash()` | OpenRouter | qwen/qwen3.8-flash | [\$0.16][19] | [\$0.47][19] |
 | `deepseekV4Flash()` | Fireworks | models/deepseek-v4-flash | [\$0.14][10] | [\$0.28][10] |
+| `deepseekV41Flash()` | OpenRouter | deepseek/deepseek-v4.1-flash | [\$0.15][27] | [\$0.60][27] |
 | `deepseekV4Pro()` | Fireworks | models/deepseek-v4-pro-0813 | [\$1.32][12] | [\$3.96][12] |
+| `deepseekPro()` | OpenRouter | ~deepseek/deepseek-pro-latest | [\$0.5808][28] | [\$1.7424][28] |
 | `GLM53()` | OpenRouter | z-ai/glm-5.3 | [\$1.40][16] | [\$4.40][16] |
 | `GLM53Flash()` | OpenRouter | z-ai/glm-5.3-flash | [\$0.075][20] | [\$0.25][20] |
 | `GLM52()` | Together | zai-org/GLM-5.2 | [\$1.40][7] | [\$4.40][7] |
@@ -262,6 +265,16 @@ OpenRouter fallbacks are disabled globally by default and are appended only with
 
 [25]: https://openrouter.ai/meta/muse-spark-1.2 "Muse Spark 1.2 on OpenRouter"
 [26]: https://openrouter.ai/meta/muse-spark-1.3-contributor "Muse Spark 1.3 Contributor on OpenRouter"
+[27]: https://openrouter.ai/deepseek/deepseek-v4.1-flash "DeepSeek V4.1 Flash on OpenRouter"
+[28]: https://openrouter.ai/~deepseek/deepseek-pro-latest "DeepSeek Pro Latest on OpenRouter"
+
+`deepseekPro()` uses OpenRouter's rolling alias `~deepseek/deepseek-pro-latest` and requires `OPENROUTER_API_KEY`. As of September 15, 2026, it targets DeepSeek V4 Pro 0813. Use `chain('deepseekPro@100')` for maximum reasoning effort. Cost estimates use the listed base rates and $0.05808/M cached input tokens; the target model and actual rates may change, including provider and time-based pricing.
+
+`deepseekV41Flash()` supports text and image input through OpenRouter and requires `OPENROUTER_API_KEY`. Use `chain('deepseekV41Flash@100')` for maximum reasoning effort. Cost estimates use the listed base rates and $0.015/M cached input tokens; actual OpenRouter pricing varies by provider and time.
+
+For direct Fireworks access, use `deepseekV41Flash({ mix: { fireworks: true, openrouter: false } })` with `FIREWORKS_API_KEY`. This selects `accounts/fireworks/models/deepseek-v4p1-flash`, priced at [$0.22 input / $0.007 cached input / $0.66 output per 1M tokens](https://fireworks.ai/models/deepseek-ai/deepseek-v4p1-flash). Set both providers to `true` to try Fireworks first and fall back to OpenRouter.
+
+For the native DeepSeek API, use `deepseekV41Flash({ mix: { deepseek: true, openrouter: false } })` with `DEEPSEEK_API_KEY`. It calls `https://api.deepseek.com/chat/completions` with `deepseek-flash`, currently DeepSeek V4.1 Flash. `MixDeepSeek` is also available for explicit `.attach()` calls. Native cost estimates use [peak rates](https://api-docs.deepseek.com/quick_start/pricing/): $0.30 input / $0.006 cached input / $1.20 output per 1M tokens; actual off-peak charges are half. When all three providers are enabled, the order is DeepSeek → Fireworks → OpenRouter.
 
 Muse Spark methods ending in `c` select Contributor: prompts and outputs may be used to improve Meta products. Methods without `c` select the standard tier. `museSpark12()` now selects standard; use `museSpark12c()` for the previous Contributor behavior.
 
@@ -986,6 +999,31 @@ const child = await context.invoke({
 Supported policies are `'inherit'`, `'none'`, `{ include: [...] }`, and `{ exclude: [...] }`. Child metadata exposes `executionId`, `parentExecutionId`, and `depth` to middleware. `.new()` inherits registered plugins but not message history.
 
 Child `systemFile` templates use the same EJS engine, `assign()` data contract, and relative Markdown includes as ordinary ModelMix templates. Use either `system` or `systemFile`, not both.
+
+### Benchmark plugin
+
+The included benchmark plugin derives task-specific criteria, runs each configured model independently, and uses the other distinct models as anonymous judges. Model specifications use the same `shortcut@effort` syntax as `chain()`:
+
+```javascript
+const { ModelMix } = require('modelmix');
+const { benchmark } = require('modelmix/plugins/benchmark');
+
+const report = await ModelMix.new()
+    .use(benchmark({
+        criteriaModel: 'gpt56luna@20',
+        models: ['gpt56luna@20', 'sonnet5@20', 'gemini38flash@20']
+    }))
+    .addText('Your benchmark task')
+    .json();
+```
+
+Each criterion is scored from 0 to 10 with equal weight. The report contains the original task, criteria, responses, individual evaluations, averages, errors, elapsed time, token usage, and available cost estimates. Failed responses or evaluations are recorded while the remaining models continue; criteria-generation failures and cancellation stop the run. The first version accepts text tasks, runs sequentially, and does not support streaming.
+
+Set `config.debug: 1` to print progress and failure reasons. Failed model outputs retain their text and provider finish reason in `errors[].error.details`; outputs marked as truncated are excluded from scoring. Adjust `options.max_tokens` to allow enough room for reasoning and output.
+
+JSON parsing accepts a Markdown code block or a lone closing triple-backtick delimiter after valid JSON. Other extra content, malformed JSON, and invalid evaluation scores remain errors.
+
+Run `node demo/benchmark.js` for a complete five-model comparison. It allows up to 32,768 output tokens per call, prints intermediate progress, a final ranking and error details, then saves each response as Markdown together with the full JSON report under `demo/results/`.
 
 ### Recursive Language Model plugin
 

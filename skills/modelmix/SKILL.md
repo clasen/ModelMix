@@ -183,14 +183,23 @@ Use `.effort(n)` (or `config.effort`) to enable Anthropic thinking — e.g. `.ef
 ### MiniMax
 `minimaxM27()` `minimaxM3()`
 
+### DeepSeek
+`deepseekV41Flash({ mix: { deepseek: true, openrouter: false } })` uses the native API at `https://api.deepseek.com/chat/completions` with model `deepseek-flash` (currently V4.1 Flash). Requires `DEEPSEEK_API_KEY`; `MixDeepSeek` supports explicit `.attach()` calls. Unified effort and native cache usage are supported, and assistant reasoning is preserved for tool continuations. Cost estimates use peak rates per 1M tokens: $0.30 input, $0.006 cached input, $1.20 output; off-peak charges are half. Enabling all three providers orders them DeepSeek → Fireworks → OpenRouter.
+
 ### Fireworks
 `museGlimmer30b()` `gptOss()` `qwen36plus()` (private/on-demand only) `qwen37plus()` `qwen38max()` `deepseekV4Flash()` `deepseekV4Pro()` `kimiK26()` `kimiK27Code()` `kimiK3()` `minimaxM27()` `minimaxM3()` `GLM52()`
+
+`deepseekV41Flash({ mix: { fireworks: true, openrouter: false } })` selects `accounts/fireworks/models/deepseek-v4p1-flash` and requires `FIREWORKS_API_KEY`. Per 1M tokens: $0.22 input, $0.007 cached input, $0.66 output. Set both providers to `true` for Fireworks followed by OpenRouter fallback; no arguments selects OpenRouter.
 
 ### Cerebras
 `GLM46()`
 
 ### OpenRouter
-`museGlimmer30b()` `museSpark12()` `museSpark12c()` `museSpark13()` `museSpark13c()` `gptOss()` `qwen35397b()` `qwen36plus()` `qwen37plus()` `qwen3827b()` `qwen38flash()` `hermes470b()` `hermes4405b()` `qwen38max()` `kimiK27Code()` `kimiK3()` `minimaxM27()` `minimaxM3()` `GLM45()` `GLM52()` `GLM53()` `GLM53Flash()`
+`deepseekPro()` uses `~deepseek/deepseek-pro-latest`, OpenRouter's rolling Pro alias (V4 Pro 0813 as of September 15, 2026). Requires `OPENROUTER_API_KEY`; supports the DeepSeek effort mapping and `chain('deepseekPro@100')`. Base cost estimates per 1M tokens: $0.5808 input, $0.05808 cached input, $1.7424 output. The target model and actual rates may change, including provider and time-based pricing.
+
+`museGlimmer30b()` `museSpark12()` `museSpark12c()` `museSpark13()` `museSpark13c()` `gptOss()` `qwen35397b()` `qwen36plus()` `qwen37plus()` `qwen3827b()` `qwen38flash()` `hermes470b()` `hermes4405b()` `qwen38max()` `kimiK27Code()` `kimiK3()` `minimaxM27()` `minimaxM3()` `GLM45()` `GLM52()` `GLM53()` `GLM53Flash()` `deepseekV41Flash()`
+
+`deepseekV41Flash()` selects `deepseek/deepseek-v4.1-flash` (text and image input) and requires `OPENROUTER_API_KEY`. It supports the DeepSeek effort mapping above, including `chain('deepseekV41Flash@100')`. Base cost estimates per 1M tokens: $0.15 input, $0.015 cached input, $0.60 output; actual OpenRouter pricing varies by provider and time.
 
 Muse Spark: the `c` suffix selects Contributor, where prompts and outputs may be used to improve Meta products. Without `c`, the standard tier is selected. Use `museSpark12c()` for the former `museSpark12()` Contributor behavior.
 
@@ -651,7 +660,7 @@ const model = ModelMix.new({
 
 ## Available Provider Classes
 
-`ModerationMix` `MixModeration` `MixOpenAI` `MixOpenAIResponses` `MixOpenAIModeration` `MixAnthropic` `MixGoogle` `MixPerplexity` `MixGroq` `MixTogether` `MixGrok` `MixOpenRouter` `MixOllama` `MixLMStudio` `MixCustom` `MixCerebras` `MixFireworks` `MixKimi` `MixMiniMax` `MixLambda`
+`ModerationMix` `MixModeration` `MixOpenAI` `MixOpenAIResponses` `MixOpenAIModeration` `MixAnthropic` `MixGoogle` `MixPerplexity` `MixGroq` `MixTogether` `MixGrok` `MixOpenRouter` `MixOllama` `MixLMStudio` `MixCustom` `MixCerebras` `MixFireworks` `MixKimi` `MixMiniMax` `MixDeepSeek` `MixLambda`
 
 ## Troubleshooting
 

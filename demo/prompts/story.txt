@@ -1,0 +1,35 @@
+Escribí un cuento breve (600–900 palabras), de cualquier género y ambientación, que cumpla estas restricciones de construcción:
+
+ESTRUCTURA
+
+- Circular: el protagonista termina en el mismo lugar físico donde empieza, pero al final ese lugar significa lo contrario (refugio → trampa, punto de partida → castigo, etc.).
+- El protagonista enfrenta una prueba o rito con una regla explícita. El criterio real de evaluación es otro, nunca se enuncia, y solo se revela en la última línea de diálogo.
+- El protagonista cumple la tarea visible, pagando un costo moral o físico real, y aun así fracasa en la prueba verdadera.
+- El final muestra la inminencia de la consecuencia, no la consecuencia. Cortar justo antes.
+- La consecuencia final es simétrica: lo que el protagonista dañó durante la prueba vuelve contra él.
+
+SIEMBRA
+
+- Un personaje marginal y sin peso aparente (un loco, un borracho, un niño, una voz anónima) anuncia el final con una frase críptica. El protagonista lo ignora.
+- Al menos dos detalles que parecen ambientales o caprichosos deben resultar funcionales al final (por ejemplo, algo que impide al protagonista orientarse, o una marca física que lo delata).
+- El momento en que el protagonista falla debe estar a la vista del lector, sin ser señalado como decisivo. Debe resignificarse en la relectura.
+- Una frase o instrucción repetida al principio y al final que enmarque el recorrido.
+
+PERSONAJES
+
+- Protagonista sin nombre, designado por su función o rol.
+- Antagonista/evaluador con apodo, lacónico, no explica nada y tiene un rasgo físico que oculta (algo que nunca se saca o nunca muestra).
+- La crueldad o arbitrariedad del evaluador se muestra con acciones, sin juicio del narrador.
+- El protagonista enfrenta una elección concreta dentro de la prueba (no si hacerlo, sino cómo o a quién), que lo hace más responsable.
+- Hacia el final, el protagonista hace preguntas que asumen su éxito y no reciben respuesta.
+
+VOZ Y TONO
+
+- Narrador en primera persona, en pasado, con tono de anécdota oral o leyenda urbana; registro coloquial.
+- El primer párrafo resume la premisa sin rodeos. El suspenso no depende de ocultar de qué trata.
+- Contraste entre un marco cotidiano o burocrático y un contenido brutal o extraño, contado con naturalidad.
+- Al menos una secuencia de diálogo con repetición y escalada (la misma orden dicha varias veces, subiendo de intensidad).
+- Remate: una línea de diálogo muy breve (dos o tres palabras) que explica el fracaso, seguida de la revelación espacial y la amenaza.
+- Economía: descripción mínima, acceso limitado a la mente del protagonista, sin moraleja explícita.
+
+No imites la trama de ningún cuento existente. Inventá la prueba, el mundo y la consecuencia desde cero.

@@ -8,6 +8,7 @@ const log = require('lemonlog')('ModelMix');
 const Bottleneck = require('bottleneck');
 const path = require('path');
 const generateJsonSchema = require('./schema');
+const parseJsonResponse = require('./lib/parse-json-response');
 const { Client } = require("@modelcontextprotocol/sdk/client/index.js");
 const { StdioClientTransport } = require("@modelcontextprotocol/sdk/client/stdio.js");
 const { MCPToolsManager } = require('./mcp-tools');
@@ -47,6 +48,7 @@ let MixKimi;
 let MixAnthropic;
 let MixMiniMax;
 let MixMiMo;
+let MixDeepSeek;
 let MixPerplexity;
 let MixOllama;
 let MixGrok;
@@ -764,6 +766,10 @@ class ModelMix {
         return this;
     }
 
+    deepseekPro({ options = {}, config = {} } = {}) {
+        return this.attach('~deepseek/deepseek-pro-latest', new MixOpenRouter({ options, config }));
+    }
+
     deepseekV4Pro({ options = {}, config = {}, mix = { fireworks: true } } = {}) {
         mix = { ...this.mix, ...mix };
         if (mix.nvidia) this.attach('deepseek-ai/deepseek-v4-pro', new MixNVIDIA({ options, config }));
@@ -779,6 +785,14 @@ class ModelMix {
         if (mix.fireworks) this.attach('accounts/fireworks/models/deepseek-v4-flash', new MixFireworks({ options, config }));
         if (mix.openrouter) this.attach('deepseek/deepseek-v4-flash', new MixOpenRouter({ options, config }));
         if (mix.together) this.attach('deepseek-ai/DeepSeek-V4-Flash', new MixTogether({ options, config }));
+        return this;
+    }
+
+    deepseekV41Flash({ options = {}, config = {}, mix = { openrouter: true } } = {}) {
+        mix = { ...this.mix, ...mix };
+        if (mix.deepseek) this.attach('deepseek-flash', new MixDeepSeek({ options, config }));
+        if (mix.fireworks) this.attach('accounts/fireworks/models/deepseek-v4p1-flash', new MixFireworks({ options, config }));
+        if (mix.openrouter) this.attach('deepseek/deepseek-v4.1-flash', new MixOpenRouter({ options, config }));
         return this;
     }
 
@@ -1000,7 +1014,13 @@ class ModelMix {
             }
         }
         const { message } = await this.execute({ options, config, systemSuffix, outputMode: 'json', signal });
-        const parsed = JSON.parse(this._extractBlock(message));
+        let parsed;
+        try {
+            parsed = parseJsonResponse(message);
+        } catch (error) {
+            if (!(error instanceof SyntaxError)) throw error;
+            parsed = JSON.parse(this._extractBlock(message));
+        }
         return isArrayWrap ? parsed.out : parsed;
     }
 
@@ -1926,6 +1946,7 @@ class ModelMix {
     MixAnthropic,
     MixMiniMax,
     MixMiMo,
+    MixDeepSeek,
     MixPerplexity,
     MixOllama,
     MixGrok,
@@ -1943,4 +1964,4 @@ class ModelMix {
     log
 }));
 
-module.exports = { MixCustom, ModelMix, ModerationMix, MixModeration, MixAnthropic, MixKimi, MixMiniMax, MixMiMo, MixOpenAI, MixOpenAIResponses, MixOpenAIModeration, MixOpenAIWebSocket, MixOpenRouter, MixPerplexity, MixOllama, MixLambda, MixLMStudio, MixGroq, MixTogether, MixGrok, MixCerebras, MixGoogle, MixFireworks, MixNVIDIA, normalizeEffort, applyUnifiedEffort, resolveProviderFamily };
+module.exports = { MixCustom, ModelMix, ModerationMix, MixModeration, MixAnthropic, MixKimi, MixMiniMax, MixMiMo, MixDeepSeek, MixOpenAI, MixOpenAIResponses, MixOpenAIModeration, MixOpenAIWebSocket, MixOpenRouter, MixPerplexity, MixOllama, MixLambda, MixLMStudio, MixGroq, MixTogether, MixGrok, MixCerebras, MixGoogle, MixFireworks, MixNVIDIA, normalizeEffort, applyUnifiedEffort, resolveProviderFamily };

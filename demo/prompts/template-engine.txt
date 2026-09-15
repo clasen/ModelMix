@@ -1,0 +1,41 @@
+Develop a minimalist template engine as a Node.js library using ES modules and no external dependencies.
+
+The complete implementation must fit within 200 physical lines, including comments and blank lines. Do not minify the code or artificially pack statements onto single lines. Write code and identifiers in English, and explanations in Spanish.
+
+Implement these three features:
+
+1. Compilation to JavaScript
+   - `compile(template, options)` returns a reusable function that accepts data and produces a string.
+   - Support `<% code %>` for executing JavaScript, `<%= expression %>` for HTML-escaped output, and `<%- expression %>` for unescaped output.
+   - Allow conditionals and loops to open and close across separate tags, with text between them.
+   - Correctly preserve quotes, backslashes, and line breaks in literal text.
+2. Errors linked to the original template
+   - Runtime errors must report the filename, original line number, and a short template excerpt.
+   - Preserve the original error as `cause`.
+   - For errors inside includes, identify the file where the failure actually occurred.
+   - For syntax errors, report at least the filename. Do not invent a line number if it cannot be determined accurately.
+3. Nested includes
+   - Provide an `include(path, data)` function inside templates.
+   - Resolve each relative path from the file containing the include call.
+   - Includes inherit parent data and may override values locally without mutating the parent data.
+   - Support multiple nesting levels.
+   - Detect inclusion cycles and report the chain of files involved.
+   - Provide clear errors for missing files.
+
+Public API:
+
+- `compile(template, options)`
+- `render(template, data, options)`
+- `renderFile(filename, data)`
+
+Keep everything synchronous. Require explicit property access through the `data` object inside templates, without `with`. Do not add caching, layouts, plugins, configurable delimiters, or browser support.
+
+Templates are trusted code. Explicitly document that the engine provides no sandbox and must not execute templates supplied by untrusted users.
+
+Deliver only:
+
+- The complete implementation in a single file.
+- The actual line count of the implementation file.
+- A brief explanation of limitations.
+
+Do not include tests, examples, sample templates, or demonstration code. Prioritize clarity and correctness over additional features.

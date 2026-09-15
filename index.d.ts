@@ -87,6 +87,7 @@ export interface ModelMixMixFlags {
   moonshot?: boolean;
   minimax?: boolean;
   mimo?: boolean;
+  deepseek?: boolean;
   [key: string]: boolean | undefined;
 }
 
@@ -527,7 +528,9 @@ export declare class ModelMix {
   mimo25(args?: ModelAttachArgs): this;
   mimo25pro(args?: ModelAttachArgs): this;
   deepseekV4Pro(args?: ModelAttachArgs): this;
+  deepseekPro(args?: ModelAttachArgs): this;
   deepseekV4Flash(args?: ModelAttachArgs): this;
+  deepseekV41Flash(args?: ModelAttachArgs): this;
   GLM52(args?: ModelAttachArgs): this;
   GLM53(args?: ModelAttachArgs): this;
   GLM53Flash(args?: ModelAttachArgs): this;
@@ -624,6 +627,7 @@ export declare class MixKimi extends MixOpenAI {}
 export declare class MixAnthropic extends MixCustom {}
 export declare class MixMiniMax extends MixOpenAI {}
 export declare class MixMiMo extends MixOpenAI {}
+export declare class MixDeepSeek extends MixOpenAI {}
 export declare class MixPerplexity extends MixCustom {}
 export declare class MixOllama extends MixCustom {}
 export declare class MixGrok extends MixOpenAI {}
