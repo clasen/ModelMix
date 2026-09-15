@@ -629,7 +629,7 @@ describe('Conversation History Tests', () => {
             expect(model.messages).to.have.length(2);
         });
 
-        it('should handle empty assistant response gracefully', async () => {
+        it('should reject an empty assistant response without adding it to history', async () => {
             const model = ModelMix.new({
                 config: { debug: false, max_history: 10 }
             });
@@ -643,9 +643,12 @@ describe('Conversation History Tests', () => {
                     }]
                 });
 
-            const response = await model.message();
-            // Empty string is falsy, so assistant message should NOT be added
-            expect(response).to.equal('');
+            let failure;
+            try { await model.message(); } catch (error) { failure = error; }
+            expect(failure).to.include({ statusCode: 502 });
+            expect(failure.message).to.include('no text or tool calls');
+            expect(model.messages).to.have.length(1);
+            expect(model.messages[0].role).to.equal('user');
         });
 
         it('should handle multiple addText before first message()', async () => {

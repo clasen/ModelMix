@@ -1,8 +1,9 @@
-import type { ChatMessage, ModelMixPlugin, TokenUsage } from '../..';
+import type { ChatMessage, ModelMixMixFlags, ModelMixPlugin, TokenUsage } from '../..';
 
 export interface BenchmarkOptions {
   criteriaModel: string;
   models: string[];
+  mix?: ModelMixMixFlags;
 }
 
 export interface BenchmarkModel {

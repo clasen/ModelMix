@@ -162,6 +162,7 @@ export interface TokenCostBreakdown {
 
 export interface TokenUsage {
   input: number;
+  /** Generated tokens excluding separately reported reasoning. */
   output: number;
   /** Internal reasoning tokens billed at the output rate when reported separately. */
   thinking: number;
@@ -178,7 +179,9 @@ export interface TokenUsage {
   cacheWritePremium: number;
   /** Full future cache hits needed to recover the current write premium. */
   breakEvenHits: number;
+  /** USD charged by OpenRouter when available, otherwise the catalog estimate. */
   cost: number;
+  /** Catalog-based estimate; its total can differ from the reported charge in cost. */
   costBreakdown: TokenCostBreakdown;
   speed?: number;
 }

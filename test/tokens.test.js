@@ -1,11 +1,83 @@
 import { expect } from 'chai';
-import { ModelMix, MixAnthropic, MixCustom, MixGoogle, MixMiMo, MixOpenAI, MixOpenAIResponses, MixOpenRouter } from '../index.js';
+import { ModelMix, MixAnthropic, MixCustom, MixGoogle, MixGrok, MixMiMo, MixOpenAI, MixOpenAIResponses, MixOpenRouter } from '../index.js';
 import { createRequire } from 'module';
 
 const require = createRequire(import.meta.url);
 const nock = require('nock');
 
 describe('Token Usage Tracking', () => {
+
+    it('adds native Grok reasoning to its exclusive completion count', () => {
+        const tokens = MixGrok.extractTokens({ usage: {
+            prompt_tokens: 656, completion_tokens: 2, total_tokens: 824,
+            prompt_tokens_details: { cached_tokens: 512 },
+            completion_tokens_details: { reasoning_tokens: 166 }
+        } });
+        expect(tokens).to.include({ input: 656, output: 2, thinking: 166, total: 824 });
+        expect(ModelMix.calculateCostBreakdown('grok-4.6', tokens).total).to.equal(0.001552);
+    });
+
+    it('combines Anthropic stream input usage with the final thinking breakdown', async () => {
+        const { Readable } = require('node:stream');
+        const chunks = [
+            { type: 'message_start', message: { usage: { input_tokens: 25, output_tokens: 1, cache_read_input_tokens: 10 } } },
+            { type: 'message_delta', usage: { output_tokens: 348, output_tokens_details: { thinking_tokens: 312 } } },
+            { type: 'message_stop' }
+        ];
+        const result = await new MixAnthropic().processStream({ data: Readable.from(chunks.map(chunk => `data: ${JSON.stringify(chunk)}\n\n`)) });
+        expect(result.tokens).to.include({ input: 35, output: 36, thinking: 312, total: 383, cached: 10 });
+    });
+
+    it('preserves Gemini stream thinking usage from the final metadata', async () => {
+        const { Readable } = require('node:stream');
+        const data = { usageMetadata: { promptTokenCount: 22, candidatesTokenCount: 5, thoughtsTokenCount: 99, totalTokenCount: 126 } };
+        const result = await new MixGoogle().processStream({ data: Readable.from([`data: ${JSON.stringify(data)}\n\n`]) });
+        expect(result.tokens).to.include({ input: 22, output: 5, thinking: 99, total: 126 });
+    });
+
+    for (const [name, extract, usage] of [
+        ['Chat Completions', MixCustom.extractTokens, { prompt_tokens: 615, completion_tokens: 5930, completion_tokens_details: { reasoning_tokens: 5900 } }],
+        ['Responses', MixOpenAIResponses.extractResponsesTokens, { input_tokens: 615, output_tokens: 5930, output_tokens_details: { reasoning_tokens: 5900 } }],
+        ['Anthropic', MixAnthropic.extractTokens, { input_tokens: 615, output_tokens: 5930, output_tokens_details: { thinking_tokens: 5900 } }]
+    ]) {
+        it(`separates ${name} reasoning without billing it twice`, () => {
+            const tokens = extract({ usage });
+            expect(tokens).to.include({ input: 615, output: 30, thinking: 5900, total: 6545 });
+            expect(ModelMix.calculateCostBreakdown('deepseek/deepseek-v4.1-flash', tokens).total).to.equal(0.00365025);
+        });
+    }
+
+    it('keeps streamed OpenRouter usage and actual cost through usage-only and trailing chunks', async () => {
+        const { Readable } = require('node:stream');
+        const provider = new MixOpenRouter();
+        const chunks = [
+            { choices: [{ delta: { reasoning: 'thinking' }, finish_reason: null }] },
+            { choices: [{ delta: { content: 'ok' }, finish_reason: 'stop' }] },
+            { choices: [], usage: { prompt_tokens: 10, completion_tokens: 12, completion_tokens_details: { reasoning_tokens: 10 }, cost: 0.123 } },
+            { choices: [] }
+        ];
+        provider.create = async () => provider.processStream({ data: Readable.from(chunks.map(chunk => `data: ${JSON.stringify(chunk)}\n\n`)) });
+        const model = ModelMix.new().attach('unlisted-model', provider).addText('test');
+        const deltas = [];
+        const result = await model.stream(({ delta }) => deltas.push(delta));
+        expect(deltas.join('')).to.equal('ok');
+        expect(result.tokens).to.include({ input: 10, output: 2, thinking: 10, total: 22, cost: 0.123 });
+    });
+
+    for (const cost of [0, 0.0073005]) {
+        it(`uses the reported OpenRouter cost ${cost} instead of catalog pricing`, async () => {
+            const provider = new MixOpenRouter();
+            provider.create = async () => provider.processResponse({ data: {
+                choices: [{ message: { content: 'ok' }, finish_reason: 'stop' }],
+                usage: { prompt_tokens: 615, completion_tokens: 5930, completion_tokens_details: { reasoning_tokens: 5900 }, cost }
+            } });
+            const model = ModelMix.new().attach('deepseek/deepseek-v4.1-flash', provider).addText('test');
+            const result = await model.raw();
+            expect(result.tokens.cost).to.equal(cost);
+            expect(result.tokens).to.include({ output: 30, thinking: 5900 });
+            expect(model.lastRaw.tokens.cost).to.equal(cost);
+        });
+    }
 
     // Ensure nock doesn't interfere with live requests via MockHttpSocket
     before(function() {
@@ -691,7 +763,7 @@ describe('Token Usage Tracking', () => {
         
         expect(result.tokens.input).to.be.greaterThan(0);
         expect(result.tokens.output).to.be.greaterThan(0);
-        expect(result.tokens.total).to.equal(result.tokens.input + result.tokens.output);
+        expect(result.tokens.total).to.equal(result.tokens.input + result.tokens.output + result.tokens.thinking);
     });
 
     it('should track tokens in Google Gemini response', async function () {
@@ -735,7 +807,7 @@ describe('Token Usage Tracking', () => {
         expect(result2.tokens.output).to.be.greaterThan(0);
 
         // Verify both results have valid token counts
-        expect(result1.tokens.total).to.equal(result1.tokens.input + result1.tokens.output);
+        expect(result1.tokens.total).to.equal(result1.tokens.input + result1.tokens.output + result1.tokens.thinking);
         expect(result2.tokens.total).to.be.greaterThan(0);
     });
 

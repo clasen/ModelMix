@@ -189,9 +189,13 @@ function baseModelSettings(request) {
     return { options, config };
 }
 
-function createModelDescriptor(parsed, source, request) {
+function createModelDescriptor(parsed, source, request, mix) {
     const settings = baseModelSettings(request);
-    const model = ModelMix.new(settings).chain(source);
+    const model = ModelMix.new(settings);
+    model[parsed.shortcut]({
+        mix,
+        config: parsed.effort === undefined ? {} : { effort: parsed.effort }
+    });
     const canonicalModels = [...new Set(model.models.map(item => item.key))].sort();
     if (canonicalModels.length === 0) {
         throw new Error(`Benchmark model "${source}" did not attach a provider.`);
@@ -327,12 +331,15 @@ function evaluationPrompt(task, criteria, response) {
     });
 }
 
-function benchmark({ criteriaModel, models } = {}) {
+function benchmark({ criteriaModel, models, mix } = {}) {
     if (typeof criteriaModel !== 'string') {
         throw new TypeError('criteriaModel must be a chain model shortcut string.');
     }
     if (!Array.isArray(models) || models.length < 2) {
         throw new TypeError('models must contain at least two chain model shortcut strings.');
+    }
+    if (mix !== undefined && !isPlainObject(mix)) {
+        throw new TypeError('mix must be a plain object of provider flags.');
     }
     const parsedCriteriaModel = parseChainModels([criteriaModel])[0];
     const parsedModels = parseChainModels(models);
@@ -351,10 +358,11 @@ function benchmark({ criteriaModel, models } = {}) {
             const criteriaDescriptor = createModelDescriptor(
                 parsedCriteriaModel,
                 criteriaModel,
-                context.request
+                context.request,
+                mix
             );
             const participants = parsedModels.map((parsed, index) => (
-                createModelDescriptor(parsed, models[index], context.request)
+                createModelDescriptor(parsed, models[index], context.request, mix)
             ));
 
             const participantKeys = new Set();
@@ -436,7 +444,7 @@ function benchmark({ criteriaModel, models } = {}) {
                         outputMode: 'raw'
                     });
                     assertComplete(responseCall.result, 'Benchmark participant');
-                    if (typeof responseCall.result.message !== 'string') {
+                    if (typeof responseCall.result.message !== 'string' || responseCall.result.message.trim().length === 0) {
                         throw new TypeError('Benchmark participant returned no text response.');
                     }
                     metrics.push(responseCall.metrics);

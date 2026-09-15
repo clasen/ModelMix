@@ -12,22 +12,24 @@ const task = await readFile(process.argv[2] || new URL('./prompts/story.txt', im
 
 const models = [
     // 'opus50@20',
+    'gpt6astra@0',
     'gpt6astra@20',
     'gpt56sol@40',
     // 'gemini38flash@20',
     // 'grok46@20',
-    'deepseekV41Flash@80'
+    'deepseekV41Flash@60'
 ];
 
 console.log(`Running benchmark: ${models.length} models, 26 sequential model calls.`);
 
 const report = await ModelMix.new({
     config: { debug: 1 },
-    options: { max_tokens: 32768 }
+    options: { max_tokens: 65536 }
 })
     .use(benchmark({
         criteriaModel: 'opus50@20',
-        models
+        models,
+        mix: { deepseek: true, openrouter: false }
     }))
     .assign({ task })
     .addText('<%- task %>')
@@ -41,7 +43,7 @@ await mkdir(resultsDirectory, { recursive: true });
 for (const result of report.results) {
     if (result.response === null) continue;
     const filename = result.id.replace(/[^A-Za-z0-9_-]/g, '_');
-    const contents = `# ${result.id}\n\nScore: ${result.score ?? 'N/A'}\n\nEstimated generation cost (USD): ${result.responseMetrics?.cost ?? 'N/A'}\n\n---\n\n${result.response}\n`;
+    const contents = `# ${result.id}\n\nScore: ${result.score === null ? 'N/A' : Number(result.score.toFixed(2))}\n\nEstimated generation cost (USD): ${result.responseMetrics?.cost ?? 'N/A'}\n\n---\n\n${result.response}\n`;
     await writeFile(path.join(resultsDirectory, `${filename}.md`), contents, 'utf8');
 }
 
@@ -66,7 +68,8 @@ const ranking = report.results
         if (left.score === null) return 1;
         if (right.score === null) return -1;
         return right.score - left.score;
-    });
+    })
+    .map(row => ({ ...row, score: row.score === null ? null : Number(row.score.toFixed(2)) }));
 
 console.table(ranking);
 if (report.errors.length > 0) {

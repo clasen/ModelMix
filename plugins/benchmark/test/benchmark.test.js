@@ -51,6 +51,24 @@ function directContext(invoke, overrides = {}) {
     };
 }
 
+describe('Empty benchmark responses', () => {
+    it('records a generation failure and never evaluates an empty candidate', async () => {
+        const plugin = benchmark({ criteriaModel: 'gpt5nano', models: ['gpt5', 'gpt5mini'] });
+        const result = await plugin.execute(directContext(async input => {
+            if (input.system.includes('define evaluation criteria')) return metricsResult(JSON.stringify(criteria));
+            if (input.system.includes('evaluate one candidate response')) {
+                expect(input.messages[0].content).to.include('usable response');
+                return metricsResult(validEvaluation());
+            }
+            return metricsResult(modelKey(input) === 'gpt-5' ? '  ' : 'usable response');
+        }));
+        expect(result.benchmark.results[0]).to.include({ response: null, score: null });
+        expect(result.benchmark.results[0].evaluationCount).to.deep.equal({ expected: 0, valid: 0 });
+        expect(result.benchmark.errors[0]).to.include({ stage: 'response', participant: 'gpt5' });
+        expect(result.benchmark.errors[0].error.message).to.include('no text response');
+    });
+});
+
 async function expectRejection(promise, message) {
     let rejection;
     try {
@@ -64,6 +82,43 @@ async function expectRejection(promise, message) {
 
 describe('benchmark plugin', () => {
     afterEach(() => sinon.restore());
+
+    it('uses the native DeepSeek provider for criteria, responses and judging when selected', async () => {
+        const { MixDeepSeek, MixOpenRouter } = require('../../..');
+        const originalApiKey = process.env.DEEPSEEK_API_KEY;
+        process.env.DEEPSEEK_API_KEY = 'native-test-key';
+        const stages = [];
+        try {
+            const plugin = benchmark({
+                criteriaModel: 'deepseekV41Flash@20',
+                models: ['deepseekV41Flash@60', 'gpt5'],
+                mix: { deepseek: true, openrouter: false }
+            });
+            const raw = await plugin.execute(directContext(async input => {
+                expect(input.model.models.some(item => item.provider instanceof MixOpenRouter)).to.equal(false);
+                const stage = input.system.includes('define evaluation criteria')
+                    ? 'criteria'
+                    : input.system.includes('evaluate one candidate response') ? 'evaluation' : 'response';
+                if (modelKey(input) === 'deepseek-flash') {
+                    expect(input.model.models).to.have.length(1);
+                    const { provider } = input.model.models[0];
+                    expect(provider).to.be.instanceOf(MixDeepSeek);
+                    expect(provider.config.url).to.equal('https://api.deepseek.com/chat/completions');
+                    expect(provider.config.effort).to.equal(stage === 'criteria' ? 20 : 60);
+                    stages.push(stage);
+                }
+                if (stage === 'criteria') return metricsResult(JSON.stringify(criteria));
+                if (stage === 'evaluation') return metricsResult(validEvaluation());
+                return metricsResult('Candidate answer');
+            }));
+            expect(stages).to.deep.equal(['criteria', 'response', 'evaluation']);
+            expect(raw.benchmark.errors).to.deep.equal([]);
+            expect(raw.benchmark.results[0].canonicalModel).to.equal('deepseek-flash');
+        } finally {
+            if (originalApiKey === undefined) delete process.env.DEEPSEEK_API_KEY;
+            else process.env.DEEPSEEK_API_KEY = originalApiKey;
+        }
+    });
 
     it('accepts a closing Markdown delimiter on criteria and evaluations without changing the response', async () => {
         const response = 'Candidate with ```text\ncontent\n```';

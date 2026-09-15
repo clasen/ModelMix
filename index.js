@@ -788,7 +788,7 @@ class ModelMix {
         return this;
     }
 
-    deepseekV41Flash({ options = {}, config = {}, mix = { openrouter: true } } = {}) {
+    deepseekV41Flash({ options = {}, config = {}, mix = { deepseek: true } } = {}) {
         mix = { ...this.mix, ...mix };
         if (mix.deepseek) this.attach('deepseek-flash', new MixDeepSeek({ options, config }));
         if (mix.fireworks) this.attach('accounts/fireworks/models/deepseek-v4p1-flash', new MixFireworks({ options, config }));
@@ -1491,17 +1491,21 @@ class ModelMix {
         }
     }
 
-    _enrichResultTokens(result, resolvedModelKey, elapsedMs) {
+    _enrichResultTokens(result, resolvedModelKey, elapsedMs, provider) {
         if (!result.tokens) return;
 
         const normalizedTokens = ModelMix.normalizeTokenUsage(result.tokens);
         const costBreakdown = ModelMix.calculateCostBreakdown(resolvedModelKey, normalizedTokens);
         const cacheMetrics = ModelMix.calculateCacheMetrics(resolvedModelKey, normalizedTokens);
+        const response = Array.isArray(result.response)
+            ? result.response.findLast(chunk => chunk.usage)
+            : result.response;
+        const reportedCost = provider instanceof MixOpenRouter ? response?.usage?.cost : undefined;
         result.tokens = {
             ...result.tokens,
             ...normalizedTokens,
             ...cacheMetrics,
-            cost: tokenUsage.hasModelPricing(resolvedModelKey) ? costBreakdown.total : 0,
+            cost: Number.isFinite(reportedCost) && reportedCost >= 0 ? reportedCost : costBreakdown.total,
             costBreakdown
         };
         const elapsedSec = elapsedMs / 1000;
@@ -1679,7 +1683,7 @@ class ModelMix {
                     providerAttempt.resolvedModelKey,
                     signal
                 );
-                this._enrichResultTokens(result, providerAttempt.resolvedModelKey, elapsedMs);
+                this._enrichResultTokens(result, providerAttempt.resolvedModelKey, elapsedMs, providerAttempt.provider);
 
                 if (result.toolCalls && result.toolCalls.length > 0) {
                     return this._continueToolCalls(result, pluginRequest, {

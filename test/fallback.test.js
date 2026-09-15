@@ -13,6 +13,63 @@ const {
 } = require('../index.js');
 
 describe('Provider Fallback Chain Tests', () => {
+
+    describe('Interrupted provider responses', () => {
+        const timeout = {
+            id: 'generation-timeout',
+            provider: 'Novita',
+            error: { code: 504, message: 'Upstream idle timeout exceeded', metadata: { error_type: 'timeout' } },
+            choices: [{ finish_reason: 'error', message: { content: '' } }]
+        };
+
+        it('rejects HTTP 200 error bodies with their status and generation details', async () => {
+            sinon.stub(global, 'fetch').resolves(new Response(JSON.stringify(timeout), { status: 200 }));
+            const model = ModelMix.new().deepseekV41Flash().addText('test');
+            let failure;
+            try { await model.raw(); } catch (error) { failure = error; }
+            expect(failure).to.include({ statusCode: 504, message: timeout.error.message });
+            expect(failure.details).to.include({ id: timeout.id, provider: 'Novita' });
+            expect(failure.details.error.metadata.error_type).to.equal('timeout');
+        });
+
+        it('retries HTTP 200 provider errors only under the configured policy', async () => {
+            const fetch = sinon.stub(global, 'fetch');
+            fetch.onFirstCall().resolves(new Response(JSON.stringify(timeout)));
+            fetch.onSecondCall().resolves(new Response(JSON.stringify({ choices: [{ finish_reason: 'stop', message: { content: 'recovered' } }] })));
+            const model = ModelMix.new({ config: { retry: { enabled: true, retries: 1, baseDelayMs: 0, maxDelayMs: 0 } } }).deepseekV41Flash().addText('test');
+            expect((await model.raw()).message).to.equal('recovered');
+            expect(fetch.callCount).to.equal(2);
+        });
+
+        it('falls back when a provider returns only reasoning without completing', async () => {
+            const fetch = sinon.stub(global, 'fetch');
+            fetch.onFirstCall().resolves(new Response(JSON.stringify({ choices: [{ finish_reason: null, message: { content: '', reasoning: 'partial' } }] })));
+            fetch.onSecondCall().resolves(new Response(JSON.stringify({ choices: [{ finish_reason: 'stop', message: { content: 'fallback' } }] })));
+            const model = ModelMix.new().deepseekV41Flash().gpt5mini().addText('test');
+            expect((await model.raw()).message).to.equal('fallback');
+            expect(fetch.callCount).to.equal(2);
+        });
+
+        it('rejects a streaming timeout instead of returning partial output', async () => {
+            const chunks = [
+                { choices: [{ delta: { content: 'partial' } }] },
+                timeout
+            ];
+            sinon.stub(global, 'fetch').resolves(new Response(chunks.map(chunk => `data: ${JSON.stringify(chunk)}\n\n`).join(''), { headers: { 'content-type': 'text/event-stream' } }));
+            const model = ModelMix.new().deepseekV41Flash().addText('test');
+            let failure;
+            try { await model.stream(() => {}); } catch (error) { failure = error; }
+            expect(failure).to.include({ statusCode: 504, message: timeout.error.message });
+        });
+
+        it('rejects an abruptly ended stream even after some text arrived', async () => {
+            sinon.stub(global, 'fetch').resolves(new Response('data: {"choices":[{"delta":{"content":"partial"},"finish_reason":null}]}\n\n'));
+            let failure;
+            try { await ModelMix.new().deepseekV41Flash().addText('test').stream(() => {}); } catch (error) { failure = error; }
+            expect(failure).to.include({ statusCode: 502 });
+            expect(failure.message).to.include('without completing');
+        });
+    });
     
     // Setup test hooks
     if (global.setupTestHooks) {

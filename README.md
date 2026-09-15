@@ -768,7 +768,7 @@ Every response from `raw()` now includes a `tokens` object with the following st
     cacheSavings: 0.00018432, // USD saved by cache reads
     cacheWritePremium: 0, // Extra USD paid to write this cache entry
     breakEvenHits: 0,     // Full future hits needed to recover that premium
-    cost: 0.00011568,     // Total estimated cost in USD
+    cost: 0.00011568,     // OpenRouter charge when reported; otherwise estimated USD
     costBreakdown: {
       uncachedInput: 0.0000352,
       cachedInput: 0.00002048,
@@ -793,7 +793,7 @@ console.log(model.lastRaw.tokens);
 // Same normalized token and cost structure returned by raw()
 ```
 
-`thinking` contains internal reasoning tokens when a provider reports them separately; cost calculation bills them at the output rate. `cached` aggregates cache reads reported by the provider, while `cacheWrite` aggregates cache writes. Anthropic additionally exposes `cacheWrite5m` and `cacheWrite1h` because those writes cost 1.25× and 2× the normal input rate, respectively. `cacheSavings` compares cache reads with the normal input rate, `cacheWritePremium` compares writes with that rate, and `breakEvenHits` estimates how many complete future hits recover the current write premium. For Anthropic, `input` is normalized to include uncached input, cache reads, and cache writes. Missing usage or pricing categories return `0`. The `speed` field is the generation speed measured in output tokens per second (integer).
+`thinking` contains internal reasoning tokens when a provider reports them separately; `output` excludes those tokens. Cost calculation bills `output + thinking` once at the output rate. OpenAI Chat/Responses and Anthropic include reasoning in their native output totals; native Grok reports it separately, while Gemini uses `thoughtsTokenCount`. `cost` uses OpenRouter's reported charge when available (including zero); otherwise it uses catalog pricing. `costBreakdown` and cache savings remain catalog estimates and can differ from the actual charge. `cached` aggregates cache reads reported by the provider, while `cacheWrite` aggregates cache writes. Anthropic additionally exposes `cacheWrite5m` and `cacheWrite1h` because those writes cost 1.25× and 2× the normal input rate, respectively. `cacheSavings` compares cache reads with the normal input rate, `cacheWritePremium` compares writes with that rate, and `breakEvenHits` estimates how many complete future hits recover the current write premium. For Anthropic, `input` is normalized to include uncached input, cache reads, and cache writes. Missing usage or pricing categories return `0`. The `speed` field is the generation speed measured in output tokens per second (integer).
 
 ## 🧠 Prompt Caching
 
@@ -1020,6 +1020,8 @@ const report = await ModelMix.new()
 Each criterion is scored from 0 to 10 with equal weight. The report contains the original task, criteria, responses, individual evaluations, averages, errors, elapsed time, token usage, and available cost estimates. Failed responses or evaluations are recorded while the remaining models continue; criteria-generation failures and cancellation stop the run. The first version accepts text tasks, runs sequentially, and does not support streaming.
 
 Set `config.debug: 1` to print progress and failure reasons. Failed model outputs retain their text and provider finish reason in `errors[].error.details`; outputs marked as truncated are excluded from scoring. Adjust `options.max_tokens` to allow enough room for reasoning and output.
+
+Pass `mix` to `benchmark()` to select providers for the criteria model, participants, and judges using each shortcut's provider flags. For example, `mix: { deepseek: true, openrouter: false }` routes `deepseekV41Flash` directly to the official DeepSeek API using `DEEPSEEK_API_KEY`. Omitting `mix` preserves each shortcut's default providers.
 
 JSON parsing accepts a Markdown code block or a lone closing triple-backtick delimiter after valid JSON. Other extra content, malformed JSON, and invalid evaluation scores remain errors.
 
