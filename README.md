@@ -212,7 +212,7 @@ ModelMix provides convenient shorthand methods for quickly accessing different A
 | `deepseekV4Flash()` | Fireworks | models/deepseek-v4-flash | [\$0.14][10] | [\$0.28][10] |
 | `deepseekV41Flash()` | OpenRouter | deepseek/deepseek-v4.1-flash | [\$0.15][27] | [\$0.60][27] |
 | `deepseekV4Pro()` | Fireworks | models/deepseek-v4-pro-0813 | [\$1.32][12] | [\$3.96][12] |
-| `deepseekPro()` | OpenRouter | ~deepseek/deepseek-pro-latest | [\$0.5808][28] | [\$1.7424][28] |
+| `deepseekPro()` | OpenRouter | deepseek/deepseek-v4-pro-0813 | [\$0.5808][28] | [\$1.7424][28] |
 | `GLM53()` | OpenRouter | z-ai/glm-5.3 | [\$1.40][16] | [\$4.40][16] |
 | `GLM53Flash()` | OpenRouter | z-ai/glm-5.3-flash | [\$0.075][20] | [\$0.25][20] |
 | `GLM52()` | Together | zai-org/GLM-5.2 | [\$1.40][7] | [\$4.40][7] |
@@ -266,9 +266,9 @@ OpenRouter fallbacks are disabled globally by default and are appended only with
 [25]: https://openrouter.ai/meta/muse-spark-1.2 "Muse Spark 1.2 on OpenRouter"
 [26]: https://openrouter.ai/meta/muse-spark-1.3-contributor "Muse Spark 1.3 Contributor on OpenRouter"
 [27]: https://openrouter.ai/deepseek/deepseek-v4.1-flash "DeepSeek V4.1 Flash on OpenRouter"
-[28]: https://openrouter.ai/~deepseek/deepseek-pro-latest "DeepSeek Pro Latest on OpenRouter"
+[28]: https://openrouter.ai/deepseek/deepseek-v4-pro-0813 "DeepSeek V4 Pro 0813 on OpenRouter"
 
-`deepseekPro()` uses OpenRouter's rolling alias `~deepseek/deepseek-pro-latest` and requires `OPENROUTER_API_KEY`. As of September 15, 2026, it targets DeepSeek V4 Pro 0813. Use `chain('deepseekPro@100')` for maximum reasoning effort. Cost estimates use the listed base rates and $0.05808/M cached input tokens; the target model and actual rates may change, including provider and time-based pricing.
+`deepseekPro()` uses the pinned OpenRouter model `deepseek/deepseek-v4-pro-0813` and requires `OPENROUTER_API_KEY`. Use `chain('deepseekPro@100')` for maximum reasoning effort. Cost estimates use the listed base rates and $0.05808/M cached input tokens; actual rates may change, including provider and time-based pricing.
 
 `deepseekV41Flash()` supports text and image input through OpenRouter and requires `OPENROUTER_API_KEY`. Use `chain('deepseekV41Flash@100')` for maximum reasoning effort. Cost estimates use the listed base rates and $0.015/M cached input tokens; actual OpenRouter pricing varies by provider and time.
 

@@ -767,7 +767,7 @@ class ModelMix {
     }
 
     deepseekPro({ options = {}, config = {} } = {}) {
-        return this.attach('~deepseek/deepseek-pro-latest', new MixOpenRouter({ options, config }));
+        return this.attach('deepseek/deepseek-v4-pro-0813', new MixOpenRouter({ options, config }));
     }
 
     deepseekV4Pro({ options = {}, config = {}, mix = { fireworks: true } } = {}) {

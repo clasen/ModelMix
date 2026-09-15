@@ -528,6 +528,7 @@ export declare class ModelMix {
   mimo25(args?: ModelAttachArgs): this;
   mimo25pro(args?: ModelAttachArgs): this;
   deepseekV4Pro(args?: ModelAttachArgs): this;
+  /** Uses deepseek/deepseek-v4-pro-0813 through OpenRouter. */
   deepseekPro(args?: ModelAttachArgs): this;
   deepseekV4Flash(args?: ModelAttachArgs): this;
   deepseekV41Flash(args?: ModelAttachArgs): this;

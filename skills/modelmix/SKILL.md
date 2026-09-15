@@ -195,7 +195,7 @@ Use `.effort(n)` (or `config.effort`) to enable Anthropic thinking — e.g. `.ef
 `GLM46()`
 
 ### OpenRouter
-`deepseekPro()` uses `~deepseek/deepseek-pro-latest`, OpenRouter's rolling Pro alias (V4 Pro 0813 as of September 15, 2026). Requires `OPENROUTER_API_KEY`; supports the DeepSeek effort mapping and `chain('deepseekPro@100')`. Base cost estimates per 1M tokens: $0.5808 input, $0.05808 cached input, $1.7424 output. The target model and actual rates may change, including provider and time-based pricing.
+`deepseekPro()` uses `deepseek/deepseek-v4-pro-0813` through OpenRouter. Requires `OPENROUTER_API_KEY`; supports the DeepSeek effort mapping and `chain('deepseekPro@100')`. Base cost estimates per 1M tokens: $0.5808 input, $0.05808 cached input, $1.7424 output. Actual rates may change, including provider and time-based pricing.
 
 `museGlimmer30b()` `museSpark12()` `museSpark12c()` `museSpark13()` `museSpark13c()` `gptOss()` `qwen35397b()` `qwen36plus()` `qwen37plus()` `qwen3827b()` `qwen38flash()` `hermes470b()` `hermes4405b()` `qwen38max()` `kimiK27Code()` `kimiK3()` `minimaxM27()` `minimaxM3()` `GLM45()` `GLM52()` `GLM53()` `GLM53Flash()` `deepseekV41Flash()`
 

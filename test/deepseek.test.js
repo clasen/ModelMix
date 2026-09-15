@@ -3,7 +3,7 @@ const nock = require('nock');
 const { ModelMix, MixDeepSeek, MixFireworks, MixOpenRouter } = require('../index.js');
 
 describe('DeepSeek Model Registration Tests', () => {
-    it('registers Pro Latest through OpenRouter and preserves caller settings', () => {
+    it('registers V4 Pro 0813 through OpenRouter and preserves caller settings', () => {
         const model = ModelMix.new();
         expect(model.deepseekPro({
             options: { temperature: 0.5 },
@@ -11,20 +11,20 @@ describe('DeepSeek Model Registration Tests', () => {
         })).to.equal(model);
 
         expect(model.models).to.have.length(1);
-        expect(model.models[0].key).to.equal('~deepseek/deepseek-pro-latest');
+        expect(model.models[0].key).to.equal('deepseek/deepseek-v4-pro-0813');
         expect(model.models[0].provider).to.be.instanceOf(MixOpenRouter);
         expect(model.models[0].provider.options.temperature).to.equal(0.5);
         expect(model.models[0].provider.config.effort).to.equal(100);
     });
 
-    describe('DeepSeek Pro Latest requests', () => {
+    describe('DeepSeek V4 Pro 0813 requests', () => {
         afterEach(() => nock.cleanAll());
 
         for (const [effort, level] of [[0, undefined], [20, 'low'], [60, 'high'], [100, 'max'], [-1, undefined]]) {
-            it(`sends the exact alias through chain() at effort ${effort} and accounts for cached input`, async () => {
+            it(`sends the exact model ID through chain() at effort ${effort} and accounts for cached input`, async () => {
                 const scope = nock('https://openrouter.ai')
                     .post('/api/v1/chat/completions', body => {
-                        expect(body.model).to.equal('~deepseek/deepseek-pro-latest');
+                        expect(body.model).to.equal('deepseek/deepseek-v4-pro-0813');
                         expect(body.reasoning_effort).to.equal(level);
                         expect(body.thinking).to.deep.equal(effort === -1
                             ? undefined
