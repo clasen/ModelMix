@@ -1,6 +1,8 @@
 const { expect } = require('chai');
 const path = require('path');
-const { MixCustom, ModelMix } = require('../index.js');
+const nock = require('nock');
+const { MixCustom, MixOpenAIResponses, MixAnthropic, MixGoogle, ModelMix } = require('../index.js');
+const { skills } = require('../plugins/skills');
 
 function createProvider(handler = async () => ({ message: 'provider', toolCalls: [] })) {
     const provider = new MixCustom();
@@ -9,6 +11,153 @@ function createProvider(handler = async () => ({ message: 'provider', toolCalls:
 }
 
 describe('ModelMix plugins', () => {
+    it('runs a native Responses skill loop including reasoning and parallel tool outputs', async () => {
+        const requests = [];
+        const output = [
+            { type: 'reasoning', id: 'rs_skill', summary: [], encrypted_content: 'opaque-reasoning' },
+            { type: 'message', id: 'msg_skill', role: 'assistant', content: [{ type: 'output_text', text: 'Reading the skill.' }] },
+            { type: 'function_call', id: 'fc_skill', call_id: 'call_skill', name: 'read_skill', arguments: JSON.stringify({ name: 'modelmix' }) },
+            { type: 'function_call', id: 'fc_local', call_id: 'call_local', name: 'local_tool', arguments: '{"value":7}' }
+        ];
+        const scope = nock('https://api.openai.com')
+            .post('/v1/responses', body => { requests.push(body); return true; })
+            .reply(200, { output })
+            .post('/v1/responses', body => { requests.push(body); return true; })
+            .reply(200, { output: [{ type: 'message', content: [{ type: 'output_text', text: 'Done.' }] }] });
+        try {
+            const model = ModelMix.new({ config: { bottleneck: { minTime: 0 } } }).gpt6astra()
+                .addTool({ name: 'local_tool', description: 'Local tool', inputSchema: { type: 'object' } }, input => `value=${input.value}`)
+                .use(await skills({ paths: [path.join(__dirname, '../skills/modelmix')] }))
+                .addText('Use the modelmix skill.');
+            expect(await model.message()).to.equal('Done.');
+            expect(scope.isDone()).to.equal(true);
+            for (const request of requests) {
+                expect(request.tools.map(tool => tool.name)).to.have.members(['local_tool', 'read_skill']);
+                const skillTool = request.tools.find(tool => tool.name === 'read_skill');
+                expect(skillTool.strict).to.equal(false);
+                expect(skillTool.parameters.required).to.deep.equal(['name']);
+            }
+            expect(requests[1].input.slice(2, 6)).to.deep.equal(output);
+            const results = requests[1].input.filter(item => item.type === 'function_call_output');
+            expect(results.map(item => item.call_id)).to.deep.equal(['call_skill', 'call_local']);
+            expect(JSON.parse(results[0].output).content).to.include('name: modelmix');
+            expect(results[1].output).to.equal('value=7');
+        } finally {
+            nock.cleanAll();
+        }
+    });
+
+    it('converts neutral tool history and native Responses tool options', () => {
+        const request = MixOpenAIResponses.buildResponsesRequest({
+            tools: [{ type: 'web_search' }, { type: 'function', function: { name: 'lookup', parameters: { type: 'object' }, strict: true } }],
+            tool_choice: { type: 'function', function: { name: 'lookup' } },
+            parallel_tool_calls: false,
+            messages: [
+                { role: 'assistant', content: 'Checking.', tool_calls: [{ id: 'call_1', type: 'function', function: { name: 'lookup', arguments: '{"query":"test"}' } }] },
+                { role: 'tool', tool_call_id: 'call_1', content: 'Found.' }
+            ]
+        });
+        expect(request.tools).to.deep.equal([{ type: 'web_search' }, { type: 'function', name: 'lookup', parameters: { type: 'object' }, strict: true }]);
+        expect(request.tool_choice).to.deep.equal({ type: 'function', name: 'lookup' });
+        expect(request.parallel_tool_calls).to.equal(false);
+        expect(request.input).to.deep.equal([
+            { role: 'assistant', content: [{ type: 'output_text', text: 'Checking.' }] },
+            { type: 'function_call', call_id: 'call_1', name: 'lookup', arguments: '{"query":"test"}' },
+            { type: 'function_call_output', call_id: 'call_1', output: 'Found.' }
+        ]);
+    });
+
+    for (const Provider of [MixCustom, MixAnthropic, MixGoogle]) {
+        for (const hasExplicitTool of [false, true]) {
+            it(`preserves plugin and registered tools with ${Provider.name} options.tools (${hasExplicitTool ? 'populated' : 'empty'})`, async () => {
+                const registered = { name: 'registered', description: 'Registered tool', inputSchema: { type: 'object' } };
+                const extra = { ...registered, name: 'explicit' };
+                const provider = new Provider();
+                const explicitTools = hasExplicitTool ? provider.getOptionsTools({ local: [extra] }).tools : [];
+                let received;
+                provider.create = async ({ options }) => { received = options.tools; return { message: 'done', toolCalls: [] }; };
+                const model = ModelMix.new({ options: { tools: explicitTools } }).attach('custom', provider)
+                    .addTool(registered, () => 'registered')
+                    .use(await skills({ paths: [path.join(__dirname, '../skills/modelmix')] })).addText('Use skills');
+                await model.message();
+                const names = received.flatMap(tool => tool.functionDeclarations || [tool.function || tool]).map(tool => tool.name);
+                expect(names).to.have.members(['registered', 'read_skill', ...(hasExplicitTool ? ['explicit'] : [])]);
+                expect(model.options.tools).to.deep.equal(explicitTools);
+            });
+        }
+    }
+
+    it('rejects collisions between explicit options and plugin tools before calling the provider', async () => {
+        let calls = 0;
+        const model = ModelMix.new({ options: { tools: [{ type: 'function', function: { name: 'read_skill' } }] } })
+            .attach('custom', createProvider(async () => { calls++; return { message: 'unexpected' }; }))
+            .use(await skills({ paths: [path.join(__dirname, '../skills/modelmix')] })).addText('test');
+        let failure;
+        try { await model.message(); } catch (error) { failure = error; }
+        expect(failure?.message).to.include('Duplicate tool name: read_skill');
+        expect(calls).to.equal(0);
+    });
+
+    it('keeps plugin tools request-scoped across tool continuations and alongside local tools', async () => {
+        const requests = [];
+        const signal = new AbortController().signal;
+        const provider = createProvider(async request => {
+            requests.push(request);
+            if (requests.length === 1) return {
+                message: '',
+                toolCalls: [
+                    { id: 'skill', name: 'read_skill', input: {} },
+                    { id: 'local', name: 'local_tool', input: {} }
+                ]
+            };
+            return { message: 'done', toolCalls: [] };
+        });
+        const model = ModelMix.new().attach('custom', provider)
+            .addTool({ name: 'local_tool', description: 'Local tool', inputSchema: { type: 'object' } }, () => 'local')
+            .use({
+                name: 'skills-test',
+                async execute(context, next) {
+                    context.request.tools.push({
+                        tool: { name: 'read_skill', description: 'Read skill', inputSchema: { type: 'object' } },
+                        callback: (_args, callbackSignal) => {
+                            expect(callbackSignal).to.equal(signal);
+                            return 'skill instructions';
+                        }
+                    });
+                    return next();
+                }
+            }).addText('Use both tools');
+
+        expect(await model.message(signal)).to.equal('done');
+        expect(requests).to.have.length(2);
+        for (const request of requests) {
+            expect(request.options.tools.map(tool => tool.function.name)).to.have.members(['local_tool', 'read_skill']);
+        }
+        const results = requests[1].options.messages.filter(message => message.role === 'tool');
+        expect(results.map(result => result.content)).to.deep.equal(['skill instructions', 'local']);
+        expect(model.mcpToolsManager.hasTool('read_skill')).to.equal(false);
+        expect(model.tools.local.map(tool => tool.name)).to.deep.equal(['local_tool']);
+    });
+
+    it('rejects collisions between plugin tools and existing tools before calling a provider', async () => {
+        let calls = 0;
+        const tool = { name: 'same', description: 'Same tool', inputSchema: { type: 'object' } };
+        const model = ModelMix.new().attach('custom', createProvider(async () => {
+            calls += 1;
+            return { message: 'unexpected' };
+        })).addTool(tool, () => 'local').use({
+            name: 'collision',
+            async execute(context, next) {
+                context.request.tools.push({ tool, callback: () => 'plugin' });
+                return next();
+            }
+        }).addText('test');
+        let failure;
+        try { await model.message(); } catch (error) { failure = error; }
+        expect(failure?.message).to.include('Duplicate tool name: same');
+        expect(calls).to.equal(0);
+    });
+
     it('keeps registration instance-scoped and lets new instances inherit plugins without history', () => {
         const plugin = { name: 'metrics', execute: (_context, next) => next() };
         const parent = ModelMix.new().use(plugin).addText('parent history');

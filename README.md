@@ -1000,6 +1000,33 @@ Supported policies are `'inherit'`, `'none'`, `{ include: [...] }`, and `{ exclu
 
 Child `systemFile` templates use the same EJS engine, `assign()` data contract, and relative Markdown includes as ordinary ModelMix templates. Use either `system` or `systemFile`, not both.
 
+Plugins may append `{ tool, callback }` entries to `context.request.tools` using the same definitions as `addTools()`. These tools are available for that execution and its tool continuations, alongside registered local/MCP tools. They do not change the instance's tool registry. Duplicate names are rejected before calling a provider. Child invocations rebuild their tools through the selected plugins or explicit `tools` input.
+
+When plugins add tools, native `options.tools` entries are combined with registered and plugin tools; duplicate function names are rejected. OpenAI Responses converts function definitions and preserves tool calls, results, and accompanying reasoning across continuations.
+
+### Skills plugin
+
+The included plugin loads local [Agent Skills](https://agentskills.io/specification). Pass explicit skill directories or `SKILL.md` files:
+
+```javascript
+import { ModelMix } from 'modelmix';
+import { skills } from 'modelmix/plugins/skills/index.js';
+
+const model = ModelMix.new()
+    .gpt6astra()
+    .opus5()
+    .use(await skills({ paths: ['./skills/writing', './skills/research/SKILL.md'] }))
+    .addText('Use the writing skill to improve this paragraph: ...');
+
+console.log(await model.message());
+```
+
+`skills()` is asynchronous. Each file must have YAML frontmatter with non-empty string `name` and `description` fields; duplicate names and malformed files fail during loading. Relative paths resolve from `process.cwd()`.
+
+Only names and descriptions are appended to the system prompt. A model supporting tool calls can select a skill with `read_skill({ name })`, then load supporting UTF-8 text files with `read_skill({ name, path: 'references/style.md' })`. Full instructions are returned literally, including any EJS syntax. Existing system instructions and tools are preserved; `read_skill` is reserved while this plugin runs.
+
+Skill metadata and `SKILL.md` content are snapshots taken when creating the plugin; recreate it to reload edits. Supporting files are read on demand. Reads must stay inside the registered skill directory, including resolved symlinks. Files are returned in full, so callers should register appropriately sized, trusted skills. The plugin does not execute scripts, install tools, or grant permissions from `allowed-tools` metadata. Skills requiring additional capabilities need tools supplied by the application.
+
 ### Benchmark plugin
 
 The included benchmark plugin derives task-specific criteria, runs each configured model independently, and uses the other distinct models as anonymous judges. Model specifications use the same `shortcut@effort` syntax as `chain()`:

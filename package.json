@@ -1,6 +1,6 @@
 {
   "name": "modelmix",
-  "version": "5.2.0",
+  "version": "5.2.1",
   "description": "🧬 Reliable interface with automatic fallback for AI LLMs.",
   "main": "index.js",
   "types": "index.d.ts",
@@ -56,6 +56,7 @@
     "bottleneck": "^2.19.5",
     "ejs": "6.0.1",
     "file-type": "^21.3.4",
+    "js-yaml": "4.3.2",
     "lemonlog": "^1.2.2",
     "ws": "^8.21.1"
   },
@@ -77,9 +78,10 @@
     "test:live.mcp": "mocha test/live.mcp.js --timeout 60000 --require test/setup.js",
     "test:tokens": "mocha test/tokens.test.js --timeout 10000 --require test/setup.js",
     "test:plugins": "mocha test/plugins.test.js --timeout 10000 --require test/setup.js",
+    "test:skills": "mocha plugins/skills/test/**/*.test.js --timeout 10000 --require test/setup.js",
     "test:benchmark": "mocha plugins/benchmark/test/**/*.test.js --timeout 10000 --require test/setup.js",
     "test:rlm": "mocha plugins/rlm/test/**/*.test.js --timeout 10000 --require test/setup.js",
-    "test:offline": "mocha test/abort.test.js test/json.test.js test/fallback.test.js test/templates.test.js test/images.test.js test/bottleneck.test.js test/tokens.test.js test/history.test.js test/anthropic.test.js test/effort.test.js test/grok.test.js test/google.test.js test/moderation.test.js test/plugins.test.js plugins/benchmark/test/**/*.test.js plugins/rlm/test/**/*.test.js --timeout 10000 --require test/setup.js"
+    "test:offline": "mocha test/abort.test.js test/json.test.js test/fallback.test.js test/templates.test.js test/images.test.js test/bottleneck.test.js test/tokens.test.js test/history.test.js test/anthropic.test.js test/effort.test.js test/grok.test.js test/google.test.js test/moderation.test.js test/plugins.test.js plugins/skills/test/**/*.test.js plugins/benchmark/test/**/*.test.js plugins/rlm/test/**/*.test.js --timeout 10000 --require test/setup.js"
   },
   "packageManager": "pnpm@12.4.1"
 }

@@ -43,7 +43,7 @@ await mkdir(resultsDirectory, { recursive: true });
 for (const result of report.results) {
     if (result.response === null) continue;
     const filename = result.id.replace(/[^A-Za-z0-9_-]/g, '_');
-    const contents = `# ${result.id}\n\nScore: ${result.score === null ? 'N/A' : Number(result.score.toFixed(2))}\n\nEstimated generation cost (USD): ${result.responseMetrics?.cost ?? 'N/A'}\n\n---\n\n${result.response}\n`;
+    const contents = `# ${result.id}\n\nScore: ${result.score === null ? 'N/A' : Math.round(result.score * 10)}/100\n\nEstimated generation cost (USD): ${result.responseMetrics?.cost ?? 'N/A'}\n\n---\n\n${result.response}\n`;
     await writeFile(path.join(resultsDirectory, `${filename}.md`), contents, 'utf8');
 }
 
@@ -69,7 +69,7 @@ const ranking = report.results
         if (right.score === null) return -1;
         return right.score - left.score;
     })
-    .map(row => ({ ...row, score: row.score === null ? null : Number(row.score.toFixed(2)) }));
+    .map(row => ({ ...row, score: row.score === null ? null : Math.round(row.score * 10) }));
 
 console.table(ranking);
 if (report.errors.length > 0) {

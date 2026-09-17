@@ -1,8 +1,3 @@
-/**
- * Type definitions for modelmix
- * @see https://github.com/clasen/ModelMix
- */
-
 export type MessageRole = 'user' | 'assistant' | 'system' | 'tool' | string;
 
 export type DebugLevel = 0 | 1 | 2 | 3 | 4;
@@ -258,6 +253,7 @@ export interface PluginExecutionContext {
   request: {
     system: string;
     messages: ChatMessage[];
+    tools: ToolWithCallback[];
     options: ModelMixOptions;
     config: ModelMixConfig;
     outputMode: ModelMixOutputMode;

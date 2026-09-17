@@ -121,6 +121,27 @@ model.use({
 
 The optional `@modelmix/rlm` package is a separate workspace/npm package for recursive processing of large structured inputs. Pass Markdown through `documents: { name: { format: 'markdown', content } }`, register named ModelMix worker chains, and provide every runtime limit explicitly. A worker uses either `model: anotherModelMixInstance` or `useParent: true`. Its planner sees content-free variable size/shape metadata, while document values and generated orchestration code stay inside an `isolated-vm` sandbox. RLM planner prompts are Markdown files rendered with the normal child `assign` plus `systemFile` path.
 
+### Loading local skills
+
+Use the included skills plugin to expose local `SKILL.md` instructions to a model with tool-call support:
+
+```javascript
+import { ModelMix } from 'modelmix';
+import { skills } from 'modelmix/plugins/skills/index.js';
+const model = ModelMix.new()
+    .gpt6astra()
+    .opus5()
+    .use(await skills({ paths: ['./skills/writing'] }))
+    .addText('Use the writing skill to revise this paragraph: ...');
+const answer = await model.message();
+```
+
+Paths identify explicit skill directories or `SKILL.md` files relative to the working directory. YAML `name` and `description` must be non-empty strings. The system prompt receives only the catalog; `read_skill({ name })` loads instructions and `read_skill({ name, path })` reads a supporting UTF-8 file inside that skill directory. Instructions are literal, never EJS-rendered. Skill metadata and instructions are snapshots; recreate the plugin to reload them. References are read on demand. The plugin supplies no script execution or automatic permissions from skill metadata.
+
+Plugin tools use `context.request.tools.push({ tool, callback })`. They coexist with local/MCP tools, are scoped to the current execution, and survive tool continuations. Duplicate names fail before a provider call; the skills plugin reserves `read_skill`. Child executions receive the tools only when the plugin is inherited or the tools are explicitly passed to `context.invoke()`.
+
+With plugin tools, native `options.tools` entries are combined with registered and plugin tools. OpenAI Responses supports this tool loop, including reasoning returned with function calls.
+
 ### Unified effort
 
 Provider-agnostic reasoning intensity. **Not** an `options` field — use `config.effort` or `.effort(n)`.

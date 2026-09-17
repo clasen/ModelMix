@@ -1312,6 +1312,7 @@ class ModelMix {
         const request = {
             system: this._renderSystem(config, {}, systemSuffix, templateContext),
             messages: clonePluginValue(preparedMessages),
+            tools: [],
             options: clonePluginValue({ ...this.options, ...options }),
             config: clonePluginValue(this._mergeRequestConfig(config)),
             outputMode
@@ -1383,15 +1384,34 @@ class ModelMix {
         templateContext
     }) {
         const provider = currentModel.provider;
+        const tools = pluginRequest?.tools.length ? {
+            ...this.tools,
+            local: [...(this.tools.local || []), ...pluginRequest.tools.map(entry => entry.tool)]
+        } : this.tools;
+        const toolOptions = provider.getOptionsTools(tools);
         const currentOptions = {
             ...this.options,
             messages: preparedMessages,
             ...provider.options,
-            ...provider.getOptionsTools(this.tools),
+            ...toolOptions,
             ...options,
             ...(pluginRequest?.options || {}),
             model: currentModel.key
         };
+        if (pluginRequest?.tools.length && currentOptions.tools !== toolOptions.tools) {
+            if (!Array.isArray(currentOptions.tools)) {
+                throw new TypeError('Request options.tools must be an array when using plugin tools.');
+            }
+            currentOptions.tools = [...(toolOptions.tools || []), ...currentOptions.tools];
+            const names = new Set();
+            for (const tool of currentOptions.tools) {
+                for (const definition of tool.functionDeclarations || [tool.function || tool]) {
+                    if (!definition.name) continue;
+                    if (names.has(definition.name)) throw new Error(`Duplicate tool name: ${definition.name}`);
+                    names.add(definition.name);
+                }
+            }
+        }
         const currentConfig = pluginRequest
             ? {
                 ...provider.config,
@@ -1512,7 +1532,7 @@ class ModelMix {
         result.tokens.speed = elapsedSec > 0 ? Math.round(result.tokens.output / elapsedSec) : 0;
     }
 
-    async _continueToolCalls(result, pluginRequest, execution) {
+    async _continueToolCalls(result, pluginRequest, execution, pluginTools) {
         const originalMessages = this.messages;
         const toolMessages = pluginRequest
             ? clonePluginValue(pluginRequest.messages)
@@ -1540,7 +1560,7 @@ class ModelMix {
         if (!result.assistantMessage) {
             toolMessages.push({ role: 'assistant', content: null, tool_calls: result.toolCalls });
         }
-        const toolResults = await this.processToolCalls(result.toolCalls, execution.signal);
+        const toolResults = await this.processToolCalls(result.toolCalls, execution.signal, pluginTools);
         for (const toolResult of toolResults) {
             toolMessages.push({
                 role: 'tool',
@@ -1650,6 +1670,23 @@ class ModelMix {
         this._requirePreparedMessages(preparedMessages);
 
         const finalConfig = pluginRequest ? pluginRequest.config : this._mergeRequestConfig(config);
+        const pluginTools = pluginRequest ? new MCPToolsManager() : null;
+        if (pluginRequest) {
+            if (!Array.isArray(pluginRequest.tools)) {
+                throw new TypeError('Plugin request tools must be an array.');
+            }
+            const names = new Set(Object.values(this.tools).flat().map(tool => tool.name));
+            for (const entry of pluginRequest.tools) {
+                if (!isPlainObject(entry) || !isPlainObject(entry.tool)) {
+                    throw new TypeError('Plugin request tools must contain { tool, callback }.');
+                }
+                if (names.has(entry.tool.name)) {
+                    throw new Error(`Duplicate tool name: ${entry.tool.name}`);
+                }
+                pluginTools.registerTool(entry.tool, entry.callback);
+                names.add(entry.tool.name);
+            }
+        }
         const modelsToTry = this.models.map((model, index) => ({ model, index }));
         if (finalConfig.roundRobin && this.models.length > 1) {
             this.models.push(this.models.shift());
@@ -1695,7 +1732,7 @@ class ModelMix {
                         _templateContext: templateContext,
                         _executionMetadata: executionMetadata,
                         _pluginsApplied: pluginsApplied
-                    });
+                    }, pluginTools);
                 }
 
                 this._logProviderSuccess(result, providerAttempt.currentConfig);
@@ -1771,7 +1808,7 @@ class ModelMix {
         if (isRootExecution) this._commitTemplateRenderContext(templateContext);
         return result;
     }
-    async processToolCalls(toolCalls, signal) {
+    async processToolCalls(toolCalls, signal, pluginTools) {
         assertAbortSignal(signal);
         const result = []
 
@@ -1804,8 +1841,9 @@ class ModelMix {
                 }
 
                 // Verificar si es una herramienta local registrada
-                if (this.mcpToolsManager.hasTool(toolName)) {
-                    const response = await this.mcpToolsManager.executeTool(toolName, toolArgs, signal);
+                if (pluginTools?.hasTool(toolName) || this.mcpToolsManager.hasTool(toolName)) {
+                    const manager = pluginTools?.hasTool(toolName) ? pluginTools : this.mcpToolsManager;
+                    const response = await manager.executeTool(toolName, toolArgs, signal);
                     throwIfAborted(signal);
                     result.push({
                         name: toolName,
