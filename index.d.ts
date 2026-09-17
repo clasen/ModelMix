@@ -495,6 +495,7 @@ export declare class ModelMix {
   sonar(args?: ModelAttachArgs): this;
 
   // Grok
+  grok47(args?: ModelAttachArgs): this;
   grok46(args?: ModelAttachArgs): this;
   grok45(args?: ModelAttachArgs): this;
   grok43(args?: ModelAttachArgs): this;

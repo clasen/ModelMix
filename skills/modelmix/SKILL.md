@@ -187,7 +187,7 @@ Use `.effort(n)` (or `config.effort`) to enable Anthropic thinking — e.g. `.ef
 `gemini31pro()` `gemini38flash()` `gemini37flash()` `gemini36flash()` `gemini35flash()` `gemini35flashLite()` `gemini31flashLite()`
 
 ### Grok
-`grok46()` `grok45()` `grok43()` `grok420multiAgent()` `grok420()`
+`grok47()` `grok46()` `grok45()` `grok43()` `grok420multiAgent()` `grok420()`
 
 ### Perplexity
 `sonar()` `sonarPro()`

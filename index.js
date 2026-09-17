@@ -603,6 +603,9 @@ class ModelMix {
         return this.attach('sonar', new MixPerplexity({ options, config }));
     }
 
+    grok47({ options = {}, config = {} } = {}) {
+        return this.attach('grok-4.7', new MixGrok({ options, config }));
+    }
     grok46({ options = {}, config = {} } = {}) {
         return this.attach('grok-4.6', new MixGrok({ options, config }));
     }

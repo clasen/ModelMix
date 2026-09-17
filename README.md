@@ -193,6 +193,7 @@ ModelMix provides convenient shorthand methods for quickly accessing different A
 | `gemini35flash()` | Google | gemini-3.5-flash | [\$0.75][3] | [\$4.50][3] |
 | `gemini35flashLite()` | Google | gemini-3.5-flash-lite | [\$0.30][3] | [\$2.50][3] |
 | `gemini31flashLite()` | Google | gemini-3.1-flash-lite-preview | [\$0.25][3] | [\$1.50][3] |
+| `grok47()` | Grok | grok-4.7 | — | — |
 | `grok46()` | Grok | grok-4.6 | [\$2.00][6] | [\$6.00][6] |
 | `grok45()` | Grok | grok-4.5 | [\$2.00][6] | [\$6.00][6] |
 | `grok43()` | Grok | grok-4.3 | [\$1.25][6] | [\$2.50][6] |

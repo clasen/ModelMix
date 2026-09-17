@@ -11,6 +11,7 @@ const {
 
 describe('Grok Model Registration Tests', () => {
     const grokModels = [
+        { method: 'grok47', key: 'grok-4.7' },
         { method: 'grok46', key: 'grok-4.6' },
         { method: 'grok45', key: 'grok-4.5' },
         { method: 'grok43', key: 'grok-4.3' },
@@ -36,6 +37,38 @@ describe('Grok Model Registration Tests', () => {
         expect(model.models[0].provider).to.be.instanceOf(MixGrok);
         expect(model.models[0].provider.options).to.deep.equal(options);
         expect(model.models[0].provider.config).to.include(config);
+    });
+
+    it('supports Grok 4.7 in chain() and preserves attachment options', () => {
+        const options = { temperature: 0.5 };
+        const config = { max_history: 3 };
+        const model = ModelMix.new().grok47({ options, config });
+
+        expect(model.models[0].provider).to.be.instanceOf(MixGrok);
+        expect(model.models[0].provider.options).to.deep.equal(options);
+        expect(model.models[0].provider.config).to.include(config);
+        expect(ModelMix.new().chain('grok47').models[0].key).to.equal('grok-4.7');
+    });
+
+    it('sends Grok 4.7 requests to xAI', async () => {
+        const api = nock('https://api.x.ai')
+            .post('/v1/chat/completions', body => {
+                expect(body.model).to.equal('grok-4.7');
+                expect(body.temperature).to.equal(0.5);
+                return true;
+            })
+            .reply(200, {
+                choices: [{ message: { content: 'ok' } }],
+                usage: { prompt_tokens: 1, completion_tokens: 1, total_tokens: 2 }
+            });
+
+        const response = await ModelMix.new()
+            .grok47({ options: { temperature: 0.5 }, config: { apiKey: 'test-key' } })
+            .addText('Hi')
+            .message();
+
+        expect(response).to.equal('ok');
+        api.done();
     });
 
     it('maps unified effort to Grok 4.6 supported levels', () => {
