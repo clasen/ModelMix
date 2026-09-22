@@ -122,6 +122,15 @@ describe('Anthropic Model Registration Tests', () => {
         expect(model.models[0].provider).to.be.instanceOf(MixAnthropic);
     });
 
+    it('should register Claude Opus 5.5', () => {
+        const model = ModelMix.new();
+        model.opus55();
+
+        expect(model.models).to.have.length(1);
+        expect(model.models[0].key).to.equal('claude-opus-5-5');
+        expect(model.models[0].provider).to.be.instanceOf(MixAnthropic);
+    });
+
     it('should keep opus5() as an alias for opus50()', () => {
         const model = ModelMix.new();
 
@@ -147,9 +156,21 @@ describe('Anthropic Model Registration Tests', () => {
         expect(options.thinking).to.deep.equal({ type: 'adaptive', display: 'summarized' });
     });
 
+    it('should apply max effort thinking via .effort(100).opus55()', () => {
+        const model = ModelMix.new().effort(100).opus55();
+        const { applyUnifiedEffort } = require('../effort.js');
+
+        expect(model.config.effort).to.equal(100);
+        const options = { model: 'claude-opus-5-5' };
+        applyUnifiedEffort(options, model.config, 'anthropic', 'claude-opus-5-5');
+        expect(options.output_config).to.deep.equal({ effort: 'max' });
+        expect(options.thinking).to.deep.equal({ type: 'adaptive', display: 'summarized' });
+    });
+
     describe('Sampling params (temperature/top_p/top_k)', () => {
         it('should detect models that reject sampling params', () => {
             expect(MixAnthropic.rejectsSamplingParams('claude-opus-5')).to.equal(true);
+            expect(MixAnthropic.rejectsSamplingParams('claude-opus-5-5')).to.equal(true);
             expect(MixAnthropic.rejectsSamplingParams('claude-opus-4-8')).to.equal(true);
             expect(MixAnthropic.rejectsSamplingParams('claude-opus-4-7')).to.equal(true);
             expect(MixAnthropic.rejectsSamplingParams('claude-sonnet-5')).to.equal(true);

@@ -179,6 +179,7 @@ ModelMix provides convenient shorthand methods for quickly accessing different A
 | `gptOss()` | Multi-provider | gpt-oss-120B | [\$0.15][7] | [\$0.60][7] |
 | `fable51()` | Anthropic | claude-fable-5-1 | [\$10.00][2] | [\$50.00][2] |
 | `fable5()` | Anthropic | claude-fable-5 | [\$10.00][2] | [\$50.00][2] |
+| `opus55()` | Anthropic | claude-opus-5-5 | [\$5.00][2] | [\$25.00][2] |
 | `opus5()` | Anthropic | claude-opus-5 | [\$5.00][2] | [\$25.00][2] |
 | `opus48()` | Anthropic | claude-opus-4-8 | [\$5.00][2] | [\$25.00][2] |
 | `opus47()` | Anthropic | claude-opus-4-7 | [\$5.00][2] | [\$25.00][2] |
@@ -219,6 +220,7 @@ ModelMix provides convenient shorthand methods for quickly accessing different A
 | `GLM52()` | Together | zai-org/GLM-5.2 | [\$1.40][7] | [\$4.40][7] |
 | `minimaxM3()` | MiniMax | MiniMax-M3 | [\$0.30][9] | [\$1.20][9] |
 | `minimaxM27()` | MiniMax | MiniMax-M2.7 | [\$0.30][9] | [\$1.20][9] |
+| `mimo26pro()` | MiMo | mimo-v2.6-pro | — | — |
 | `sonar()` | Perplexity | sonar | [\$1.00][4] | [\$1.00][4] |
 | `sonarPro()` | Perplexity | sonar-pro | [\$3.00][4] | [\$15.00][4] |
 | `hermes470b()` | OpenRouter | nousresearch/hermes-4-70b | [\$0.13][13] | [\$0.40][13] |

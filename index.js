@@ -545,6 +545,9 @@ class ModelMix {
         if (mix.openrouter) this.attach('anthropic/claude-fable-5.1', new MixOpenRouter({ options, config }));
         return this;
     }
+    opus55({ options = {}, config = {} } = {}) {
+        return this.attach('claude-opus-5-5', new MixAnthropic({ options, config }));
+    }
     opus50({ options = {}, config = {} } = {}) {
         return this.attach('claude-opus-5', new MixAnthropic({ options, config }));
     }
@@ -766,6 +769,13 @@ class ModelMix {
         mix = { ...this.mix, ...mix };
         if (mix.mimo) this.attach('mimo-v2.5-pro', new MixMiMo({ options, config }));
         if (mix.openrouter) this.attach('xiaomi/mimo-v2.5-pro', new MixOpenRouter({ options, config }));
+        return this;
+    }
+
+    mimo26pro({ options = {}, config = {}, mix = { openrouter: true } } = {}) {
+        mix = { ...this.mix, ...mix };
+        if (mix.mimo) this.attach('mimo-v2.6-pro', new MixMiMo({ options, config }));
+        if (mix.openrouter) this.attach('xiaomi/mimo-v2.6-pro', new MixOpenRouter({ options, config }));
         return this;
     }
 

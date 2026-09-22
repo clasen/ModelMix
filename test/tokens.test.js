@@ -674,6 +674,38 @@ describe('Token Usage Tracking', () => {
         }
     });
 
+    it('should register MiMo 2.6 Pro with native and OpenRouter providers', function () {
+        const originalMimoApiKey = process.env.MIMO_API_KEY;
+        const originalOpenRouterApiKey = process.env.OPENROUTER_API_KEY;
+
+        process.env.MIMO_API_KEY = 'test-mimo-key';
+        process.env.OPENROUTER_API_KEY = 'test-openrouter-key';
+
+        try {
+            const model = ModelMix.new().mimo26pro();
+            const withNative = ModelMix.new()
+                .mimo26pro({ mix: { mimo: true, openrouter: true } });
+
+            expect(model.models.map(({ key }) => key)).to.deep.equal(['xiaomi/mimo-v2.6-pro']);
+            expect(model.models[0].provider).to.be.instanceOf(MixOpenRouter);
+
+            expect(withNative.models.map(({ key }) => key)).to.deep.equal([
+                'mimo-v2.6-pro',
+                'xiaomi/mimo-v2.6-pro'
+            ]);
+            expect(withNative.models[0].provider).to.be.instanceOf(MixMiMo);
+            expect(withNative.models[1].provider).to.be.instanceOf(MixOpenRouter);
+
+            expect(ModelMix.new().chain('mimo26pro').models[0].key).to.equal('xiaomi/mimo-v2.6-pro');
+        } finally {
+            if (originalMimoApiKey === undefined) delete process.env.MIMO_API_KEY;
+            else process.env.MIMO_API_KEY = originalMimoApiKey;
+
+            if (originalOpenRouterApiKey === undefined) delete process.env.OPENROUTER_API_KEY;
+            else process.env.OPENROUTER_API_KEY = originalOpenRouterApiKey;
+        }
+    });
+
     it('should register GPT-OSS 120B through the current OpenRouter model ID', function () {
         const originalOpenRouterApiKey = process.env.OPENROUTER_API_KEY;
         process.env.OPENROUTER_API_KEY = 'test-openrouter-key';

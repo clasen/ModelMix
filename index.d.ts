@@ -470,6 +470,7 @@ export declare class ModelMix {
   fable51(args?: ModelAttachArgs): this;
   fable50(args?: ModelAttachArgs): this;
   fable5(args?: ModelAttachArgs): this;
+  opus55(args?: ModelAttachArgs): this;
   opus50(args?: ModelAttachArgs): this;
   opus5(args?: ModelAttachArgs): this;
   opus48(args?: ModelAttachArgs): this;
@@ -527,6 +528,7 @@ export declare class ModelMix {
   minimaxM3(args?: ModelAttachArgs): this;
   mimo25(args?: ModelAttachArgs): this;
   mimo25pro(args?: ModelAttachArgs): this;
+  mimo26pro(args?: ModelAttachArgs): this;
   deepseekV4Pro(args?: ModelAttachArgs): this;
   /** Uses deepseek/deepseek-v4-pro-0813 through OpenRouter. */
   deepseekPro(args?: ModelAttachArgs): this;

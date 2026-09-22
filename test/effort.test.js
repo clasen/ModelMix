@@ -197,6 +197,10 @@ describe('Unified effort scale', () => {
                 thinking: { type: 'adaptive', display: 'summarized' },
                 output_config: { effort: 'low' }
             });
+            expect(mapEffort('anthropic', 50, 'claude-opus-5-5')).to.deep.equal({
+                thinking: { type: 'adaptive', display: 'summarized' },
+                output_config: { effort: 'high' }
+            });
             expect(mapEffort('anthropic', 90, 'claude-fable-5-1')).to.deep.equal({
                 thinking: { type: 'adaptive', display: 'summarized' },
                 output_config: { effort: 'max' }

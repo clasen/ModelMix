@@ -177,7 +177,7 @@ Use `ModerationMix.new().openai()` with `.raw()` to classify text and images thr
 Every textual GPT-5 and GPT-6 shortcut registers only the official OpenAI model by default. Pass `mix: { openrouter: true }` to `ModelMix.new()` or to an individual shortcut to append its `openai/*` OpenRouter route as a fallback. `gpt53chat()` uses `gpt-5.3-chat-latest` officially and `openai/gpt-5.3-chat` through OpenRouter. Both API keys are required when that fallback is enabled. Realtime shortcuts remain official-only.
 
 ### Anthropic
-`fable51()` `fable50()` `opus50()` `opus48()` `opus47()` `opus46()` `sonnet5()` `sonnet46()` `sonnet45()` `haiku45()`
+`fable51()` `fable50()` `opus55()` `opus50()` `opus48()` `opus47()` `opus46()` `sonnet5()` `sonnet46()` `sonnet45()` `haiku45()`
 
 Use `.effort(n)` (or `config.effort`) to enable Anthropic thinking — e.g. `.effort(100).opus50()`. `fable5()` and `opus5()` remain available as compatibility aliases.
 
@@ -203,6 +203,9 @@ Use `.effort(n)` (or `config.effort`) to enable Anthropic thinking — e.g. `.ef
 
 ### MiniMax
 `minimaxM27()` `minimaxM3()`
+
+### MiMo
+`mimo26pro()` — uses OpenRouter (`xiaomi/mimo-v2.6-pro`) by default; the native API requires `MIMO_API_KEY` and `mix: { mimo: true }`.
 
 ### DeepSeek
 `deepseekV41Flash({ mix: { deepseek: true, openrouter: false } })` uses the native API at `https://api.deepseek.com/chat/completions` with model `deepseek-flash` (currently V4.1 Flash). Requires `DEEPSEEK_API_KEY`; `MixDeepSeek` supports explicit `.attach()` calls. Unified effort and native cache usage are supported, and assistant reasoning is preserved for tool continuations. Cost estimates use peak rates per 1M tokens: $0.30 input, $0.006 cached input, $1.20 output; off-peak charges are half. Enabling all three providers orders them DeepSeek → Fireworks → OpenRouter.

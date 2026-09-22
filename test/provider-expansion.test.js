@@ -1,7 +1,9 @@
 const { expect } = require('chai');
+const nock = require('nock');
 const {
     ModelMix,
     MixFireworks,
+    MixMiMo,
     MixMiniMax,
     MixNVIDIA,
     MixOpenRouter,
@@ -96,5 +98,30 @@ describe('Provider expansion regressions', () => {
         expect(model.models).to.have.length(1);
         expect(model.models[0].key).to.equal('accounts/fireworks/models/minimax-m3');
         expect(model.models[0].provider).to.be.instanceOf(MixFireworks);
+    });
+
+    it('should send MiMo 2.6 Pro requests to the native MiMo API', async () => {
+        const api = nock('https://api.xiaomimimo.com')
+            .post('/v1/chat/completions', body => {
+                expect(body.model).to.equal('mimo-v2.6-pro');
+                return true;
+            })
+            .reply(200, {
+                choices: [{ message: { content: 'ok' } }],
+                usage: { prompt_tokens: 1, completion_tokens: 1, total_tokens: 2 }
+            });
+
+        const model = ModelMix.new().mimo26pro({
+            mix: { mimo: true, openrouter: false },
+            config: { apiKey: 'test-mimo-key' }
+        });
+
+        expect(model.models).to.have.length(1);
+        expect(model.models[0].provider).to.be.instanceOf(MixMiMo);
+
+        const response = await model.addText('Hi').message();
+
+        expect(response).to.equal('ok');
+        api.done();
     });
 });
