@@ -160,7 +160,9 @@ ModelMix provides convenient shorthand methods for quickly accessing different A
 | Method | Provider | Model | Input / 1M | Output / 1M |
 | --- | --- | --- | ---: | ---: |
 | `gpt6astra()` | OpenAI | gpt-6-astra | [\$10.00][1] | [\$50.00][1] |
-| `gpt56sol()` | OpenAI | gpt-5.6-sol | [\$5.00][1] | [\$30.00][1] |
+| `gpt6sol()` | OpenAI | gpt-6-sol | [\$2.00][1] | [\$10.00][1] |
+| `gpt6luna()` | OpenAI | gpt-6-luna | [\$0.10][1] | [\$0.50][1] |
+| `gpt56sol()` | OpenAI | gpt-5.6-sol | [\$4.00][1] | [\$20.00][1] |
 | `gpt56terra()` | OpenAI | gpt-5.6-terra | [\$2.00][1] | [\$12.00][1] |
 | `gpt56luna()` | OpenAI | gpt-5.6-luna | [\$0.20][1] | [\$1.20][1] |
 | `gpt55()` | OpenAI | gpt-5.5 | [\$5.00][1] | [\$30.00][1] |
@@ -320,6 +322,7 @@ ModelMix.new().effort(-1).minimaxM3().addText('...').message();
 
 - **Gemini:** Gemini 3+ uses bands 0–24 / 25–49 / 50–74 / 75–100. Gemini 3.8 Flash and 3.7 Flash clamp these bands to `low` / `low` / `medium` / `high`; `-1` leaves their native `medium` default unchanged. Gemini 2.5 maps 0–100 to `thinkingBudget`.
 - **GPT-6 Astra:** 0–39 maps to `low`, 40–59 to `medium`, 60–79 to `high`, 80–99 to `xhigh`, and 100 to `max`. [Model details](https://developers.openai.com/api/docs/models/gpt-6-astra). Cache reads cost $1.00 and cache writes $12.50 per 1M tokens; requests over 272K input tokens apply 2× input/cache and 1.5× output rates.
+- **GPT-6 Sol and GPT-6 Luna:** `100` maps to `max`; the remaining bands match OpenAI, so 0–19 is `none` and 80–99 is `xhigh`. [Sol model details](https://developers.openai.com/api/docs/models/gpt-6-sol), [Luna model details](https://developers.openai.com/api/docs/models/gpt-6-luna). Cache reads cost $0.20 and $0.01 and cache writes $2.50 and $0.125 per 1M tokens; requests over 272K input tokens apply the same 2× input/cache and 1.5× output rates as Astra.
 - **GPT-5.6:** `100` maps to `max`; 80–99 remains `xhigh`.
 - **Qwen 3.8 27B and Flash:** 0–39 / 40–79 / 80–100 map to `low` / `medium` / `xhigh`; `-1` leaves the native `xhigh` default unchanged. Qwen 3.8 Flash is the managed production version based on the open-weight Flash-Next architecture.
 - **GLM 5.3 and GLM 5.3 Flash:** reasoning is mandatory; 0–39 / 40–79 / 80–100 map to `low` / `high` / `max`; `-1` leaves the native `max` default unchanged.
@@ -831,9 +834,9 @@ await ask('Summarize support ticket 456.');
 
 The contents of `support.md` and the cache key stay the same between calls; only the final question changes. The first request may report `cacheWrite > 0`, while later requests confirm reuse with `cached > 0`. For GPT-5.6, the stable prefix must contain at least 1,024 tokens. Keep all variable content after the breakpoint, and change `prompt_cache_key` when the stable instructions change.
 
-### GPT-5.6 prompt caching
+### GPT-5.6 and GPT-6 prompt caching
 
-GPT-5.6 supports implicit or explicit caching through `prompt_cache_options`. Put the explicit breakpoint at the end of the stable prefix; the provider only caches prompts with at least 1,024 tokens.
+GPT-5.6 and the GPT-6 models (Astra, Sol, and Luna) support implicit or explicit caching through `prompt_cache_options`. Put the explicit breakpoint at the end of the stable prefix; the provider only caches prompts with at least 1,024 tokens.
 
 ```javascript
 const model = ModelMix.new()
@@ -854,15 +857,17 @@ console.log(result.tokens.cached, result.tokens.cacheWrite, result.tokens.cost);
 
 The provider-neutral `cache: { breakpoint: true }` option is accepted by `addTextFromFile()`, `addImage()`, `addImageFromUrl()`, and `addImageFromBuffer()`. Responses-native `input_text`, `input_image`, and `input_file` blocks preserve the native `prompt_cache_breakpoint` field when supplied directly through `options.messages`.
 
-GPT-5.6 uses `prompt_cache_options.ttl`; `prompt_cache_retention` remains available for earlier OpenAI models. ModelMix rejects the incompatible control instead of silently dropping it. For GPT-5.6 requests over 272K input tokens, the cost calculation applies the documented 2× input and 1.5× output multipliers to the complete request, including cache reads and writes.
+GPT-5.6 and GPT-6 use `prompt_cache_options.ttl`; `prompt_cache_retention` remains available for earlier OpenAI models. ModelMix rejects the incompatible control instead of silently dropping it. For GPT-5.6 requests over 272K input tokens, the cost calculation applies the documented 2× input and 1.5× output multipliers to the complete request, including cache reads and writes.
 
 GPT-5.6 prices per 1M tokens:
 
 | Model | Input | Cached input | Cache write | Output |
 | --- | ---: | ---: | ---: | ---: |
-| `gpt-5.6-sol` | $5.00 | $0.50 | $6.25 | $30.00 |
+| `gpt-5.6-sol` | $4.00 | $0.40 | $5.00 | $20.00 |
 | `gpt-5.6-terra` | $2.00 | $0.20 | $2.50 | $12.00 |
 | `gpt-5.6-luna` | $0.20 | $0.02 | $0.25 | $1.20 |
+
+GPT-5.6 Sol's $4.00 input and $20.00 output rates are promotional and available at least through November 21, 2026.
 
 ### Cross-provider cache fallback
 
@@ -885,7 +890,7 @@ const model = ModelMix.new()
   .addText('Answer this variable request.');
 ```
 
-GPT-5.6 receives `prompt_cache_breakpoint`; Anthropic receives `cache_control`; older OpenAI models and providers without an equivalent omit the marker. When a neutral explicit breakpoint is present for Anthropic, its model-scoped `cache_control` becomes that block's policy instead of adding an automatic breakpoint after the variable suffix.
+GPT-5.6 and GPT-6 receive `prompt_cache_breakpoint`; Anthropic receives `cache_control`; older OpenAI models and providers without an equivalent omit the marker. When a neutral explicit breakpoint is present for Anthropic, its model-scoped `cache_control` becomes that block's policy instead of adding an automatic breakpoint after the variable suffix.
 
 ## 🔧 Model Context Protocol (MCP) Integration
 
@@ -1055,7 +1060,7 @@ Pass `mix` to `benchmark()` to select providers for the criteria model, particip
 
 JSON parsing accepts a Markdown code block or a lone closing triple-backtick delimiter after valid JSON. Other extra content, malformed JSON, and invalid evaluation scores remain errors.
 
-Run `node demo/benchmark.js` for a complete five-model comparison. It allows up to 32,768 output tokens per call, prints intermediate progress, a final ranking and error details, then saves each response as Markdown together with the full JSON report under `demo/results/`.
+Run `node demo/benchmark.js` for a complete model comparison. It allows up to 32,768 output tokens per call, prints intermediate progress, a final ranking and error details, then saves each response as Markdown together with the full JSON report under `demo/results/`.
 
 ### Recursive Language Model plugin
 

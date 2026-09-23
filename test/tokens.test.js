@@ -252,29 +252,35 @@ describe('Token Usage Tracking', () => {
         ]);
     });
 
-    it('should translate neutral cache breakpoints for GPT-5.6 and filter them for older models', async function () {
+    it('should translate neutral cache breakpoints for GPT-5.6 and GPT-6 and filter them for older models', async function () {
         const breakpoint = { mode: 'explicit' };
         const model = ModelMix.new()
             .addText('Stable text', { role: 'developer', cache: { breakpoint: true } })
             .addImageFromUrl('data:image/png;base64,AAAA', { cache: { breakpoint: true } });
         const messages = await model.prepareMessages();
-        const gpt56Request = MixOpenAIResponses.buildResponsesRequest({
-            model: 'gpt-5.6-luna',
-            messages,
-            prompt_cache_options: { mode: 'explicit', ttl: '30m' }
-        });
-        const olderRequest = MixOpenAIResponses.buildResponsesRequest({
-            model: 'gpt-5.4',
-            messages
-        });
 
         expect(messages[0].content[0]).to.deep.include({ cache: { breakpoint: true } });
         expect(messages[0].content[0]).to.not.have.property('prompt_cache_breakpoint');
-        expect(gpt56Request.input[0].content[0].prompt_cache_breakpoint).to.deep.equal(breakpoint);
-        expect(gpt56Request.input[1].content[0]).to.deep.equal({
-            type: 'input_image',
-            image_url: 'data:image/png;base64,AAAA',
-            prompt_cache_breakpoint: breakpoint
+
+        for (const key of ['gpt-5.6-luna', 'gpt-6-astra', 'gpt-6-sol', 'gpt-6-luna']) {
+            const request = MixOpenAIResponses.buildResponsesRequest({
+                model: key,
+                messages,
+                prompt_cache_options: { mode: 'explicit', ttl: '30m' }
+            });
+
+            expect(request.prompt_cache_options).to.deep.equal({ mode: 'explicit', ttl: '30m' });
+            expect(request.input[0].content[0].prompt_cache_breakpoint).to.deep.equal(breakpoint);
+            expect(request.input[1].content[0]).to.deep.equal({
+                type: 'input_image',
+                image_url: 'data:image/png;base64,AAAA',
+                prompt_cache_breakpoint: breakpoint
+            });
+        }
+
+        const olderRequest = MixOpenAIResponses.buildResponsesRequest({
+            model: 'gpt-5.4',
+            messages
         });
         expect(olderRequest.input[0].content[0]).to.not.have.property('cache');
         expect(olderRequest.input[0].content[0]).to.not.have.property('prompt_cache_breakpoint');
@@ -343,6 +349,12 @@ describe('Token Usage Tracking', () => {
     it('should reject prompt cache controls unsupported by the selected OpenAI model', function () {
         expect(() => MixOpenAIResponses.buildResponsesRequest({
             model: 'gpt-5.6-luna',
+            messages: [{ role: 'user', content: 'Hi' }],
+            prompt_cache_retention: '24h'
+        })).to.throw('prompt_cache_options.ttl');
+
+        expect(() => MixOpenAIResponses.buildResponsesRequest({
+            model: 'gpt-6-sol',
             messages: [{ role: 'user', content: 'Hi' }],
             prompt_cache_retention: '24h'
         })).to.throw('prompt_cache_options.ttl');
@@ -417,6 +429,35 @@ describe('Token Usage Tracking', () => {
         }
     });
 
+    it('should register GPT-6 Sol and Luna shortcuts with OpenAI Responses provider', function () {
+        const model = ModelMix.new({ mix: { openrouter: true } })
+            .gpt6sol()
+            .gpt6luna();
+
+        expect(model.models.map(({ key }) => key)).to.deep.equal([
+            'gpt-6-sol',
+            'openai/gpt-6-sol',
+            'gpt-6-luna',
+            'openai/gpt-6-luna'
+        ]);
+        expect(model.models[0].provider).to.be.instanceOf(MixOpenAIResponses);
+        expect(model.models[1].provider).to.be.instanceOf(MixOpenRouter);
+        expect(model.models[2].provider).to.be.instanceOf(MixOpenAIResponses);
+        expect(model.models[3].provider).to.be.instanceOf(MixOpenRouter);
+    });
+
+    it('should account for GPT-6 Sol and Luna cache usage and the long-context boundary', function () {
+        const tokens = { input: 272_000, cached: 100_000, cacheWrite: 20_000, output: 1_000 };
+        for (const key of ['gpt-6-sol', 'openai/gpt-6-sol']) {
+            expect(ModelMix.calculateCost(key, tokens)).to.be.closeTo(0.384, 1e-10);
+            expect(ModelMix.calculateCost(key, { ...tokens, input: 272_001 })).to.be.closeTo(0.763004, 1e-10);
+        }
+        for (const key of ['gpt-6-luna', 'openai/gpt-6-luna']) {
+            expect(ModelMix.calculateCost(key, tokens)).to.be.closeTo(0.0192, 1e-10);
+            expect(ModelMix.calculateCost(key, { ...tokens, input: 272_001 })).to.be.closeTo(0.0381502, 1e-10);
+        }
+    });
+
     it('should register GPT-5.6 shortcuts with OpenAI Responses provider', function () {
         const model = ModelMix.new({ mix: { openrouter: true } })
             .gpt56sol()
@@ -437,8 +478,8 @@ describe('Token Usage Tracking', () => {
         expect(model.models[3].provider).to.be.instanceOf(MixOpenRouter);
         expect(model.models[4].provider).to.be.instanceOf(MixOpenAIResponses);
         expect(model.models[5].provider).to.be.instanceOf(MixOpenRouter);
-        expect(ModelMix.calculateCost('gpt-5.6-sol', { input: 1_000_000, output: 1_000_000 })).to.equal(55);
-        expect(ModelMix.calculateCost('openai/gpt-5.6-sol', { input: 1_000_000, output: 1_000_000 })).to.equal(55);
+        expect(ModelMix.calculateCost('gpt-5.6-sol', { input: 1_000_000, output: 1_000_000 })).to.equal(38);
+        expect(ModelMix.calculateCost('openai/gpt-5.6-sol', { input: 1_000_000, output: 1_000_000 })).to.equal(38);
         expect(ModelMix.calculateCost('gpt-5.6-terra', { input: 1_000_000, output: 1_000_000 })).to.equal(22);
         expect(ModelMix.calculateCost('gpt-5.6-luna', { input: 1_000_000, output: 1_000_000 })).to.equal(2.2);
         expect(ModelMix.calculateCost('openai/gpt-5.3-chat', { input: 1_000_000, output: 1_000_000 })).to.equal(15.75);

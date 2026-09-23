@@ -164,7 +164,7 @@ ModelMix.new({ config: { effort: 80 } })
 | DeepSeek V4 | off | `low`↑ | `high`↑ | `high`↑ | `max`↑ | — |
 | MiniMax M3 | off | adaptive | adaptive | adaptive | adaptive | adaptive |
 
-\* GPT-6 Astra maps 0–39 / 40–59 / 60–79 / 80–99 / 100 to `low` / `medium` / `high` / `xhigh` / `max`. GPT-5.6 maps `100` to `max`; 80–99 remains `xhigh`. Qwen 3.8 27B and Flash map 0–39 / 40–79 / 80–100 to `low` / `medium` / `xhigh`; Qwen 3.8 Flash is the managed production version based on Flash-Next. GLM 5.3 and GLM 5.3 Flash require reasoning and map those bands to `low` / `high` / `max`. Gemini bands: 0–24 / 25–49 / 50–74 / 75–100. Gemini 3.8 Flash and 3.7 Flash support only `low` / `medium` / `high`, so the first two bands clamp to `low`; `-1` keeps their native `medium` default. DeepSeek `↑` = thinking on; `off` = thinking disabled. MiniMax `off`/`adaptive` = `thinking.disabled` / `thinking.type=adaptive`. Gemini 2.5 maps 0–100 to `thinkingBudget`. Anthropic: adaptive + `output_config.effort` on Claude 5 / Fable / Opus 4.6+ / Sonnet 4.6+; Sonnet 4.5 / Haiku 4.5 use `thinking.type=enabled` + `budget_tokens`. Grok 4.6 maps 0–39 / 40–59 / 60–79 / 80–100 to `low` / `medium` / `high` / `xhigh`; without effort it uses native `high`. `-1` = adaptive/dynamic when available, else no-op. Levels clamp per model. Former `*think()` methods are removed — use `.effort(n).<model>()`. Kimi: `kimiK25()` / `kimiK26()`. Grok 4.20: `.grok420()` non-reasoning; `.effort(20+|-1).grok420()` selects reasoning.
+\* GPT-6 Astra maps 0–39 / 40–59 / 60–79 / 80–99 / 100 to `low` / `medium` / `high` / `xhigh` / `max`. GPT-6 Sol, GPT-6 Luna, and GPT-5.6 map `100` to `max` and keep `xhigh` for 80–99, with OpenAI's `none` band at 0–19. Qwen 3.8 27B and Flash map 0–39 / 40–79 / 80–100 to `low` / `medium` / `xhigh`; Qwen 3.8 Flash is the managed production version based on Flash-Next. GLM 5.3 and GLM 5.3 Flash require reasoning and map those bands to `low` / `high` / `max`. Gemini bands: 0–24 / 25–49 / 50–74 / 75–100. Gemini 3.8 Flash and 3.7 Flash support only `low` / `medium` / `high`, so the first two bands clamp to `low`; `-1` keeps their native `medium` default. DeepSeek `↑` = thinking on; `off` = thinking disabled. MiniMax `off`/`adaptive` = `thinking.disabled` / `thinking.type=adaptive`. Gemini 2.5 maps 0–100 to `thinkingBudget`. Anthropic: adaptive + `output_config.effort` on Claude 5 / Fable / Opus 4.6+ / Sonnet 4.6+; Sonnet 4.5 / Haiku 4.5 use `thinking.type=enabled` + `budget_tokens`. Grok 4.6 maps 0–39 / 40–59 / 60–79 / 80–100 to `low` / `medium` / `high` / `xhigh`; without effort it uses native `high`. `-1` = adaptive/dynamic when available, else no-op. Levels clamp per model. Former `*think()` methods are removed — use `.effort(n).<model>()`. Kimi: `kimiK25()` / `kimiK26()`. Grok 4.20: `.grok420()` non-reasoning; `.effort(20+|-1).grok420()` selects reasoning.
 
 ## Available Model Shorthands
 
@@ -172,7 +172,7 @@ ModelMix.new({ config: { effort: 80 } })
 
 Use `ModerationMix.new().openai()` with `.raw()` to classify text and images through OpenAI's Moderations endpoint. Read the results from `raw.moderation`. `ModerationMix` accepts moderation providers as ordered fallbacks, rejects generative providers, and does not generate text or support streaming.
 
-`gpt6astra()` `gpt56sol()` `gpt56terra()` `gpt56luna()` `gpt55()` `gpt55pro()` `gpt54()` `gpt54mini()` `gpt54nano()` `gpt54pro()` `gpt53codex()` `gpt53chat()` `gpt52()` `gpt51()` `gpt5()` `gpt5mini()` `gpt5nano()` `gptRealtime()` `gptRealtimeMini()` `gptOss()`
+`gpt6astra()` `gpt6sol()` `gpt6luna()` `gpt56sol()` `gpt56terra()` `gpt56luna()` `gpt55()` `gpt55pro()` `gpt54()` `gpt54mini()` `gpt54nano()` `gpt54pro()` `gpt53codex()` `gpt53chat()` `gpt52()` `gpt51()` `gpt5()` `gpt5mini()` `gpt5nano()` `gptRealtime()` `gptRealtimeMini()` `gptOss()`
 
 Every textual GPT-5 and GPT-6 shortcut registers only the official OpenAI model by default. Pass `mix: { openrouter: true }` to `ModelMix.new()` or to an individual shortcut to append its `openai/*` OpenRouter route as a fallback. `gpt53chat()` uses `gpt-5.3-chat-latest` officially and `openai/gpt-5.3-chat` through OpenRouter. Both API keys are required when that fallback is enabled. Realtime shortcuts remain official-only.
 
@@ -411,7 +411,7 @@ console.log(model.lastRaw.think);    // reasoning content (if available)
 console.log(model.lastRaw.response); // raw API response
 ```
 
-### GPT-5.6 explicit prompt caching
+### GPT-5.6 and GPT-6 explicit prompt caching
 
 ```javascript
 const model = ModelMix.new()
@@ -434,9 +434,9 @@ const model = ModelMix.new()
 const result = await model.raw();
 ```
 
-`cache: { breakpoint: true }` is provider-neutral: GPT-5.6 receives `prompt_cache_breakpoint`, Anthropic receives `cache_control`, and unsupported providers omit it. Keep native request policies inside each model shorthand so they do not leak across fallbacks. Anthropic usage separates `cacheWrite5m` and `cacheWrite1h`; `cacheWrite` stays as their compatible aggregate.
+`cache: { breakpoint: true }` is provider-neutral: GPT-5.6 and GPT-6 receive `prompt_cache_breakpoint`, Anthropic receives `cache_control`, and unsupported providers omit it. Keep native request policies inside each model shorthand so they do not leak across fallbacks. Anthropic usage separates `cacheWrite5m` and `cacheWrite1h`; `cacheWrite` stays as their compatible aggregate.
 
-GPT-5.6 replaces `prompt_cache_retention` with `prompt_cache_options.ttl`. Explicit breakpoints also work on image methods and Responses-native `input_text`, `input_image`, and `input_file` blocks. Prompts need at least 1,024 tokens to be cached. Requests over 272K input tokens use 2× input and 1.5× output prices for the complete request; ModelMix applies these multipliers to `cost`, `costBreakdown`, and cache economics.
+GPT-5.6 and GPT-6 replace `prompt_cache_retention` with `prompt_cache_options.ttl`. Explicit breakpoints also work on image methods and Responses-native `input_text`, `input_image`, and `input_file` blocks. Prompts need at least 1,024 tokens to be cached. Requests over 272K input tokens use 2× input and 1.5× output prices for the complete request; ModelMix applies these multipliers to `cost`, `costBreakdown`, and cache economics.
 
 ### Add images
 

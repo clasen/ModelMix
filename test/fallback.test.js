@@ -115,6 +115,8 @@ describe('Provider Fallback Chain Tests', () => {
             expect(ModelMix.new().mix.openrouter).to.equal(false);
             const shortcuts = [
                 ['gpt6astra', 'gpt-6-astra', 'openai/gpt-6-astra', MixOpenAIResponses],
+                ['gpt6sol', 'gpt-6-sol', 'openai/gpt-6-sol', MixOpenAIResponses],
+                ['gpt6luna', 'gpt-6-luna', 'openai/gpt-6-luna', MixOpenAIResponses],
                 ['gpt5', 'gpt-5', 'openai/gpt-5', MixOpenAI],
                 ['gpt5mini', 'gpt-5-mini', 'openai/gpt-5-mini', MixOpenAI],
                 ['gpt5nano', 'gpt-5-nano', 'openai/gpt-5-nano', MixOpenAI],
@@ -230,6 +232,48 @@ describe('Provider Fallback Chain Tests', () => {
             expect(openRouterRequest.model).to.equal('openai/gpt-6-astra');
             expect(openRouterRequest.max_completion_tokens).to.equal(8192);
             expect(openRouterRequest).to.not.have.property('temperature');
+        });
+
+        it('should fallback from the official GPT-6 Sol and Luna endpoints to OpenRouter', async () => {
+            const cases = [
+                ['gpt6sol', 'gpt-6-sol', 'Hello from GPT-6 Sol through OpenRouter!'],
+                ['gpt6luna', 'gpt-6-luna', 'Hello from GPT-6 Luna through OpenRouter!']
+            ];
+
+            for (const [shortcut, officialKey, content] of cases) {
+                let openRouterRequest;
+                const instance = ModelMix.new().effort(100);
+                instance[shortcut]({ mix: { openrouter: true } }).addText('Hello');
+
+                nock('https://api.openai.com')
+                    .post('/v1/responses', body => {
+                        expect(body.model).to.equal(officialKey);
+                        expect(body.reasoning).to.deep.equal({ effort: 'max' });
+                        expect(body.max_output_tokens).to.equal(8192);
+                        expect(body).to.not.have.property('temperature');
+                        return true;
+                    })
+                    .reply(503, { error: 'Service unavailable' });
+
+                nock('https://openrouter.ai')
+                    .post('/api/v1/chat/completions', body => {
+                        openRouterRequest = body;
+                        return true;
+                    })
+                    .reply(200, {
+                        choices: [{
+                            message: {
+                                role: 'assistant',
+                                content
+                            }
+                        }]
+                    });
+
+                expect(await instance.message()).to.equal(content);
+                expect(openRouterRequest.model).to.equal(`openai/${officialKey}`);
+                expect(openRouterRequest.max_completion_tokens).to.equal(8192);
+                expect(openRouterRequest).to.not.have.property('temperature');
+            }
         });
 
         it('should keep the default fable51 chain on Anthropic', () => {

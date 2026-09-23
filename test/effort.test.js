@@ -90,6 +90,15 @@ describe('Unified effort scale', () => {
             }
         });
 
+        it('maps GPT-6 Sol and Luna effort from none to max', () => {
+            for (const model of ['gpt-6-sol', 'gpt-6-luna']) {
+                for (const [effort, level] of [[0, 'none'], [20, 'low'], [40, 'medium'], [60, 'high'], [99, 'xhigh'], [100, 'max']]) {
+                    expect(mapEffort('openai', effort, model)).to.deep.equal({ reasoning_effort: level });
+                }
+                expect(mapEffort('openai', 100, `openai/${model}`)).to.deep.equal({ reasoning_effort: 'max' });
+            }
+        });
+
         it('sets OpenAI adaptive only when supported (otherwise no-op)', () => {
             expect(mapEffort('openai', -1)).to.equal(null);
             expect(mapEffort('openai', -1, 'gpt-5.2')).to.equal(null);
