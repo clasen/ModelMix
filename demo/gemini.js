@@ -20,9 +20,9 @@ const flash = await mmix.gemini38flash()
 
 console.log(flash);
 
-// Using Gemini 3.1 Pro with custom config
-console.log("\n" + '--------| gemini31pro() with JSON response |--------');
-const pro = mmix.new().gemini31pro();
+// Using Gemini 3.7 Flash with custom config
+console.log("\n" + '--------| gemini37flash() with JSON response |--------');
+const pro = mmix.new().gemini37flash();
 
 pro.addText('Give me a fun fact about cats');
 

@@ -84,13 +84,13 @@ Chain shorthand methods to attach providers. First model is primary; others are 
 
 ```javascript
 const model = ModelMix.new()
-    .sonnet46()        // primary
+    .sonnet5()         // primary
     .gpt52()           // fallback 1
     .gemini38flash()   // fallback 2
     .addText("Hello!")
 ```
 
-If `sonnet46` fails, it automatically tries `gpt52`, then `gemini38flash`.
+If `sonnet5` fails, it automatically tries `gpt52`, then `gemini38flash`.
 
 The equivalent `chain()` form accepts public shortcut names directly in the
 same order. Append `@effort` for a per-model unified effort override (`-1` or
@@ -99,7 +99,7 @@ provider default when no chain effort is configured:
 
 ```javascript
 const model = ModelMix.new()
-    .chain('sonnet46', 'gpt52@20', 'gemini38flash@-1')
+    .chain('sonnet5', 'gpt52@20', 'gemini38flash@-1')
     .addText('Hello!');
 ```
 
@@ -147,7 +147,7 @@ With plugin tools, native `options.tools` entries are combined with registered a
 Provider-agnostic reasoning intensity. **Not** an `options` field — use `config.effort` or `.effort(n)`.
 
 ```javascript
-ModelMix.new({ config: { effort: 40 } }).sonnet46().addText('Plan this refactor').message();
+ModelMix.new({ config: { effort: 40 } }).sonnet5().addText('Plan this refactor').message();
 ModelMix.new().deepseekV4Flash({ config: { effort: 100 } }).addText('...').message();
 ModelMix.new().effort(-1).minimaxM3().addText('Quick question').message();
 
@@ -164,7 +164,7 @@ ModelMix.new({ config: { effort: 80 } })
 | DeepSeek V4 | off | `low`↑ | `high`↑ | `high`↑ | `max`↑ | — |
 | MiniMax M3 | off | adaptive | adaptive | adaptive | adaptive | adaptive |
 
-\* GPT-6 Astra maps 0–39 / 40–59 / 60–79 / 80–99 / 100 to `low` / `medium` / `high` / `xhigh` / `max`. GPT-6 Sol, GPT-6 Luna, and GPT-5.6 map `100` to `max` and keep `xhigh` for 80–99, with OpenAI's `none` band at 0–19. Qwen 3.8 27B and Flash map 0–39 / 40–79 / 80–100 to `low` / `medium` / `xhigh`; Qwen 3.8 Flash is the managed production version based on Flash-Next. GLM 5.3 and GLM 5.3 Flash require reasoning and map those bands to `low` / `high` / `max`. Gemini bands: 0–24 / 25–49 / 50–74 / 75–100. Gemini 3.8 Flash and 3.7 Flash support only `low` / `medium` / `high`, so the first two bands clamp to `low`; `-1` keeps their native `medium` default. DeepSeek `↑` = thinking on; `off` = thinking disabled. MiniMax `off`/`adaptive` = `thinking.disabled` / `thinking.type=adaptive`. Gemini 2.5 maps 0–100 to `thinkingBudget`. Anthropic: adaptive + `output_config.effort` on Claude 5 / Fable / Opus 4.6+ / Sonnet 4.6+; Sonnet 4.5 / Haiku 4.5 use `thinking.type=enabled` + `budget_tokens`. Grok 4.6 maps 0–39 / 40–59 / 60–79 / 80–100 to `low` / `medium` / `high` / `xhigh`; without effort it uses native `high`. `-1` = adaptive/dynamic when available, else no-op. Levels clamp per model. Former `*think()` methods are removed — use `.effort(n).<model>()`. Kimi: `kimiK25()` / `kimiK26()`. Grok 4.20: `.grok420()` non-reasoning; `.effort(20+|-1).grok420()` selects reasoning.
+\* GPT-6 Astra maps 0–39 / 40–59 / 60–79 / 80–99 / 100 to `low` / `medium` / `high` / `xhigh` / `max`. GPT-6 Sol, GPT-6 Luna, and GPT-5.6 map `100` to `max` and keep `xhigh` for 80–99, with OpenAI's `none` band at 0–19. Qwen 3.8 27B and Flash map 0–39 / 40–79 / 80–100 to `low` / `medium` / `xhigh`; Qwen 3.8 Flash is the managed production version based on Flash-Next. GLM 5.3 and GLM 5.3 Flash require reasoning and map those bands to `low` / `high` / `max`. Gemini bands: 0–24 / 25–49 / 50–74 / 75–100. Gemini 3.8 Flash and 3.7 Flash support only `low` / `medium` / `high`, so the first two bands clamp to `low`; `-1` keeps their native `medium` default. DeepSeek `↑` = thinking on; `off` = thinking disabled. MiniMax `off`/`adaptive` = `thinking.disabled` / `thinking.type=adaptive`. Gemini 2.5 maps 0–100 to `thinkingBudget`. Anthropic: adaptive + `output_config.effort` on Claude 5 / Fable / Opus 4.6+ / Sonnet 4.6+; Sonnet 4.5 / Haiku 4.5 use `thinking.type=enabled` + `budget_tokens`. Grok 4.6 maps 0–39 / 40–59 / 60–79 / 80–100 to `low` / `medium` / `high` / `xhigh`; without effort it uses native `high`. `-1` = adaptive/dynamic when available, else no-op. Levels clamp per model. Former `*think()` methods are removed — use `.effort(n).<model>()`. Kimi: `kimiK26()`.
 
 ## Available Model Shorthands
 
@@ -172,31 +172,31 @@ ModelMix.new({ config: { effort: 80 } })
 
 Use `ModerationMix.new().openai()` with `.raw()` to classify text and images through OpenAI's Moderations endpoint. Read the results from `raw.moderation`. `ModerationMix` accepts moderation providers as ordered fallbacks, rejects generative providers, and does not generate text or support streaming.
 
-`gpt6astra()` `gpt6sol()` `gpt6luna()` `gpt56sol()` `gpt56terra()` `gpt56luna()` `gpt55()` `gpt55pro()` `gpt54()` `gpt54mini()` `gpt54nano()` `gpt54pro()` `gpt53codex()` `gpt53chat()` `gpt52()` `gpt51()` `gpt5()` `gpt5mini()` `gpt5nano()` `gptRealtime()` `gptRealtimeMini()` `gptOss()`
+`gpt6astra()` `gpt6sol()` `gpt6luna()` `gpt56sol()` `gpt56terra()` `gpt56luna()` `gpt55()` `gpt55pro()` `gpt54()` `gpt54mini()` `gpt54nano()` `gpt54pro()` `gpt52()` `gpt5mini()` `gpt5nano()` `gptRealtime()` `gptRealtimeMini()`
 
-Every textual GPT-5 and GPT-6 shortcut registers only the official OpenAI model by default. Pass `mix: { openrouter: true }` to `ModelMix.new()` or to an individual shortcut to append its `openai/*` OpenRouter route as a fallback. `gpt53chat()` uses `gpt-5.3-chat-latest` officially and `openai/gpt-5.3-chat` through OpenRouter. Both API keys are required when that fallback is enabled. Realtime shortcuts remain official-only.
+Every textual GPT-5 and GPT-6 shortcut registers only the official OpenAI model by default. Pass `mix: { openrouter: true }` to `ModelMix.new()` or to an individual shortcut to append its `openai/*` OpenRouter route as a fallback. Both API keys are required when that fallback is enabled. Realtime shortcuts remain official-only.
 
 ### Anthropic
-`fable51()` `fable50()` `opus55()` `opus50()` `opus48()` `opus47()` `opus46()` `sonnet5()` `sonnet46()` `sonnet45()` `haiku45()`
+`fable51()` `fable50()` `opus55()` `opus50()` `opus48()` `opus47()` `opus46()` `sonnet5()` `sonnet45()` `haiku45()`
 
 Use `.effort(n)` (or `config.effort`) to enable Anthropic thinking — e.g. `.effort(100).opus50()`. `fable5()` and `opus5()` remain available as compatibility aliases.
 
 `fable51()` registers `claude-fable-5-1` through Anthropic by default. Pass `mix: { openrouter: true }` to append `anthropic/claude-fable-5.1` as its fallback.
 
 ### Google
-`gemini31pro()` `gemini38flash()` `gemini37flash()` `gemini36flash()` `gemini35flash()` `gemini35flashLite()` `gemini31flashLite()`
+`gemini38flash()` `gemini37flash()` `gemini36flash()` `gemini35flash()` `gemini35flashLite()` `gemini31flashLite()`
 
 ### Grok
-`grok47()` `grok46()` `grok45()` `grok43()` `grok420multiAgent()` `grok420()`
+`grok47()` `grok46()` `grok43()`
 
 ### Perplexity
 `sonar()` `sonarPro()`
 
 ### Together
-`museGlimmer30b()` `qwen36plus()` `qwen37plus()` `GLM52()` `kimiK25()` `kimiK26()` `kimiK27Code()` `kimiK3()` `minimaxM27()` `minimaxM3()` `gptOss()`
+`museGlimmer30b()` `qwen36plus()` `qwen37plus()` `GLM52()` `kimiK26()` `kimiK27Code()` `kimiK3()` `minimaxM27()` `minimaxM3()`
 
 ### NVIDIA
-`museGlimmer30b()` `gptOss()` `minimaxM27()`
+`museGlimmer30b()` `minimaxM27()`
 
 ### Moonshot
 `kimiK3()` — requires `MOONSHOT_API_KEY`; Fireworks, OpenRouter, and Together are available through `mix`.
@@ -208,12 +208,10 @@ Use `.effort(n)` (or `config.effort`) to enable Anthropic thinking — e.g. `.ef
 `mimo26pro()` — uses OpenRouter (`xiaomi/mimo-v2.6-pro`) by default; the native API requires `MIMO_API_KEY` and `mix: { mimo: true }`.
 
 ### DeepSeek
-`deepseekV41Flash({ mix: { deepseek: true, openrouter: false } })` uses the native API at `https://api.deepseek.com/chat/completions` with model `deepseek-flash` (currently V4.1 Flash). Requires `DEEPSEEK_API_KEY`; `MixDeepSeek` supports explicit `.attach()` calls. Unified effort and native cache usage are supported, and assistant reasoning is preserved for tool continuations. Cost estimates use peak rates per 1M tokens: $0.30 input, $0.006 cached input, $1.20 output; off-peak charges are half. Enabling all three providers orders them DeepSeek → Fireworks → OpenRouter.
+`deepseekV41Flash({ mix: { deepseek: true, openrouter: false } })` uses the native API at `https://api.deepseek.com/chat/completions` with model `deepseek-flash` (currently V4.1 Flash). Requires `DEEPSEEK_API_KEY`; `MixDeepSeek` supports explicit `.attach()` calls. Unified effort and native cache usage are supported, and assistant reasoning is preserved for tool continuations. Cost estimates use peak rates per 1M tokens: $0.30 input, $0.006 cached input, $1.20 output; off-peak charges are half. Optional routes: `mix: { fireworks: true }` selects `accounts/fireworks/models/deepseek-v4p1-flash` with `FIREWORKS_API_KEY`, and `mix: { openrouter: true }` selects `deepseek/deepseek-v4.1-flash` (text and image input) with `OPENROUTER_API_KEY`; enabling all three routes orders them DeepSeek → Fireworks → OpenRouter.
 
 ### Fireworks
-`museGlimmer30b()` `gptOss()` `qwen36plus()` (private/on-demand only) `qwen37plus()` `qwen38max()` `deepseekV4Flash()` `deepseekV4Pro()` `kimiK26()` `kimiK27Code()` `kimiK3()` `minimaxM27()` `minimaxM3()` `GLM52()`
-
-`deepseekV41Flash({ mix: { fireworks: true, openrouter: false } })` selects `accounts/fireworks/models/deepseek-v4p1-flash` and requires `FIREWORKS_API_KEY`. Per 1M tokens: $0.22 input, $0.007 cached input, $0.66 output. Set both providers to `true` for Fireworks followed by OpenRouter fallback; no arguments selects OpenRouter.
+`museGlimmer30b()` `qwen36plus()` (private/on-demand only) `qwen37plus()` `qwen38max()` `deepseekV4Flash()` `deepseekV4Pro()` `kimiK26()` `kimiK27Code()` `kimiK3()` `minimaxM27()` `minimaxM3()` `GLM52()`
 
 ### Cerebras
 `GLM46()`
@@ -221,14 +219,12 @@ Use `.effort(n)` (or `config.effort`) to enable Anthropic thinking — e.g. `.ef
 ### OpenRouter
 `deepseekPro()` uses `deepseek/deepseek-v4-pro-0813` through OpenRouter. Requires `OPENROUTER_API_KEY`; supports the DeepSeek effort mapping and `chain('deepseekPro@100')`. Base cost estimates per 1M tokens: $0.5808 input, $0.05808 cached input, $1.7424 output. Actual rates may change, including provider and time-based pricing.
 
-`museGlimmer30b()` `museSpark12()` `museSpark12c()` `museSpark13()` `museSpark13c()` `gptOss()` `qwen35397b()` `qwen36plus()` `qwen37plus()` `qwen3827b()` `qwen38flash()` `hermes470b()` `hermes4405b()` `qwen38max()` `kimiK27Code()` `kimiK3()` `minimaxM27()` `minimaxM3()` `GLM45()` `GLM52()` `GLM53()` `GLM53Flash()` `deepseekV41Flash()`
-
-`deepseekV41Flash()` selects `deepseek/deepseek-v4.1-flash` (text and image input) and requires `OPENROUTER_API_KEY`. It supports the DeepSeek effort mapping above, including `chain('deepseekV41Flash@100')`. Base cost estimates per 1M tokens: $0.15 input, $0.015 cached input, $0.60 output; actual OpenRouter pricing varies by provider and time.
+`museGlimmer30b()` `museSpark12()` `museSpark12c()` `museSpark13()` `museSpark13c()` `qwen35397b()` `qwen36plus()` `qwen37plus()` `qwen3827b()` `qwen38flash()` `hermes470b()` `hermes4405b()` `qwen38max()` `kimiK27Code()` `kimiK3()` `minimaxM27()` `minimaxM3()` `GLM45()` `GLM52()` `GLM53()` `GLM53Flash()`
 
 Muse Spark: the `c` suffix selects Contributor, where prompts and outputs may be used to improve Meta products. Without `c`, the standard tier is selected. Use `museSpark12c()` for the former `museSpark12()` Contributor behavior.
 
 ### Multi-provider (auto-fallback across free/paid tiers)
-`hermes3()` `kimiK25()`
+`hermes3()` `kimiK26()`
 
 ### Local
 `lmstudio()` — for LM Studio local models
@@ -609,13 +605,13 @@ For full debug output, also set: `DEBUG=ModelMix* node script.js`
 
 ```javascript
 const model = ModelMix.new()
-    .gptOss()
-    .kimiK25()
+    .kimiK26()
+    .GLM52()
     .addText("What is the capital of France?");
 console.log(await model.message());
 ```
 
-These use providers with free quotas (Groq, Cerebras, and Together). OpenRouter is disabled because its GPT-OSS 120B route is no longer free. If one runs out of quota, ModelMix falls back to the next.
+Each shortcut registers its default provider and accepts additional providers through `mix`. If one model fails, ModelMix falls back to the next.
 
 ### Multi-provider routing
 
@@ -624,16 +620,11 @@ Some model shorthands register the same model across multiple providers for maxi
 ```javascript
 const model = ModelMix.new({
     mix: {
-        anthropic: true,    // fable51() default: true
-        openrouter: false,  // fallback default: false
-        cerebras: true,      // default: true
-        groq: true,          // default: true
-        together: false,     // default: false
-        lambda: false,       // default: false
-        minimax: false,      // default: false
-        fireworks: false     // default: false
+        fireworks: true,     // kimiK26() default: true
+        openrouter: false,   // default: false
+        together: false      // default: false
     }
-}).kimiK25();
+}).kimiK26();
 ```
 
 ## Agent Usage Rules

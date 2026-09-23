@@ -47,7 +47,7 @@ describe('Conversation History Tests', () => {
         });
 
         it('should add assistant response to message history after raw()', async () => {
-            model.sonnet46().addText('Hello');
+            model.sonnet5().addText('Hello');
 
             nock('https://api.anthropic.com')
                 .post('/v1/messages')
@@ -128,7 +128,7 @@ describe('Conversation History Tests', () => {
             const model = ModelMix.new({
                 config: { debug: false, max_history: 10 }
             });
-            model.sonnet46();
+            model.sonnet5();
 
             // First turn
             model.addText('Capital of France?');

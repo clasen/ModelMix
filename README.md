@@ -138,11 +138,11 @@ const ETH = ModelMix.new()
 console.log(ETH.price);
 ```
 
-**This example uses providers with free quotas (Groq, Cerebras, and Together). OpenRouter is disabled because its GPT-OSS 120B route is no longer free. If one model runs out of quota, ModelMix automatically falls back to the next model in the chain.**
+**This example chains two multi-provider shortcuts. Each one registers its default provider and accepts additional providers through `mix`; if one model fails, ModelMix automatically falls back to the next model in the chain.**
 ```javascript
 ModelMix.new()
-  .gptOss()
-  .kimiK25()
+  .kimiK26()
+  .GLM52()
   .addText('What is the capital of France?');
 ```
 
@@ -171,14 +171,9 @@ ModelMix provides convenient shorthand methods for quickly accessing different A
 | `gpt54mini()` | OpenAI | gpt-5.4-mini | [\$0.75][1] | [\$4.50][1] |
 | `gpt54nano()` | OpenAI | gpt-5.4-nano | [\$0.20][1] | [\$1.25][1] |
 | `gpt54pro()` | OpenAI | gpt-5.4-pro | [\$30.00][1] | [\$180.00][1] |
-| `gpt53codex()` | OpenAI | gpt-5.3-codex | [\$1.75][1] | [\$14.00][1] |
-| `gpt53chat()` | OpenAI | gpt-5.3-chat-latest | [\$1.75][1] | [\$14.00][1] |
 | `gpt52()` | OpenAI | gpt-5.2 | [\$1.75][1] | [\$14.00][1] |
-| `gpt51()` | OpenAI | gpt-5.1 | [\$1.25][1] | [\$10.00][1] |
-| `gpt5()` | OpenAI | gpt-5 | [\$1.25][1] | [\$10.00][1] |
 | `gpt5mini()` | OpenAI | gpt-5-mini | [\$0.25][1] | [\$2.00][1] |
 | `gpt5nano()` | OpenAI | gpt-5-nano | [\$0.05][1] | [\$0.40][1] |
-| `gptOss()` | Multi-provider | gpt-oss-120B | [\$0.15][7] | [\$0.60][7] |
 | `fable51()` | Anthropic | claude-fable-5-1 | [\$10.00][2] | [\$50.00][2] |
 | `fable5()` | Anthropic | claude-fable-5 | [\$10.00][2] | [\$50.00][2] |
 | `opus55()` | Anthropic | claude-opus-5-5 | [\$5.00][2] | [\$25.00][2] |
@@ -187,9 +182,7 @@ ModelMix provides convenient shorthand methods for quickly accessing different A
 | `opus47()` | Anthropic | claude-opus-4-7 | [\$5.00][2] | [\$25.00][2] |
 | `opus46()` | Anthropic | claude-opus-4-6 | [\$5.00][2] | [\$25.00][2] |
 | `sonnet5()` | Anthropic | claude-sonnet-5 | [\$3.00][2] | [\$15.00][2] |
-| `sonnet46()` | Anthropic | claude-sonnet-4-6 | [\$3.00][2] | [\$15.00][2] |
 | `haiku45()` | Anthropic | claude-haiku-4-5-20251001 | [\$1.00][2] | [\$5.00][2] |
-| `gemini31pro()` | Google | gemini-3.1-pro-preview | [\$2.00][3] | [\$12.00][3] |
 | `gemini38flash()` | Google | gemini-3.8-flash | [\$0.75][3] | [\$3.75][3] |
 | `gemini37flash()` | Google | gemini-3.7-flash | [\$0.75][3] | [\$3.75][3] |
 | `gemini36flash()` | Google | gemini-3.6-flash | [\$0.75][3] | [\$3.75][3] |
@@ -198,10 +191,7 @@ ModelMix provides convenient shorthand methods for quickly accessing different A
 | `gemini31flashLite()` | Google | gemini-3.1-flash-lite-preview | [\$0.25][3] | [\$1.50][3] |
 | `grok47()` | Grok | grok-4.7 | — | — |
 | `grok46()` | Grok | grok-4.6 | [\$2.00][6] | [\$6.00][6] |
-| `grok45()` | Grok | grok-4.5 | [\$2.00][6] | [\$6.00][6] |
 | `grok43()` | Grok | grok-4.3 | [\$1.25][6] | [\$2.50][6] |
-| `grok420multiAgent()` | Grok | grok-4.20-multi-agent-0309 | [\$1.25][6] | [\$2.50][6] |
-| `grok420()` | Grok | grok-4.20-0309 (†) | [\$1.25][6] | [\$2.50][6] |
 | `museGlimmer30b()` | Fireworks | models/muse-glimmer-30b | [\$0.35][17] | [\$1.50][17] |
 | `museSpark12()` | OpenRouter | meta/muse-spark-1.2 | [\$1.25][25] | [\$4.25][25] |
 | `museSpark12c()` | OpenRouter | meta/muse-spark-1.2-contributor | [\$0.10][22] | [\$0.20][22] |
@@ -214,7 +204,7 @@ ModelMix provides convenient shorthand methods for quickly accessing different A
 | `qwen3827b()` | OpenRouter | qwen/qwen3.8-27b | [\$0.45][15] | [\$3.20][15] |
 | `qwen38flash()` | OpenRouter | qwen/qwen3.8-flash | [\$0.16][19] | [\$0.47][19] |
 | `deepseekV4Flash()` | Fireworks | models/deepseek-v4-flash | [\$0.14][10] | [\$0.28][10] |
-| `deepseekV41Flash()` | OpenRouter | deepseek/deepseek-v4.1-flash | [\$0.15][27] | [\$0.60][27] |
+| `deepseekV41Flash()` | DeepSeek | deepseek-flash | [\$0.30][29] | [\$1.20][29] |
 | `deepseekV4Pro()` | Fireworks | models/deepseek-v4-pro-0813 | [\$1.32][12] | [\$3.96][12] |
 | `deepseekPro()` | OpenRouter | deepseek/deepseek-v4-pro-0813 | [\$0.5808][28] | [\$1.7424][28] |
 | `GLM53()` | OpenRouter | z-ai/glm-5.3 | [\$1.40][16] | [\$4.40][16] |
@@ -230,7 +220,6 @@ ModelMix provides convenient shorthand methods for quickly accessing different A
 | `hermes3()` | Lambda | Hermes-3-Llama-3.1-405B-FP8 | [\$0.80][8] | [\$0.80][8] |
 | `kimiK3()` | Moonshot | kimi-k3 | [\$3.00][11] | [\$15.00][11] |
 | `kimiK27Code()` | Together | Kimi-K2.7-Code | [\$0.95][7] | [\$4.00][7] |
-| `kimiK25()` | Together | Kimi-K2.5 | [\$0.50][7] | [\$2.80][7] |
 | `kimiK26()` | Fireworks | models/kimi-k2p6 | [\$0.95][10] | [\$4.00][10] |
 
 Gemini 3.8 Flash, 3.7 Flash, and 3.6 Flash use Google's introductory standard pricing through December 31, 2026; standard rates double on January 1, 2027.
@@ -239,9 +228,9 @@ Gemini 3.8 Flash, 3.7 Flash, and 3.6 Flash use Google's introductory standard pr
 
 `fable51()` uses the official Anthropic API by default (`claude-fable-5-1`). Pass `mix: { openrouter: true }` to append [`anthropic/claude-fable-5.1`][21] as its fallback.
 
-Every textual GPT-5 and GPT-6 shortcut in the table uses the official OpenAI API by default. Pass `mix: { openrouter: true }` to `ModelMix.new()` or to an individual shortcut to append the matching [`openai/*` OpenRouter route][23] as its fallback. `gpt53chat()` maps the official `gpt-5.3-chat-latest` alias to `openai/gpt-5.3-chat`. Realtime shortcuts remain official-only because they use OpenAI's WebSocket transport.
+Every textual GPT-5 and GPT-6 shortcut in the table uses the official OpenAI API by default. Pass `mix: { openrouter: true }` to `ModelMix.new()` or to an individual shortcut to append the matching [`openai/*` OpenRouter route][23] as its fallback. Realtime shortcuts remain official-only because they use OpenAI's WebSocket transport.
 
-OpenRouter fallbacks are disabled globally by default and are appended only with `mix.openrouter: true`. Shortcuts whose primary provider is OpenRouter, such as `qwen36plus()`, are unaffected. The multi-provider shortcuts also expose the current catalog alternatives: `gptOss()` supports NVIDIA and Fireworks; `qwen37plus()` supports Together; `kimiK27Code()` supports Fireworks and OpenRouter; `kimiK3()` supports Fireworks, OpenRouter, and Together; `GLM52()` supports Fireworks and OpenRouter; and both MiniMax shortcuts support Fireworks. `minimaxM27()` keeps every explicitly enabled provider in its fallback chain.
+OpenRouter fallbacks are disabled globally by default and are appended only with `mix.openrouter: true`. Shortcuts whose primary provider is OpenRouter, such as `qwen36plus()`, are unaffected. The multi-provider shortcuts also expose the current catalog alternatives: `qwen37plus()` supports Together; `kimiK27Code()` supports Fireworks and OpenRouter; `kimiK3()` supports Fireworks, OpenRouter, and Together; `GLM52()` supports Fireworks and OpenRouter; and both MiniMax shortcuts support Fireworks. `minimaxM27()` keeps every explicitly enabled provider in its fallback chain.
 
 [1]: https://platform.openai.com/docs/pricing "Pricing | OpenAI"
 [2]: https://docs.anthropic.com/en/docs/about-claude/pricing "Pricing - Anthropic"
@@ -270,16 +259,14 @@ OpenRouter fallbacks are disabled globally by default and are appended only with
 
 [25]: https://openrouter.ai/meta/muse-spark-1.2 "Muse Spark 1.2 on OpenRouter"
 [26]: https://openrouter.ai/meta/muse-spark-1.3-contributor "Muse Spark 1.3 Contributor on OpenRouter"
-[27]: https://openrouter.ai/deepseek/deepseek-v4.1-flash "DeepSeek V4.1 Flash on OpenRouter"
 [28]: https://openrouter.ai/deepseek/deepseek-v4-pro-0813 "DeepSeek V4 Pro 0813 on OpenRouter"
+[29]: https://api-docs.deepseek.com/quick_start/pricing/ "DeepSeek API Pricing"
 
 `deepseekPro()` uses the pinned OpenRouter model `deepseek/deepseek-v4-pro-0813` and requires `OPENROUTER_API_KEY`. Use `chain('deepseekPro@100')` for maximum reasoning effort. Cost estimates use the listed base rates and $0.05808/M cached input tokens; actual rates may change, including provider and time-based pricing.
 
-`deepseekV41Flash()` supports text and image input through OpenRouter and requires `OPENROUTER_API_KEY`. Use `chain('deepseekV41Flash@100')` for maximum reasoning effort. Cost estimates use the listed base rates and $0.015/M cached input tokens; actual OpenRouter pricing varies by provider and time.
+By default `deepseekV41Flash()` uses the native DeepSeek API (`https://api.deepseek.com/chat/completions`, model `deepseek-flash`, currently V4.1 Flash) and requires `DEEPSEEK_API_KEY`; `MixDeepSeek` remains available for explicit `.attach()` calls. Use `chain('deepseekV41Flash@100')` for maximum reasoning effort. Native cost estimates use [peak rates](https://api-docs.deepseek.com/quick_start/pricing/): $0.30 input / $0.006 cached input / $1.20 output per 1M tokens; actual off-peak charges are half.
 
-For direct Fireworks access, use `deepseekV41Flash({ mix: { fireworks: true, openrouter: false } })` with `FIREWORKS_API_KEY`. This selects `accounts/fireworks/models/deepseek-v4p1-flash`, priced at [$0.22 input / $0.007 cached input / $0.66 output per 1M tokens](https://fireworks.ai/models/deepseek-ai/deepseek-v4p1-flash). Set both providers to `true` to try Fireworks first and fall back to OpenRouter.
-
-For the native DeepSeek API, use `deepseekV41Flash({ mix: { deepseek: true, openrouter: false } })` with `DEEPSEEK_API_KEY`. It calls `https://api.deepseek.com/chat/completions` with `deepseek-flash`, currently DeepSeek V4.1 Flash. `MixDeepSeek` is also available for explicit `.attach()` calls. Native cost estimates use [peak rates](https://api-docs.deepseek.com/quick_start/pricing/): $0.30 input / $0.006 cached input / $1.20 output per 1M tokens; actual off-peak charges are half. When all three providers are enabled, the order is DeepSeek → Fireworks → OpenRouter.
+Optional routes: `mix: { fireworks: true }` selects `accounts/fireworks/models/deepseek-v4p1-flash` with `FIREWORKS_API_KEY`, priced at [$0.22 input / $0.007 cached input / $0.66 output per 1M tokens](https://fireworks.ai/models/deepseek-ai/deepseek-v4p1-flash), and `mix: { openrouter: true }` selects `deepseek/deepseek-v4.1-flash` with `OPENROUTER_API_KEY`, which accepts text and image input. With all three providers enabled the order is DeepSeek → Fireworks → OpenRouter.
 
 Muse Spark methods ending in `c` select Contributor: prompts and outputs may be used to improve Meta products. Methods without `c` select the standard tier. `museSpark12()` now selects standard; use `museSpark12c()` for the previous Contributor behavior.
 
@@ -337,8 +324,7 @@ ModelMix.new().effort(-1).minimaxM3().addText('...').message();
 
 The former `*think()` methods were removed. Use `.effort(n).<model>()` with `0`–`100` or `-1` instead.
 
-- **Kimi:** use `kimiK25()` or `kimiK26()`.
-- **Grok 4.20:** `.grok420()` selects the non-reasoning model. Use `.effort(20+).grok420()` or `.effort(-1).grok420()` to select the reasoning model.
+- **Kimi:** use `kimiK26()`.
 
 ## 🔄 Templates
 

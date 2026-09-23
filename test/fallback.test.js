@@ -117,13 +117,9 @@ describe('Provider Fallback Chain Tests', () => {
                 ['gpt6astra', 'gpt-6-astra', 'openai/gpt-6-astra', MixOpenAIResponses],
                 ['gpt6sol', 'gpt-6-sol', 'openai/gpt-6-sol', MixOpenAIResponses],
                 ['gpt6luna', 'gpt-6-luna', 'openai/gpt-6-luna', MixOpenAIResponses],
-                ['gpt5', 'gpt-5', 'openai/gpt-5', MixOpenAI],
                 ['gpt5mini', 'gpt-5-mini', 'openai/gpt-5-mini', MixOpenAI],
                 ['gpt5nano', 'gpt-5-nano', 'openai/gpt-5-nano', MixOpenAI],
-                ['gpt51', 'gpt-5.1', 'openai/gpt-5.1', MixOpenAIResponses],
                 ['gpt52', 'gpt-5.2', 'openai/gpt-5.2', MixOpenAIResponses],
-                ['gpt53codex', 'gpt-5.3-codex', 'openai/gpt-5.3-codex', MixOpenAIResponses],
-                ['gpt53chat', 'gpt-5.3-chat-latest', 'openai/gpt-5.3-chat', MixOpenAIResponses],
                 ['gpt54', 'gpt-5.4', 'openai/gpt-5.4', MixOpenAIResponses],
                 ['gpt54mini', 'gpt-5.4-mini', 'openai/gpt-5.4-mini', MixOpenAIResponses],
                 ['gpt54nano', 'gpt-5.4-nano', 'openai/gpt-5.4-nano', MixOpenAIResponses],
@@ -153,10 +149,10 @@ describe('Provider Fallback Chain Tests', () => {
                 .gpt56sol({ mix: { openrouter: false } });
             expect(locallyDisabled.models.map(({ key }) => key)).to.deep.equal(['gpt-5.6-sol']);
 
-            const inherited = ModelMix.new({ mix: { openrouter: true } }).new().gpt5();
+            const inherited = ModelMix.new({ mix: { openrouter: true } }).new().gpt5mini();
             expect(inherited.models.map(({ key }) => key)).to.deep.equal([
-                'gpt-5',
-                'openai/gpt-5'
+                'gpt-5-mini',
+                'openai/gpt-5-mini'
             ]);
         });
 
@@ -309,7 +305,7 @@ describe('Provider Fallback Chain Tests', () => {
         });
 
         it('should use primary provider when available', async () => {
-            model.gpt5mini().sonnet46().addText('Hello');
+            model.gpt5mini().sonnet5().addText('Hello');
 
             // Mock successful OpenAI response
             nock('https://api.openai.com')
@@ -329,7 +325,7 @@ describe('Provider Fallback Chain Tests', () => {
         });
 
         it('should fallback to secondary provider when primary fails', async () => {
-            model.gpt5mini().sonnet46().addText('Hello');
+            model.gpt5mini().sonnet5().addText('Hello');
 
             // Mock failed OpenAI response (GPT-5 mini)
             nock('https://api.openai.com')
@@ -443,7 +439,7 @@ describe('Provider Fallback Chain Tests', () => {
         });
 
         it('should cascade through multiple fallbacks', async () => {
-            model.gpt5mini().sonnet46().gemini37flash().addText('Hello');
+            model.gpt5mini().sonnet5().gemini37flash().addText('Hello');
 
             // Mock failed OpenAI response
             nock('https://api.openai.com')
@@ -474,7 +470,7 @@ describe('Provider Fallback Chain Tests', () => {
         });
 
         it('should throw error when all providers fail', async () => {
-            model.gpt5mini().sonnet46().addText('Hello');
+            model.gpt5mini().sonnet5().addText('Hello');
 
             // Mock all providers failing
             nock('https://api.openai.com')
@@ -504,7 +500,7 @@ describe('Provider Fallback Chain Tests', () => {
         });
 
         it('should fallback from OpenAI to Anthropic', async () => {
-            model.gpt5mini().sonnet46().addText('Test message');
+            model.gpt5mini().sonnet5().addText('Test message');
 
             // Mock OpenAI failure
             nock('https://api.openai.com')
@@ -527,7 +523,7 @@ describe('Provider Fallback Chain Tests', () => {
         });
 
         it('should fallback from Anthropic to Google', async () => {
-            model.sonnet46().gemini37flash().addText('Test message');
+            model.sonnet5().gemini37flash().addText('Test message');
 
             // Mock Anthropic failure
             nock('https://api.anthropic.com')
@@ -553,7 +549,7 @@ describe('Provider Fallback Chain Tests', () => {
         });
 
         it('should handle network timeout fallback', async () => {
-            model.gpt5mini().sonnet46().addText('Hello');
+            model.gpt5mini().sonnet5().addText('Hello');
 
             // Mock timeout error on first provider (using 408 Request Timeout)
             nock('https://api.openai.com')
@@ -587,7 +583,7 @@ describe('Provider Fallback Chain Tests', () => {
 
         it('should handle JSON fallback correctly', async () => {
             const schema = { name: 'Alice', age: 30 };
-            model.gpt5mini().sonnet46().addText('Generate user data');
+            model.gpt5mini().sonnet5().addText('Generate user data');
 
             // Mock OpenAI failure
             nock('https://api.openai.com')
@@ -613,7 +609,7 @@ describe('Provider Fallback Chain Tests', () => {
         });
 
         it('should preserve message history through fallbacks', async () => {
-            model.gpt5mini().sonnet46()
+            model.gpt5mini().sonnet5()
                 .addText('First message')
                 .addText('Second message');
 
@@ -644,7 +640,7 @@ describe('Provider Fallback Chain Tests', () => {
                 config: { debug: false, retry: { enabled: false } }
             });
 
-            model.gpt5mini().sonnet46().addText('Hello');
+            model.gpt5mini().sonnet5().addText('Hello');
 
             nock('https://api.openai.com')
                 .post('/v1/chat/completions')
@@ -692,7 +688,7 @@ describe('Provider Fallback Chain Tests', () => {
                 config: { debug: false, retry: { enabled: true, retries: 2, baseDelayMs: 0, maxDelayMs: 0 } }
             });
 
-            model.gpt5mini().sonnet46().addText('Hello');
+            model.gpt5mini().sonnet5().addText('Hello');
 
             nock('https://api.openai.com')
                 .post('/v1/chat/completions')
@@ -716,7 +712,7 @@ describe('Provider Fallback Chain Tests', () => {
                 config: { debug: false, retry: { enabled: true, retries: 1, baseDelayMs: 0, maxDelayMs: 0 } }
             });
 
-            model.gpt5mini().sonnet46().addText('Hello');
+            model.gpt5mini().sonnet5().addText('Hello');
 
             nock('https://api.openai.com')
                 .post('/v1/chat/completions')
@@ -746,7 +742,7 @@ describe('Provider Fallback Chain Tests', () => {
 
             // Configure with custom temperature for fallback
             model.gpt5mini({ options: { temperature: 0.6 } })
-                 .sonnet46({ options: { temperature: 0.7 } })
+                 .sonnet45({ options: { temperature: 0.7 } })
                  .addText('Creative response');
 
             // Mock first provider failure
@@ -779,7 +775,7 @@ describe('Provider Fallback Chain Tests', () => {
             });
 
             model.gpt5mini({ options: { max_tokens: 100 } })
-                .sonnet46({ options: { max_tokens: 200 } })
+                .sonnet5({ options: { max_tokens: 200 } })
                 .addText('Generate text');
 
             // Mock OpenAI failure
@@ -913,7 +909,7 @@ describe('Provider Fallback Chain Tests', () => {
         });
 
         it('should provide detailed error information when all fallbacks fail', async () => {
-            model.gpt5mini().sonnet46().gemini37flash().addText('Test');
+            model.gpt5mini().sonnet5().gemini37flash().addText('Test');
 
             // Mock all providers failing with different errors
             nock('https://api.openai.com')
@@ -938,7 +934,7 @@ describe('Provider Fallback Chain Tests', () => {
         });
 
         it('should handle malformed responses in fallback', async () => {
-            model.gpt5mini().sonnet46().addText('Test');
+            model.gpt5mini().sonnet5().addText('Test');
 
             // Mock malformed response from first provider
             nock('https://api.openai.com')

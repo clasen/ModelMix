@@ -747,20 +747,19 @@ describe('Token Usage Tracking', () => {
         }
     });
 
-    it('should register GPT-OSS 120B through the current OpenRouter model ID', function () {
+    it('should register Kimi K2.6 through the current OpenRouter model ID', function () {
         const originalOpenRouterApiKey = process.env.OPENROUTER_API_KEY;
         process.env.OPENROUTER_API_KEY = 'test-openrouter-key';
 
         try {
-            const model = ModelMix.new().gptOss({
-                mix: { cerebras: false, groq: true, openrouter: true, together: false }
+            const model = ModelMix.new().kimiK26({
+                mix: { fireworks: false, together: false, openrouter: true }
             });
 
             expect(model.models.map(({ key }) => key)).to.deep.equal([
-                'openai/gpt-oss-120b',
-                'openai/gpt-oss-120b'
+                'moonshotai/kimi-k2.6'
             ]);
-            expect(model.models[1].provider).to.be.instanceOf(MixOpenRouter);
+            expect(model.models[0].provider).to.be.instanceOf(MixOpenRouter);
         } finally {
             if (originalOpenRouterApiKey === undefined) delete process.env.OPENROUTER_API_KEY;
             else process.env.OPENROUTER_API_KEY = originalOpenRouterApiKey;

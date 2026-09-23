@@ -13,10 +13,7 @@ describe('Grok Model Registration Tests', () => {
     const grokModels = [
         { method: 'grok47', key: 'grok-4.7' },
         { method: 'grok46', key: 'grok-4.6' },
-        { method: 'grok45', key: 'grok-4.5' },
-        { method: 'grok43', key: 'grok-4.3' },
-        { method: 'grok420multiAgent', key: 'grok-4.20-multi-agent-0309' },
-        { method: 'grok420', key: GROK420_ALIAS }
+        { method: 'grok43', key: 'grok-4.3' }
     ];
 
     for (const grokModel of grokModels) {

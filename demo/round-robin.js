@@ -11,11 +11,11 @@ const ai = ModelMix.new({
     },
     mix: { openrouter: false } // Exclude OpenRouter (free tier often rate-limited)
 })
-    .gptOss();
+    .kimiK26({ mix: { fireworks: true, together: true } });
 
 console.log('Making 6 requests with round robin enabled...\n');
 
-// Make 6 requests to see rotation through all models (cerebras + groq)
+// Make 6 requests to see rotation through all models (fireworks + together)
 for (let i = 1; i <= 6; i++) {
     const result = await ai.new()
         .addText(`Calculate ${i} * 2`)

@@ -412,7 +412,7 @@ describe('JSON Schema and Structured Output Tests', () => {
                 }]
             };
 
-            model.gpt51().addText('Name and capital of 3 South American countries.');
+            model.gpt52().addText('Name and capital of 3 South American countries.');
 
             let capturedBody;
             nock('https://api.openai.com')
@@ -462,7 +462,7 @@ describe('JSON Schema and Structured Output Tests', () => {
                 }
             };
 
-            model.sonnet46().addText('Generate user data');
+            model.sonnet5().addText('Generate user data');
             
             // Mock the API response
             nock('https://api.anthropic.com')

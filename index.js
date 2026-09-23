@@ -463,17 +463,11 @@ class ModelMix {
         return this;
     }
 
-    gpt5(args = {}) {
-        return this._attachOpenAIWithOpenRouter('gpt-5', MixOpenAI, args);
-    }
     gpt5mini(args = {}) {
         return this._attachOpenAIWithOpenRouter('gpt-5-mini', MixOpenAI, args);
     }
     gpt5nano(args = {}) {
         return this._attachOpenAIWithOpenRouter('gpt-5-nano', MixOpenAI, args);
-    }
-    gpt51(args = {}) {
-        return this._attachOpenAIWithOpenRouter('gpt-5.1', MixOpenAIResponses, args);
     }
     gpt52(args = {}) {
         return this._attachOpenAIWithOpenRouter('gpt-5.2', MixOpenAIResponses, args);
@@ -520,25 +514,6 @@ class ModelMix {
     gptRealtimeMini({ options = {}, config = {} } = {}) {
         return this.attach('gpt-realtime-mini', new MixOpenAIWebSocket({ options, config }));
     }
-    gpt53codex(args = {}) {
-        return this._attachOpenAIWithOpenRouter('gpt-5.3-codex', MixOpenAIResponses, args);
-    }
-    gpt53chat(args = {}) {
-        return this._attachOpenAIWithOpenRouter('gpt-5.3-chat-latest', MixOpenAIResponses, {
-            ...args,
-            openRouterKey: 'openai/gpt-5.3-chat'
-        });
-    }
-    gptOss({ options = {}, config = {}, mix = {} } = {}) {
-        mix = { ...this.mix, ...mix };
-        if (mix.nvidia) this.attach('openai/gpt-oss-120b', new MixNVIDIA({ options, config }));
-        if (mix.fireworks) this.attach('accounts/fireworks/models/gpt-oss-120b', new MixFireworks({ options, config }));
-        if (mix.together) this.attach('openai/gpt-oss-120b', new MixTogether({ options, config }));
-        if (mix.cerebras) this.attach('gpt-oss-120b', new MixCerebras({ options, config }));
-        if (mix.groq) this.attach('openai/gpt-oss-120b', new MixGroq({ options, config }));
-        if (mix.openrouter) this.attach('openai/gpt-oss-120b', new MixOpenRouter({ options, config }));
-        return this;
-    }
     fable50({ options = {}, config = {} } = {}) {
         return this.attach('claude-fable-5', new MixAnthropic({ options, config }));
     }
@@ -575,18 +550,12 @@ class ModelMix {
     sonnet5(args = {}) {
         return this.sonnet50(args);
     }
-    sonnet46({ options = {}, config = {} } = {}) {
-        return this.attach('claude-sonnet-4-6', new MixAnthropic({ options, config }));
-    }
     sonnet45({ options = {}, config = {} } = {}) {
         return this.attach('claude-sonnet-4-5-20250929', new MixAnthropic({ options, config }));
     }
     haiku45({ options = {}, config = {} } = {}) {
         return this.attach('claude-haiku-4-5-20251001', new MixAnthropic({ options, config }));
     }
-    gemini31pro({ options = {}, config = {} } = {}) {
-        return this.attach('gemini-3.1-pro-preview', new MixGoogle({ options, config }));
-    }    
     gemini38flash({ options = {}, config = {} } = {}) {
         return this.attach('gemini-3.8-flash', new MixGoogle({ options, config }));
     }
@@ -618,18 +587,8 @@ class ModelMix {
     grok46({ options = {}, config = {} } = {}) {
         return this.attach('grok-4.6', new MixGrok({ options, config }));
     }
-    grok45({ options = {}, config = {} } = {}) {
-        return this.attach('grok-4.5', new MixGrok({ options, config }));
-    }
     grok43({ options = {}, config = {} } = {}) {
         return this.attach('grok-4.3', new MixGrok({ options, config }));
-    }
-    grok420multiAgent({ options = {}, config = {} } = {}) {
-        return this.attach('grok-4.20-multi-agent-0309', new MixGrok({ options, config }));
-    }
-    /** Non-reasoning by default; with `.effort(20+)` / `-1` resolves to the reasoning model at request time. */
-    grok420({ options = {}, config = {} } = {}) {
-        return this.attach('grok-4.20-0309', new MixGrok({ options, config }));
     }
 
     museGlimmer30b({ options = {}, config = {}, mix = { fireworks: true } } = {}) {
@@ -729,14 +688,6 @@ class ModelMix {
         if (mix.fireworks) this.attach('accounts/fireworks/models/kimi-k3', new MixFireworks({ options, config }));
         if (mix.openrouter) this.attach('moonshotai/kimi-k3', new MixOpenRouter({ options, config }));
         if (mix.together) this.attach('moonshotai/Kimi-K3', new MixTogether({ options, config }));
-        return this;
-    }
-
-    kimiK25({ options = {}, config = {}, mix = { together: true } } = {}) {
-        mix = { ...this.mix, ...mix };
-        if (mix.together) this.attach('moonshotai/Kimi-K2.5', new MixTogether({ options, config }));
-        if (mix.fireworks) this.attach('accounts/fireworks/models/kimi-k2p5', new MixFireworks({ options, config }));
-        if (mix.openrouter) this.attach('moonshotai/kimi-k2.5', new MixOpenRouter({ options, config }));
         return this;
     }
 
@@ -1804,7 +1755,7 @@ class ModelMix {
             });
         } else {
             if (!this.models || this.models.length === 0) {
-                throw new Error('No models specified. Use methods like .gpt5(), .sonnet46() first.');
+                throw new Error('No models specified. Use methods like .gpt5mini(), .sonnet5() first.');
             }
             execution = this.limiter.schedule(() => {
                 throwIfAborted(signal);

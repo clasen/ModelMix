@@ -445,10 +445,8 @@ export declare class ModelMix {
   attach(key: string, provider: MixCustom): this;
 
   // OpenAI
-  gpt5(args?: ModelAttachArgs): this;
   gpt5mini(args?: ModelAttachArgs): this;
   gpt5nano(args?: ModelAttachArgs): this;
-  gpt51(args?: ModelAttachArgs): this;
   gpt52(args?: ModelAttachArgs): this;
   gpt54(args?: ModelAttachArgs): this;
   gpt54mini(args?: ModelAttachArgs): this;
@@ -464,9 +462,6 @@ export declare class ModelMix {
   gpt56luna(args?: ModelAttachArgs): this;
   gptRealtime(args?: ModelAttachArgs): this;
   gptRealtimeMini(args?: ModelAttachArgs): this;
-  gpt53codex(args?: ModelAttachArgs): this;
-  gpt53chat(args?: ModelAttachArgs): this;
-  gptOss(args?: ModelAttachArgs): this;
 
   // Anthropic
   fable51(args?: ModelAttachArgs): this;
@@ -480,12 +475,10 @@ export declare class ModelMix {
   opus46(args?: ModelAttachArgs): this;
   sonnet50(args?: ModelAttachArgs): this;
   sonnet5(args?: ModelAttachArgs): this;
-  sonnet46(args?: ModelAttachArgs): this;
   sonnet45(args?: ModelAttachArgs): this;
   haiku45(args?: ModelAttachArgs): this;
 
   // Google
-  gemini31pro(args?: ModelAttachArgs): this;
   gemini38flash(args?: ModelAttachArgs): this;
   gemini37flash(args?: ModelAttachArgs): this;
   gemini36flash(args?: ModelAttachArgs): this;
@@ -500,11 +493,7 @@ export declare class ModelMix {
   // Grok
   grok47(args?: ModelAttachArgs): this;
   grok46(args?: ModelAttachArgs): this;
-  grok45(args?: ModelAttachArgs): this;
   grok43(args?: ModelAttachArgs): this;
-  grok420multiAgent(args?: ModelAttachArgs): this;
-  /** Non-reasoning by default; with `.effort(20+)` / `-1` uses the reasoning model at request time. */
-  grok420(args?: ModelAttachArgs): this;
 
   // Multi-provider
   museGlimmer30b(args?: ModelAttachArgs): this;
@@ -524,7 +513,6 @@ export declare class ModelMix {
   kimiK26(args?: ModelAttachArgs): this;
   kimiK27Code(args?: ModelAttachArgs): this;
   kimiK3(args?: ModelAttachArgs): this;
-  kimiK25(args?: ModelAttachArgs): this;
   lmstudio(model?: string, args?: ModelAttachArgs): this;
   minimaxM27(args?: ModelAttachArgs): this;
   minimaxM3(args?: ModelAttachArgs): this;

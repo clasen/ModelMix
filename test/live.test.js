@@ -180,24 +180,22 @@ describe('Live Integration Tests', function () {
 
     describe('Additional Model Tests', function () {
 
-        it('should work with GPT-OSS model', async function () {
-            const model = ModelMix.new(setup).gptOss({
+        it('should work with Kimi K2.6 model', async function () {
+            const model = ModelMix.new(setup).kimiK26({
                 options: { max_tokens: 128 }
             });
 
-            model.addText('Say "gptoss test successful" and nothing else.');
+            model.addText('Say "Kimik26 test successful" and nothing else.');
 
             const response = await model.message();
-            console.log(`GPT-OSS response: ${response}`);
+            console.log(`Kimi K2.6 response: ${response}`);
 
             expect(response).to.be.a('string');
-            expect(response.toLowerCase()).to.include('gptoss test successful');
+            expect(response.toLowerCase()).to.include('kimik26 test successful');
         });
 
         const grokSeriesTests = [
-            { name: 'Grok 4.6', factory: (m) => m.grok46(), token: 'grok46' },
-            { name: 'Grok 4.20 reasoning', factory: (m) => m.effort(50).grok420(), token: 'grok420' },
-            { name: 'Grok 4.20 non-reasoning', factory: (m) => m.grok420(), token: 'grok420nr' }
+            { name: 'Grok 4.6', factory: (m) => m.grok46(), token: 'grok46' }
         ];
 
         for (const grokModel of grokSeriesTests) {

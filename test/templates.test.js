@@ -38,7 +38,7 @@ describe('EJS Template and File Operations Tests', () => {
     describe('EJS rendering', () => {
         it('renders inline variables with plain data keys', async () => {
             const model = ModelMix.new()
-                .gpt51()
+                .gpt52()
                 .assign({ name: 'Alice', age: 30, city: 'New York' })
                 .addText('Hello <%- name %>, you are <%- age %> years old and live in <%- city %>.');
 
@@ -53,7 +53,7 @@ describe('EJS Template and File Operations Tests', () => {
 
         it('assigns one template data key', async () => {
             const model = ModelMix.new()
-                .gpt51()
+                .gpt52()
                 .assignKey('name', 'Martin')
                 .addText('Hello <%- name %>.');
 
@@ -66,7 +66,7 @@ describe('EJS Template and File Operations Tests', () => {
 
         it('supports nested data, conditionals, and loops', async () => {
             const model = ModelMix.new()
-                .gpt51()
+                .gpt52()
                 .assign({
                     user: {
                         name: 'Charlie',
@@ -86,7 +86,7 @@ describe('EJS Template and File Operations Tests', () => {
         it('keeps raw and XML-escaped output distinct', async () => {
             const value = 'Hello & "World" <test>';
             const model = ModelMix.new()
-                .gpt51()
+                .gpt52()
                 .assign({ value })
                 .addText('Escaped: <%= value %>\nRaw: <%- value %>');
 
@@ -101,7 +101,7 @@ describe('EJS Template and File Operations Tests', () => {
 
         it('does not execute EJS received through template data', async () => {
             const model = ModelMix.new()
-                .gpt51()
+                .gpt52()
                 .assign({ payload: '<%- secret %>', secret: 'must-not-render' })
                 .addText('Payload: <%- payload %>');
 
@@ -114,7 +114,7 @@ describe('EJS Template and File Operations Tests', () => {
 
         it('selects uniformly when choice options omit weights', async () => {
             const model = ModelMix.new()
-                .gpt51()
+                .gpt52()
                 .addText(`<% choice %>
 <% option %>
 Use emojis.
@@ -134,7 +134,7 @@ Do not use emojis.
 
         it('selects weighted options using relative weights', async () => {
             const model = ModelMix.new()
-                .gpt51()
+                .gpt52()
                 .assign({ language: 'Spanish' })
                 .addText(`<% choice %>
 <% option 20 %>
@@ -155,7 +155,7 @@ Do not use emojis in <%- language %>.
 
         it('supports nested choices', async () => {
             const model = ModelMix.new()
-                .gpt51()
+                .gpt52()
                 .addText(`<% choice %>
 <% option %>
 Tone:
@@ -187,7 +187,7 @@ first
 <% option %>
 second
 <% /choice %>`;
-            const model = ModelMix.new().gpt51().addText(template);
+            const model = ModelMix.new().gpt52().addText(template);
             const random = sinon.stub(model, '_choiceRandom');
             random.onFirstCall().returns(0.1);
             random.onSecondCall().returns(0.9);
@@ -208,7 +208,7 @@ second
 
         it('fails before the request when a variable is missing', async () => {
             const model = ModelMix.new()
-                .gpt51()
+                .gpt52()
                 .assign({ name: 'David' })
                 .addText('Hello <%- name %>, status: <%- status %>');
 
@@ -225,7 +225,7 @@ second
         });
 
         it('rejects invalid template data immediately', () => {
-            const model = ModelMix.new().gpt51();
+            const model = ModelMix.new().gpt52();
 
             expect(() => model.assign(null)).to.throw(TypeError, 'Template data must be a plain non-null object.');
             expect(() => model.assign(undefined)).to.throw(TypeError, 'Template data must be a plain non-null object.');
@@ -278,7 +278,7 @@ second
             ];
 
             for (const testCase of cases) {
-                const model = ModelMix.new().gpt51().addText(testCase.source);
+                const model = ModelMix.new().gpt52().addText(testCase.source);
                 let error;
                 try {
                     await model.message();
@@ -293,7 +293,7 @@ second
 
         it('rerolls earlier choices after a later template fails to render', async () => {
             const model = ModelMix.new()
-                .gpt51()
+                .gpt52()
                 .addText(`<% choice %>
 <% option %>
 A
@@ -333,7 +333,7 @@ A
 <% option %>
 B
 <% /choice %>`;
-            const model = ModelMix.new().gpt51().addText(template);
+            const model = ModelMix.new().gpt52().addText(template);
             const random = sinon.stub(model, '_choiceRandom');
             random.onFirstCall().returns(0.1);
             random.onSecondCall().returns(0.9);
@@ -370,7 +370,7 @@ B
                     max_history: 10,
                     bottleneck: { maxConcurrent: 2, minTime: 0 }
                 }
-            }).gpt51().addText(template);
+            }).gpt52().addText(template);
             const content = model.messages[0].content[0];
             const random = sinon.stub(model, '_choiceRandom');
             random.onFirstCall().returns(0.1);
@@ -396,7 +396,7 @@ B
     describe('File templates and data', () => {
         it('renders a file template with a relative include', async () => {
             const model = ModelMix.new()
-                .gpt51()
+                .gpt52()
                 .assign({
                     name: 'Eve',
                     platform: 'ModelMix',
@@ -423,7 +423,7 @@ B
 
         it('resolves a dynamic include path relative to its template', async () => {
             const model = ModelMix.new()
-                .gpt51()
+                .gpt52()
                 .assign({ rulesFile: 'system-rules.txt', language: 'Spanish' })
                 .addTextFromFile(path.join(fixturesPath, 'dynamic-include.txt'));
 
@@ -436,7 +436,7 @@ B
 
         it('processes choice directives inside relative includes', async () => {
             const model = ModelMix.new()
-                .gpt51()
+                .gpt52()
                 .addTextFromFile(path.join(fixturesPath, 'choice-template.txt'));
             sinon.stub(model, '_choiceRandom').returns(0.75);
 
@@ -449,7 +449,7 @@ B
 
         it('supports recursive includes with an explicit depth limit', async () => {
             const model = ModelMix.new()
-                .gpt51()
+                .gpt52()
                 .assign({
                     node: {
                         text: 'Root',
@@ -481,7 +481,7 @@ B
             const base = ModelMix.new()
                 .setSystemFromFile(path.join(fixturesPath, 'system-template.txt'))
                 .assign({ role: 'data analyst', language: 'Spanish' });
-            const model = base.new().gpt51().addText('Analyze this.');
+            const model = base.new().gpt52().addText('Analyze this.');
 
             mockOpenAI(body => {
                 const system = body.input.find(message => message.role === 'developer');
@@ -494,7 +494,7 @@ B
 
         it('renders assigned files through EJS includes, including their relative includes', async () => {
             const model = ModelMix.new()
-                .gpt51()
+                .gpt52()
                 .assign({
                     name: 'Eve',
                     platform: 'ModelMix',
@@ -523,7 +523,7 @@ B
             const base = ModelMix.new()
                 .assign({ language: 'Spanish' })
                 .assignKeyFromFile('rules', path.join(fixturesPath, 'system-rules.txt'));
-            const model = base.new().gpt51().addText('Rules:\n<%- rules %>');
+            const model = base.new().gpt52().addText('Rules:\n<%- rules %>');
 
             mockOpenAI(body => {
                 expect(userTexts(body)[0].trim()).to.equal('Rules:\nAlways respond in Spanish.');
@@ -534,7 +534,7 @@ B
 
         it('uses the latest assignment when a plain value and a file share a key', async () => {
             const plainValue = ModelMix.new()
-                .gpt51()
+                .gpt52()
                 .assign({ language: 'Spanish' })
                 .assignKeyFromFile('rules', path.join(fixturesPath, 'system-rules.txt'))
                 .assignKey('rules', 'Use the plain value.')
@@ -546,7 +546,7 @@ B
             await plainValue.message();
 
             const fileValue = ModelMix.new()
-                .gpt51()
+                .gpt52()
                 .assign({ language: 'Spanish', rules: 'Ignore this value.' })
                 .assignKeyFromFile('rules', path.join(fixturesPath, 'system-rules.txt'))
                 .addText('<%- rules %>');
@@ -559,7 +559,7 @@ B
 
         it('injects JSON file contents without XML escaping', async () => {
             const model = ModelMix.new()
-                .gpt51()
+                .gpt52()
                 .assignKeyFromFile('data', path.join(fixturesPath, 'data.json'))
                 .addText('Process this data:\n<%- data %>');
 
@@ -580,7 +580,7 @@ B
             try {
                 fs.writeFileSync(assignedFile, 'Version one for <%- name %>.');
                 const model = ModelMix.new()
-                    .gpt51()
+                    .gpt52()
                     .assign({ name: 'Eve' })
                     .assignKeyFromFile('content', assignedFile)
                     .addText('<%- content %>');
@@ -602,7 +602,7 @@ B
         });
 
         it('throws immediately when a template or data file is missing', () => {
-            const model = ModelMix.new().gpt51();
+            const model = ModelMix.new().gpt52();
             const missingPath = path.join(fixturesPath, 'nonexistent.txt');
 
             expect(() => model.addTextFromFile(missingPath)).to.throw(`File not found: ${missingPath}`);
@@ -622,7 +622,7 @@ B
         it('renders system and message templates for JSON output', async () => {
             const schema = { summary: 'Analysis summary', userCount: 0 };
             const model = ModelMix.new()
-                .gpt51()
+                .gpt52()
                 .setSystem('You are a <%- role %>.')
                 .assign({ role: 'data analyst', instruction: 'Count active users' })
                 .assignKeyFromFile('data', path.join(fixturesPath, 'data.json'))
@@ -653,7 +653,7 @@ B
 
         it('renders the system before adding block instructions', async () => {
             const model = ModelMix.new()
-                .gpt51()
+                .gpt52()
                 .setSystem('Act as <%- role %>.')
                 .assign({ role: 'reviewer' })
                 .addText('Review this.');
@@ -670,7 +670,7 @@ B
 
         it('keeps rendered history snapshots when template data changes', async () => {
             const model = ModelMix.new({ config: { max_history: 10 } })
-                .gpt51()
+                .gpt52()
                 .assign({ name: 'Alice' })
                 .addText('Hello <%- name %>.');
 
@@ -689,8 +689,8 @@ B
         it('keeps a system choice stable across provider fallback', async () => {
             const systems = [];
             const model = ModelMix.new()
-                .gpt51()
-                .sonnet46()
+                .gpt52()
+                .sonnet5()
                 .setSystem(`<% choice %>
 <% option %>
 First system.

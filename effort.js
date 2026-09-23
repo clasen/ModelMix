@@ -141,7 +141,7 @@ const PROVIDER_FAMILY_BY_CLASS = {
     MixCustom: null,
 };
 
-/** Logical alias from `.grok420()` — resolved to reasoning / non-reasoning at request time. */
+/** Logical alias key `grok-4.20-0309` — resolved to reasoning / non-reasoning at request time. */
 const GROK420_ALIAS = 'grok-4.20-0309';
 const GROK420_REASONING = 'grok-4.20-0309-reasoning';
 const GROK420_NON_REASONING = 'grok-4.20-0309-non-reasoning';

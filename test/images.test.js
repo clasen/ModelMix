@@ -51,10 +51,10 @@ describe('Image Processing and Multimodal Support Tests', () => {
             expect(response).to.include('I can see a small test image');
         });
 
-        it('should support multimodal with sonnet46()', async () => {
+        it('should support multimodal with sonnet5()', async () => {
             const base64Image = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAoAAAAKCAYAAACNMs+9AAAAFUlEQVR42mP8z8BQz0AEYBxVSF+FABJADveWkH6oAAAAAElFTkSuQmCC';
 
-            model.sonnet46()
+            model.sonnet5()
                 .addText('Describe this image')
                 .addImageFromUrl(base64Image);
 
@@ -87,7 +87,7 @@ describe('Image Processing and Multimodal Support Tests', () => {
             const pngBase64 = 'iVBORw0KGgoAAAANSUhEUgAAAAoAAAAKCAYAAACNMs+9AAAAFUlEQVR42mP8z8BQz0AEYBxVSF+FABJADveWkH6oAAAAAElFTkSuQmCC';
             const pngBuffer = Buffer.from(pngBase64, 'base64');
 
-            model.sonnet46()
+            model.sonnet5()
                 .addText('Describe this image')
                 .addImageFromUrl(imageUrl);
 

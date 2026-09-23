@@ -443,7 +443,7 @@ describe('AbortSignal execution contract', () => {
             });
         });
         const model = ModelMix.new({ config: { bottleneck: { maxConcurrent: 1, minTime: 0 } } })
-            .gpt51()
+            .gpt52()
             .addText('test');
 
         const execution = model.raw(controller.signal);

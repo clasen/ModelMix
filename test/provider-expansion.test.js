@@ -16,10 +16,10 @@ describe('Provider expansion regressions', () => {
         process.env.MINIMAX_API_KEY = 'test-minimax-key';
 
         try {
-            const gptOss = ModelMix.new().gptOss();
+            const kimi = ModelMix.new().kimiK26();
             const minimax = ModelMix.new().minimaxM27();
 
-            expect(gptOss.models.some(({ provider }) => provider instanceof MixOpenRouter)).to.equal(false);
+            expect(kimi.models.some(({ provider }) => provider instanceof MixOpenRouter)).to.equal(false);
             expect(minimax.models.map(({ key }) => key)).to.deep.equal(['MiniMax-M2.7']);
             expect(minimax.models[0].provider).to.be.instanceOf(MixMiniMax);
         } finally {
@@ -28,33 +28,26 @@ describe('Provider expansion regressions', () => {
         }
     });
 
-    it('should retain every enabled GPT OSS provider, including shared model keys', () => {
-        const model = ModelMix.new().gptOss({
+    it('should retain every enabled Muse Glimmer 30B provider, including shared model keys', () => {
+        const model = ModelMix.new().museGlimmer30b({
             mix: {
                 nvidia: true,
                 fireworks: true,
                 together: true,
-                cerebras: true,
-                groq: true,
                 openrouter: true
             }
         });
 
         expect(model.models.map(({ key }) => key)).to.deep.equal([
-            'openai/gpt-oss-120b',
-            'accounts/fireworks/models/gpt-oss-120b',
-            'openai/gpt-oss-120b',
-            'gpt-oss-120b',
-            'openai/gpt-oss-120b',
-            'openai/gpt-oss-120b'
+            'meta/muse-glimmer-30b',
+            'accounts/fireworks/models/muse-glimmer-30b',
+            'meta/muse-glimmer-30b',
+            'meta-models/Muse-Glimmer-30B'
         ]);
         expect(model.models[0].provider).to.be.instanceOf(MixNVIDIA);
         expect(model.models[1].provider).to.be.instanceOf(MixFireworks);
-        expect(ModelMix.calculateCost('accounts/fireworks/models/gpt-oss-120b', {
-            input: 1_000_000,
-            cached: 500_000,
-            output: 1_000_000
-        })).to.equal(0.682);
+        expect(model.models[2].provider).to.be.instanceOf(MixOpenRouter);
+        expect(model.models[3].provider).to.be.instanceOf(MixTogether);
     });
 
     it('should retain every enabled MiniMax M2.7 provider in fallback order', () => {

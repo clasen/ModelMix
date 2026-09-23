@@ -72,9 +72,9 @@ describe('Rate Limiting with Bottleneck Tests', () => {
         it('should enforce minimum time between requests', async () => {
             const startTimes = [];
             
-            model.gpt51();
+            model.gpt52();
             
-            // Mock API responses (gpt51 uses /v1/responses)
+            // Mock API responses (gpt52 uses /v1/responses)
             nock('https://api.openai.com')
                 .post('/v1/responses')
                 .times(3)
@@ -116,9 +116,9 @@ describe('Rate Limiting with Bottleneck Tests', () => {
                 }
             });
             
-            model.gpt51();
+            model.gpt52();
             
-            // Mock API with delay to simulate concurrent requests (gpt51 uses /v1/responses)
+            // Mock API with delay to simulate concurrent requests (gpt52 uses /v1/responses)
             nock('https://api.openai.com')
                 .post('/v1/responses')
                 .times(5)
@@ -171,7 +171,7 @@ describe('Rate Limiting with Bottleneck Tests', () => {
         it('should apply rate limiting to OpenAI requests', async () => {
             const requestTimes = [];
             
-            model.gpt51();
+            model.gpt52();
             
             nock('https://api.openai.com')
                 .post('/v1/responses')
@@ -195,7 +195,7 @@ describe('Rate Limiting with Bottleneck Tests', () => {
         it('should apply rate limiting to Anthropic requests', async () => {
             const requestTimes = [];
             
-            model.sonnet46();
+            model.sonnet5();
             
             nock('https://api.anthropic.com')
                 .post('/v1/messages')
@@ -247,7 +247,7 @@ describe('Rate Limiting with Bottleneck Tests', () => {
         });
 
         it('should handle rate limiting with API errors', async () => {
-            model.gpt51({ mix: { openrouter: false } });
+            model.gpt52({ mix: { openrouter: false } });
             
             nock('https://api.openai.com')
                 .post('/v1/responses')
@@ -269,7 +269,7 @@ describe('Rate Limiting with Bottleneck Tests', () => {
         it('should continue rate limiting after errors', async () => {
             const requestTimes = [];
             
-            model.gpt51();
+            model.gpt52();
             
             // First request fails
             nock('https://api.openai.com')
@@ -319,7 +319,7 @@ describe('Rate Limiting with Bottleneck Tests', () => {
                 }
             });
             
-            model.gpt51();
+            model.gpt52();
             
             let requestCount = 0;
             
@@ -360,7 +360,7 @@ describe('Rate Limiting with Bottleneck Tests', () => {
                 }
             });
             
-            model.gpt51();
+            model.gpt52();
             
             const results = [];
             
@@ -403,7 +403,7 @@ describe('Rate Limiting with Bottleneck Tests', () => {
                 }
             });
             
-            model.gpt51();
+            model.gpt52();
             
             nock('https://api.openai.com')
                 .post('/v1/responses')
@@ -445,7 +445,7 @@ describe('Rate Limiting with Bottleneck Tests', () => {
                 done();
             });
             
-            model.gpt51();
+            model.gpt52();
             
             nock('https://api.openai.com')
                 .post('/v1/responses')

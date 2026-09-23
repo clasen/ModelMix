@@ -1,7 +1,7 @@
 const { expect } = require('chai');
 const sinon = require('sinon');
 
-const { MixOpenAI, ModelMix } = require('../../..');
+const { MixOpenAI, MixOpenAIResponses, ModelMix } = require('../../..');
 const { benchmark } = require('..');
 
 const criteria = {
@@ -53,18 +53,18 @@ function directContext(invoke, overrides = {}) {
 
 describe('Empty benchmark responses', () => {
     it('records a generation failure and never evaluates an empty candidate', async () => {
-        const plugin = benchmark({ criteriaModel: 'gpt5nano', models: ['gpt5', 'gpt5mini'] });
+        const plugin = benchmark({ criteriaModel: 'gpt5nano', models: ['gpt52', 'gpt5mini'] });
         const result = await plugin.execute(directContext(async input => {
             if (input.system.includes('define evaluation criteria')) return metricsResult(JSON.stringify(criteria));
             if (input.system.includes('evaluate one candidate response')) {
                 expect(input.messages[0].content).to.include('usable response');
                 return metricsResult(validEvaluation());
             }
-            return metricsResult(modelKey(input) === 'gpt-5' ? '  ' : 'usable response');
+            return metricsResult(modelKey(input) === 'gpt-5.2' ? '  ' : 'usable response');
         }));
         expect(result.benchmark.results[0]).to.include({ response: null, score: null });
         expect(result.benchmark.results[0].evaluationCount).to.deep.equal({ expected: 0, valid: 0 });
-        expect(result.benchmark.errors[0]).to.include({ stage: 'response', participant: 'gpt5' });
+        expect(result.benchmark.errors[0]).to.include({ stage: 'response', participant: 'gpt52' });
         expect(result.benchmark.errors[0].error.message).to.include('no text response');
     });
 });
@@ -91,7 +91,7 @@ describe('benchmark plugin', () => {
         try {
             const plugin = benchmark({
                 criteriaModel: 'deepseekV41Flash@20',
-                models: ['deepseekV41Flash@60', 'gpt5'],
+                models: ['deepseekV41Flash@60', 'gpt52'],
                 mix: { deepseek: true, openrouter: false }
             });
             const raw = await plugin.execute(directContext(async input => {
@@ -122,7 +122,7 @@ describe('benchmark plugin', () => {
 
     it('accepts a closing Markdown delimiter on criteria and evaluations without changing the response', async () => {
         const response = 'Candidate with ```text\ncontent\n```';
-        const plugin = benchmark({ criteriaModel: 'gpt5nano', models: ['gpt5', 'sonnet5'] });
+        const plugin = benchmark({ criteriaModel: 'gpt5nano', models: ['gpt52', 'sonnet5'] });
         const raw = await plugin.execute(directContext(async input => {
             if (input.system.includes('define evaluation criteria')) {
                 return metricsResult(JSON.stringify(criteria) + '```');
@@ -138,7 +138,7 @@ describe('benchmark plugin', () => {
     });
 
     it('still rejects invalid or incomplete evaluations with closing Markdown delimiters', async () => {
-        const plugin = benchmark({ criteriaModel: 'gpt5nano', models: ['gpt5', 'sonnet5'] });
+        const plugin = benchmark({ criteriaModel: 'gpt5nano', models: ['gpt52', 'sonnet5'] });
         let evaluation = 0;
         const invalid = [validEvaluation() + ' explanation```', '{"scores":[]}```'];
         const raw = await plugin.execute(directContext(async input => {
@@ -209,7 +209,7 @@ describe('benchmark plugin', () => {
     }
 
     it('preserves Markdown fences inside valid JSON evaluations and the final JSON report', async () => {
-        sinon.stub(MixOpenAI.prototype, 'create').callsFake(async ({ config }) => {
+        const respond = async ({ config }) => {
             if (config.system.includes('define evaluation criteria')) {
                 return metricsResult(JSON.stringify(criteria));
             }
@@ -219,9 +219,11 @@ describe('benchmark plugin', () => {
                 return metricsResult(JSON.stringify(value));
             }
             return metricsResult('```text\nA candidate answer\n```');
-        });
+        };
+        sinon.stub(MixOpenAI.prototype, 'create').callsFake(respond);
+        sinon.stub(MixOpenAIResponses.prototype, 'create').callsFake(respond);
         const report = await ModelMix.new().use(benchmark({
-            criteriaModel: 'gpt5nano', models: ['gpt5', 'gpt5mini']
+            criteriaModel: 'gpt5nano', models: ['gpt52', 'gpt5mini']
         })).addText('Evaluate the answer.').json();
         expect(report.errors).to.deep.equal([]);
         expect(report.results[0].response).to.equal('```text\nA candidate answer\n```');
@@ -229,7 +231,7 @@ describe('benchmark plugin', () => {
     });
 
     it('rejects truncated output with its finish reason and preserves the text and metrics', async () => {
-        const plugin = benchmark({ criteriaModel: 'gpt5nano', models: ['gpt5', 'sonnet5'] });
+        const plugin = benchmark({ criteriaModel: 'gpt5nano', models: ['gpt52', 'sonnet5'] });
         const log = sinon.stub(console, 'log');
         const raw = await plugin.execute(directContext(async input => {
             if (input.system.includes('define evaluation criteria')) {
@@ -258,7 +260,7 @@ describe('benchmark plugin', () => {
         const calls = [];
         const plugin = benchmark({
             criteriaModel: 'gpt5nano@10',
-            models: ['gpt5@0', 'gpt5mini@25', 'sonnet5@50']
+            models: ['gpt52@0', 'gpt5mini@25', 'sonnet5@50']
         });
         const context = directContext(async input => {
             calls.push(input);
@@ -279,7 +281,7 @@ describe('benchmark plugin', () => {
         expect(report.criteria.model).to.include({ id: 'gpt5nano@10', effort: 10 });
         expect(report.results).to.have.length(3);
         expect(report.results.map(result => result.response)).to.deep.equal([
-            'response:gpt-5',
+            'response:gpt-5.2',
             'response:gpt-5-mini',
             'response:claude-sonnet-5'
         ]);
@@ -312,7 +314,7 @@ describe('benchmark plugin', () => {
     it('treats aliases as one model for duplicates and self-evaluation exclusion', async () => {
         const plugin = benchmark({
             criteriaModel: 'gpt5nano',
-            models: ['sonnet5@10', 'sonnet50@20', 'gpt5@30']
+            models: ['sonnet5@10', 'sonnet50@20', 'gpt52@30']
         });
         const raw = await plugin.execute(directContext(async input => {
             if (input.system.includes('define evaluation criteria')) {
@@ -329,8 +331,8 @@ describe('benchmark plugin', () => {
             { expected: 1, valid: 1 },
             { expected: 2, valid: 2 }
         ]);
-        expect(raw.benchmark.results[0].evaluations[0].judge.canonicalModel).to.equal('gpt-5');
-        expect(raw.benchmark.results[1].evaluations[0].judge.canonicalModel).to.equal('gpt-5');
+        expect(raw.benchmark.results[0].evaluations[0].judge.canonicalModel).to.equal('gpt-5.2');
+        expect(raw.benchmark.results[1].evaluations[0].judge.canonicalModel).to.equal('gpt-5.2');
         expect(raw.benchmark.results[2].evaluations.map(item => item.judge.id)).to.deep.equal([
             'sonnet5@10',
             'sonnet50@20'
@@ -338,7 +340,7 @@ describe('benchmark plugin', () => {
 
         const duplicate = benchmark({
             criteriaModel: 'gpt5nano',
-            models: ['sonnet5@100', 'sonnet50@100', 'gpt5']
+            models: ['sonnet5@100', 'sonnet50@100', 'gpt52']
         });
         await expectRejection(duplicate.execute(directContext(async () => {
             throw new Error('should not be called');
@@ -346,7 +348,7 @@ describe('benchmark plugin', () => {
 
         const inheritedDuplicate = benchmark({
             criteriaModel: 'gpt5nano',
-            models: ['sonnet5', 'sonnet50', 'gpt5']
+            models: ['sonnet5', 'sonnet50', 'gpt52']
         });
         await expectRejection(inheritedDuplicate.execute(directContext(async () => {
             throw new Error('should not be called');
@@ -367,7 +369,7 @@ describe('benchmark plugin', () => {
         const evaluationCalls = [];
         const plugin = benchmark({
             criteriaModel: 'gpt5nano',
-            models: ['gpt5', 'gpt5mini', 'sonnet5']
+            models: ['gpt52', 'gpt5mini', 'sonnet5']
         });
         const raw = await plugin.execute(directContext(async input => {
             if (input.system.includes('define evaluation criteria')) {
@@ -382,7 +384,7 @@ describe('benchmark plugin', () => {
                 }
                 return metricsResult(validEvaluation(9, 7));
             }
-            if (modelKey(input) === 'gpt-5') throw new Error('participant unavailable');
+            if (modelKey(input) === 'gpt-5.2') throw new Error('participant unavailable');
             return metricsResult(`response:${modelKey(input)}`);
         }));
 
@@ -395,11 +397,11 @@ describe('benchmark plugin', () => {
         expect(sonnet.evaluationCount).to.deep.equal({ expected: 2, valid: 2 });
         expect(sonnet.score).to.equal(8);
         expect(evaluationCalls).to.deep.include({
-            judge: 'gpt-5',
+            judge: 'gpt-5.2',
             response: 'response:gpt-5-mini'
         });
         expect(evaluationCalls).to.deep.include({
-            judge: 'gpt-5',
+            judge: 'gpt-5.2',
             response: 'response:claude-sonnet-5'
         });
         expect(raw.benchmark.errors.map(error => error.stage)).to.deep.equal([
@@ -414,7 +416,7 @@ describe('benchmark plugin', () => {
     it('rejects incomplete evaluations without using any of their scores', async () => {
         const plugin = benchmark({
             criteriaModel: 'gpt5nano',
-            models: ['gpt5', 'sonnet5']
+            models: ['gpt52', 'sonnet5']
         });
         const raw = await plugin.execute(directContext(async input => {
             if (input.system.includes('define evaluation criteria')) {
@@ -446,7 +448,7 @@ describe('benchmark plugin', () => {
     it('aborts when criteria generation fails and propagates cancellation', async () => {
         const invalidCriteria = benchmark({
             criteriaModel: 'gpt5nano',
-            models: ['gpt5', 'sonnet5']
+            models: ['gpt52', 'sonnet5']
         });
         await expectRejection(invalidCriteria.execute(directContext(async () => (
             metricsResult(JSON.stringify({ criteria: [] }))
@@ -465,7 +467,7 @@ describe('benchmark plugin', () => {
     it('logs intermediate progress when ModelMix debug is enabled', async () => {
         const plugin = benchmark({
             criteriaModel: 'gpt5nano',
-            models: ['gpt5', 'sonnet5']
+            models: ['gpt52', 'sonnet5']
         });
         const log = sinon.stub(console, 'log');
         try {
@@ -486,13 +488,13 @@ describe('benchmark plugin', () => {
 
         const output = log.args.flat().join('\n');
         expect(output).to.include('[benchmark] Generating criteria with gpt5nano.');
-        expect(output).to.include('[benchmark] Running response 1/2: gpt5.');
+        expect(output).to.include('[benchmark] Running response 1/2: gpt52.');
         expect(output).to.include('[benchmark] Running evaluation 2/2:');
         expect(output).to.include('[benchmark] Completed benchmark');
     });
 
     it('integrates with ModelMix json() and exposes the same report through lastRaw', async () => {
-        sinon.stub(MixOpenAI.prototype, 'create').callsFake(async ({ config, options }) => {
+        const respond = async ({ config, options }) => {
             if (config.system.includes('define evaluation criteria')) {
                 return metricsResult(JSON.stringify(criteria));
             }
@@ -501,11 +503,13 @@ describe('benchmark plugin', () => {
             }
             expect(options).to.not.have.property('response_format');
             return metricsResult(`response:${options.model}`);
-        });
+        };
+        sinon.stub(MixOpenAI.prototype, 'create').callsFake(respond);
+        sinon.stub(MixOpenAIResponses.prototype, 'create').callsFake(respond);
         const model = ModelMix.new()
             .use(benchmark({
                 criteriaModel: 'gpt5nano',
-                models: ['gpt5', 'gpt5mini']
+                models: ['gpt52', 'gpt5mini']
             }))
             .addText('Complete the task.');
 
