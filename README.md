@@ -123,11 +123,19 @@ has no configured effort:
 
 ```javascript
 const model = ModelMix.new(setup)
-    .chain('sonnet5', 'gpt56luna@20', 'gemini38flash@-1')
+    .chain('sonnet5@high', 'gpt6luna@high', 'gemini38flash@-1')
     .addText("What's your name?");
 
 console.log(await model.message());
 ```
+
+The suffix accepts an integer (`-1` or `0`–`100`) or an exact named level supported
+by the model's effort mapping, such as `none`, `minimal`, `low`, `medium`, `high`,
+`xhigh`, or `max`. For example, `gpt6luna@high` selects GPT-6 Luna's `high` level;
+`gpt6luna@50` still uses the numeric scale. `adaptive` and `disabled` are accepted
+where the mapping exposes those thinking modes. Unsupported names throw an error;
+models using only numeric thinking budgets require a numeric suffix. Names resolve
+separately for each enabled provider, and explicit native options still take precedence.
 
 **Use Perplexity to get the price of ETH**
 ```javascript
@@ -181,6 +189,7 @@ ModelMix provides convenient shorthand methods for quickly accessing different A
 | `opus48()` | Anthropic | claude-opus-4-8 | [\$5.00][2] | [\$25.00][2] |
 | `opus47()` | Anthropic | claude-opus-4-7 | [\$5.00][2] | [\$25.00][2] |
 | `opus46()` | Anthropic | claude-opus-4-6 | [\$5.00][2] | [\$25.00][2] |
+| `sonnet55()` | Anthropic | claude-sonnet-5-5 | [\$2.00][2] | [\$10.00][2] |
 | `sonnet5()` | Anthropic | claude-sonnet-5 | [\$3.00][2] | [\$15.00][2] |
 | `haiku45()` | Anthropic | claude-haiku-4-5-20251001 | [\$1.00][2] | [\$5.00][2] |
 | `gemini38flash()` | Google | gemini-3.8-flash | [\$0.75][3] | [\$3.75][3] |
@@ -225,6 +234,8 @@ ModelMix provides convenient shorthand methods for quickly accessing different A
 Gemini 3.8 Flash, 3.7 Flash, and 3.6 Flash use Google's introductory standard pricing through December 31, 2026; standard rates double on January 1, 2027.
 
 `museGlimmer30b()` uses Fireworks by default. OpenRouter, NVIDIA NIM, and Together are available through `mix.openrouter`, `mix.nvidia`, and `mix.together`.
+
+`sonnet55()` uses Anthropic's `claude-sonnet-5-5` and supports unified effort, including `.chain('sonnet55@high')`. Existing `sonnet5()` / `sonnet50()` still select Sonnet 5. Sonnet 5.5 uses adaptive thinking by default; to disable up-front thinking, pass `options: { thinking: { type: 'between_tools' }, output_config: { effort: 'high' } }` (only `low`, `medium`, and `high` are supported in this mode). Forced tool choices (`any` / `tool`) are not supported. See the [Sonnet 5.5 documentation](https://platform.claude.com/docs/en/models/sonnet-5-5/overview).
 
 `fable51()` uses the official Anthropic API by default (`claude-fable-5-1`). Pass `mix: { openrouter: true }` to append [`anthropic/claude-fable-5.1`][21] as its fallback.
 

@@ -10,7 +10,7 @@ const setup = {
 
 const mmix = await ModelMix.new(setup)
     .fable51({ mix: { openrouter: true } }) // (main + provider fallback) Anthropic/OpenRouter Claude Fable 5.1
-    .sonnet5() // (fallback 2) Anthropic claude-sonnet-5
+    .sonnet55() // (fallback 2) Anthropic claude-sonnet-5-5
     .gpt56luna({ mix: { openrouter: true } }) // (fallback 3 + provider fallback) OpenAI/OpenRouter gpt-5.6-luna
     .gemini38flash() // (fallback 4) Google gemini-3.8-flash
     .gpt5nano({ mix: { openrouter: true } }) // (fallback 5 + provider fallback) OpenAI/OpenRouter gpt-5-nano
@@ -27,7 +27,7 @@ const mmix = await ModelMix.new(setup)
     .museSpark13() // (fallback 16) OpenRouter meta/muse-spark-1.3
     .museSpark12() // (fallback 17) OpenRouter meta/muse-spark-1.2
     .museSpark13c() // (fallback 18) OpenRouter meta/muse-spark-1.3-contributor
-    .gpt6astra() // (fallback 19) OpenAI gpt-6-astra
+    .chain('gpt6astra@high') // (fallback 19) OpenAI gpt-6-astra, high reasoning effort
     .deepseekV41Flash({ mix: { deepseek: true, fireworks: true, openrouter: true } }) // (fallback 20 + provider fallback) DeepSeek/Fireworks/OpenRouter V4.1 Flash
     .deepseekPro() // (fallback 21) OpenRouter deepseek/deepseek-v4-pro-0813
     .addText("What's your name?");

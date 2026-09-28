@@ -93,13 +93,17 @@ const model = ModelMix.new()
 If `sonnet5` fails, it automatically tries `gpt52`, then `gemini38flash`.
 
 The equivalent `chain()` form accepts public shortcut names directly in the
-same order. Append `@effort` for a per-model unified effort override (`-1` or
-`0`–`100`). Without the suffix, the entry inherits `config.effort`, or keeps the
+same order. Append `@effort` for a per-model override: a unified integer (`-1` or
+`0`–`100`), or an exact supported name such as `low`, `medium`, `high`, `xhigh`,
+or `max`. `none`, `minimal`, `adaptive`, and `disabled` are accepted where the
+model's effort mapping exposes them. Names resolve per provider; unsupported
+names throw, and models with only numeric thinking budgets need a numeric suffix.
+Explicit native options still win. Without the suffix, the entry inherits `config.effort`, or keeps the
 provider default when no chain effort is configured:
 
 ```javascript
 const model = ModelMix.new()
-    .chain('sonnet5', 'gpt52@20', 'gemini38flash@-1')
+    .chain('sonnet5@high', 'gpt6luna@high', 'gemini38flash@-1')
     .addText('Hello!');
 ```
 
@@ -177,9 +181,11 @@ Use `ModerationMix.new().openai()` with `.raw()` to classify text and images thr
 Every textual GPT-5 and GPT-6 shortcut registers only the official OpenAI model by default. Pass `mix: { openrouter: true }` to `ModelMix.new()` or to an individual shortcut to append its `openai/*` OpenRouter route as a fallback. Both API keys are required when that fallback is enabled. Realtime shortcuts remain official-only.
 
 ### Anthropic
-`fable51()` `fable50()` `opus55()` `opus50()` `opus48()` `opus47()` `opus46()` `sonnet5()` `sonnet45()` `haiku45()`
+`fable51()` `fable50()` `opus55()` `opus50()` `opus48()` `opus47()` `opus46()` `sonnet55()` `sonnet5()` `sonnet45()` `haiku45()`
 
 Use `.effort(n)` (or `config.effort`) to enable Anthropic thinking — e.g. `.effort(100).opus50()`. `fable5()` and `opus5()` remain available as compatibility aliases.
+
+`sonnet55()` registers `claude-sonnet-5-5` through Anthropic and supports `.chain('sonnet55@high')`. `sonnet5()` / `sonnet50()` remain Sonnet 5. Sonnet 5.5 uses adaptive thinking by default. To disable up-front thinking, pass `options: { thinking: { type: 'between_tools' }, output_config: { effort: 'high' } }`; this mode accepts only `low`, `medium`, or `high`. Forced tool choices (`any` / `tool`) are unsupported.
 
 `fable51()` registers `claude-fable-5-1` through Anthropic by default. Pass `mix: { openrouter: true }` to append `anthropic/claude-fable-5.1` as its fallback.
 

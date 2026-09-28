@@ -440,7 +440,7 @@ export declare class ModelMix {
   assign(keyValues: Record<string, unknown>): this;
   assignKey(key: string, value: unknown): this;
   effort(value: EffortValue): this;
-  /** Attach an ordered model chain. Use `shortcut@effort` for a per-model override. */
+  /** Attach an ordered model chain. `shortcut@effort` accepts -1, 0..100, or an exact supported level such as `gpt6luna@high`. */
   chain(...modelSpecs: string[]): this;
   attach(key: string, provider: MixCustom): this;
 
@@ -473,6 +473,7 @@ export declare class ModelMix {
   opus48(args?: ModelAttachArgs): this;
   opus47(args?: ModelAttachArgs): this;
   opus46(args?: ModelAttachArgs): this;
+  sonnet55(args?: ModelAttachArgs): this;
   sonnet50(args?: ModelAttachArgs): this;
   sonnet5(args?: ModelAttachArgs): this;
   sonnet45(args?: ModelAttachArgs): this;

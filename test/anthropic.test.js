@@ -372,6 +372,84 @@ describe('Anthropic Model Registration Tests', () => {
         expect(options.output_config).to.deep.equal({ effort: 'max' });
     });
 
+    describe('Claude Sonnet 5.5', () => {
+        it('should preserve fluent registration and provider options', () => {
+            const model = ModelMix.new();
+
+            expect(model.sonnet55({
+                options: { max_tokens: 123 },
+                config: { effort: 50 }
+            })).to.equal(model);
+            expect(model.models).to.have.length(1);
+            expect(model.models[0].key).to.equal('claude-sonnet-5-5');
+            expect(model.models[0].provider).to.be.instanceOf(MixAnthropic);
+            expect(model.models[0].provider.options.max_tokens).to.equal(123);
+            expect(model.models[0].provider.config.effort).to.equal(50);
+        });
+
+        it('should support chain effort overrides without replacing Sonnet 5', () => {
+            const model = ModelMix.new().effort(20);
+
+            expect(model.chain('sonnet55@high', 'sonnet5')).to.equal(model);
+            expect(model.models.map(({ key }) => key)).to.deep.equal([
+                'claude-sonnet-5-5', 'claude-sonnet-5'
+            ]);
+            expect(model.models[0].provider.config.effort).to.equal(40);
+            expect(model.config.effort).to.equal(20);
+        });
+
+        for (const { name, args, thinking, effort } of [
+            { name: 'native defaults', args: {} },
+            {
+                name: 'unified max effort',
+                args: { config: { effort: 100 } },
+                thinking: { type: 'adaptive', display: 'summarized' },
+                effort: 'max'
+            },
+            {
+                name: 'explicit between-tools thinking',
+                args: {
+                    config: { effort: 100 },
+                    options: { thinking: { type: 'between_tools' }, output_config: { effort: 'high' } }
+                },
+                thinking: { type: 'between_tools' },
+                effort: 'high'
+            }
+        ]) {
+            it(`should send Sonnet 5.5 requests with ${name}`, async () => {
+                let requestBody;
+                const scope = nock('https://api.anthropic.com')
+                    .post('/v1/messages', body => {
+                        requestBody = body;
+                        return true;
+                    })
+                    .reply(200, {
+                        content: [{ type: 'text', text: 'Done' }],
+                        usage: { input_tokens: 10, output_tokens: 5 }
+                    });
+                const model = ModelMix.new().sonnet55({
+                    ...args,
+                    options: { max_tokens: 128, temperature: 0.5, top_p: 0.9, top_k: 40, ...args.options }
+                }).addText('Hello');
+
+                expect(await model.message()).to.equal('Done');
+                expect(scope.isDone()).to.equal(true);
+                expect(requestBody.model).to.equal('claude-sonnet-5-5');
+                expect(requestBody.max_tokens).to.equal(128);
+                expect(requestBody).to.not.have.property('temperature');
+                expect(requestBody).to.not.have.property('top_p');
+                expect(requestBody).to.not.have.property('top_k');
+                if (thinking) {
+                    expect(requestBody.thinking).to.deep.equal(thinking);
+                    expect(requestBody.output_config.effort).to.equal(effort);
+                } else {
+                    expect(requestBody).to.not.have.property('thinking');
+                    expect(requestBody).to.not.have.property('output_config');
+                }
+            });
+        }
+    });
+
     it('should register Claude Sonnet 5', () => {
         const model = ModelMix.new();
         model.sonnet50();

@@ -23,7 +23,7 @@ const {
 const { isPlainObject } = require('./lib/object-utils');
 const { normalizeContentCache } = require('./lib/content-cache');
 const tokenUsage = require('./lib/token-usage');
-const { parseChainModels } = require('./lib/model-chain');
+const { parseChainModels, attachChainModel } = require('./lib/model-chain');
 const {
     validateTemplateData,
     validateTemplateDataKey,
@@ -184,12 +184,14 @@ class ModelMix {
 
     chain(...modelSpecs) {
         const models = parseChainModels(modelSpecs);
-        for (const { shortcut, effort } of models) {
-            if (effort === undefined) {
-                this[shortcut]();
-            } else {
-                this[shortcut]({ config: { effort } });
+        const start = this.models.length;
+        try {
+            for (const model of models) {
+                attachChainModel(this, model);
             }
+        } catch (error) {
+            this.models.splice(start);
+            throw error;
         }
         return this;
     }
@@ -543,6 +545,9 @@ class ModelMix {
     }    
     opus46({ options = {}, config = {} } = {}) {
         return this.attach('claude-opus-4-6', new MixAnthropic({ options, config }));
+    }
+    sonnet55({ options = {}, config = {} } = {}) {
+        return this.attach('claude-sonnet-5-5', new MixAnthropic({ options, config }));
     }
     sonnet50({ options = {}, config = {} } = {}) {
         return this.attach('claude-sonnet-5', new MixAnthropic({ options, config }));
