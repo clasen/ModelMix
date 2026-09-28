@@ -7,6 +7,7 @@ const {
     hasNativeEffort,
     resolveProviderFamily,
     levelFromBands,
+    resolveNamedEffort,
     OPENAI_BANDS,
     ANTHROPIC_BANDS,
     GEMINI_BANDS,
@@ -588,6 +589,47 @@ describe('Unified effort scale', () => {
             expect(capturedBody.generationConfig.thinkingConfig).to.deep.equal({
                 thinkingLevel: 'low'
             });
+        });
+    });
+
+    describe('resolveNamedEffort', () => {
+        it('resolves exact names using each provider mapping', () => {
+            for (const [family, key, name, expected] of [
+                ['openai', 'gpt-6-luna', 'high', { reasoning_effort: 'high' }],
+                ['openai', 'gpt-6-luna', 'max', { reasoning_effort: 'max' }],
+                ['openai', 'gpt-6-luna', 'none', { reasoning_effort: 'none' }],
+                ['anthropic', 'claude-opus-5-5', 'high', {
+                    thinking: { type: 'adaptive', display: 'summarized' }, output_config: { effort: 'high' }
+                }],
+                ['google', 'gemini-3.8-flash', 'high', { thinkingConfig: { thinkingLevel: 'high' } }],
+                ['openai', 'deepseek-flash', 'max', { reasoning_effort: 'max', thinking: { type: 'enabled' } }],
+                ['openai', 'deepseek-flash', 'disabled', { thinking: { type: 'disabled' } }],
+                ['openai', 'MiniMax-M3', 'disabled', { thinking: { type: 'disabled' } }]
+            ]) {
+                const effort = resolveNamedEffort(family, name, key);
+                expect(mapEffort(family, effort, key)).to.deep.equal(expected);
+            }
+        });
+
+        it('resolves adaptive only where the model exposes it', () => {
+            for (const [family, key] of [
+                ['anthropic', 'claude-opus-5-5'], ['google', 'gemini-2.5-flash'], ['openai', 'MiniMax-M3']
+            ]) {
+                expect(resolveNamedEffort(family, 'adaptive', key)).to.equal(-1);
+                expect(mapEffort(family, -1, key)).not.to.equal(null);
+            }
+        });
+
+        it('rejects unavailable exact names and numeric-budget models without approximating', () => {
+            for (const [family, key, name] of [
+                ['openai', 'gpt-6-luna', 'minimal'], ['google', 'gemini-3.8-flash', 'minimal'],
+                ['google', 'gemini-3.8-flash', 'xhigh'], ['google', 'gemini-3.8-flash', 'adaptive'],
+                ['openai', 'deepseek-flash', 'adaptive'], ['google', 'gemini-2.5-flash', 'high'],
+                ['anthropic', 'claude-haiku-4-5', 'high'], [null, 'sonar-pro', 'high'],
+                ['openai', 'gpt-6-luna', 50]
+            ]) {
+                expect(() => resolveNamedEffort(family, name, key)).to.throw(`Invalid effort ${JSON.stringify(name)} for model "${key}"`);
+            }
         });
     });
 });

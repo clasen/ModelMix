@@ -487,8 +487,24 @@ function applyUnifiedEffort(options, config, providerFamily, modelKey) {
     return options;
 }
 
+function resolveNamedEffort(providerFamily, name, modelKey) {
+    if (name === 'adaptive' && mapAdaptiveEffort(providerFamily, modelKey)) {
+        return -1;
+    }
+    if (typeof name === 'string' && name !== 'adaptive') {
+        for (let effort = 0; effort <= 100; effort++) {
+            const patch = mapEffort(providerFamily, effort, modelKey);
+            const level = patch?.reasoning_effort ?? patch?.output_config?.effort
+                ?? patch?.thinkingConfig?.thinkingLevel ?? patch?.thinking?.type;
+            if (level === name) return effort;
+        }
+    }
+    throw new Error(`Invalid effort ${JSON.stringify(name)} for model "${modelKey}": no exact named level is available; use a supported name or numeric effort.`);
+}
+
 module.exports = {
     normalizeEffort,
+    resolveNamedEffort,
     mapEffort,
     mapAdaptiveEffort,
     applyUnifiedEffort,

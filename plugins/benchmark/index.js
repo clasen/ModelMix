@@ -1,6 +1,6 @@
 const { ModelMix } = require('../..');
 const { normalizeEffort } = require('../../effort');
-const { parseChainModels } = require('../../lib/model-chain');
+const { parseChainModels, attachChainModel } = require('../../lib/model-chain');
 const parseJsonResponse = require('../../lib/parse-json-response');
 
 const CRITERIA_SYSTEM = `You define evaluation criteria for model benchmarks.
@@ -192,10 +192,7 @@ function baseModelSettings(request) {
 function createModelDescriptor(parsed, source, request, mix) {
     const settings = baseModelSettings(request);
     const model = ModelMix.new(settings);
-    model[parsed.shortcut]({
-        mix,
-        config: parsed.effort === undefined ? {} : { effort: parsed.effort }
-    });
+    attachChainModel(model, parsed, { mix });
     const canonicalModels = [...new Set(model.models.map(item => item.key))].sort();
     if (canonicalModels.length === 0) {
         throw new Error(`Benchmark model "${source}" did not attach a provider.`);
@@ -203,7 +200,8 @@ function createModelDescriptor(parsed, source, request, mix) {
     const inheritedEffort = request.config.effort === undefined || request.config.effort === null
         ? undefined
         : normalizeEffort(request.config.effort);
-    const effort = parsed.effort === undefined ? inheritedEffort : parsed.effort;
+    const effort = typeof parsed.effort === 'string' ? model.models[0].provider.config.effort
+        : parsed.effort === undefined ? inheritedEffort : parsed.effort;
     return {
         source,
         id: effort === undefined ? parsed.shortcut : `${parsed.shortcut}@${effort}`,

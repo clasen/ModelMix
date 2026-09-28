@@ -2,6 +2,7 @@ const { expect } = require('chai');
 const sinon = require('sinon');
 
 const { MixOpenAI, MixOpenAIResponses, ModelMix } = require('../../..');
+const { applyUnifiedEffort, resolveProviderFamily } = require('../../../effort');
 const { benchmark } = require('..');
 
 const criteria = {
@@ -82,6 +83,33 @@ async function expectRejection(promise, message) {
 
 describe('benchmark plugin', () => {
     afterEach(() => sinon.restore());
+
+    it('resolves named chain levels before invoking benchmark models', async () => {
+        const plugin = benchmark({
+            criteriaModel: 'gpt6luna@high',
+            models: ['gpt6luna@high', 'sonnet5@high']
+        });
+        const result = await plugin.execute(directContext(async input => {
+            const { key, provider } = input.model.models[0];
+            const options = applyUnifiedEffort({}, provider.config, resolveProviderFamily(provider), key);
+            expect(options.reasoning_effort || options.output_config?.effort).to.equal('high');
+            if (input.system.includes('define evaluation criteria')) return metricsResult(JSON.stringify(criteria));
+            if (input.system.includes('evaluate one candidate response')) return metricsResult(validEvaluation());
+            return metricsResult('Usable response.');
+        }));
+        expect(result.benchmark.errors).to.deep.equal([]);
+        expect(result.benchmark.results.map(item => item.effort)).to.deep.equal([60, 40]);
+    });
+
+    it('rejects duplicate numeric and named specifications before invoking models', async () => {
+        const plugin = benchmark({
+            criteriaModel: 'gpt6luna',
+            models: ['gpt6luna@high', 'gpt6luna@60', 'sonnet5']
+        });
+        const invoke = sinon.spy();
+        await expectRejection(plugin.execute(directContext(invoke)), 'duplicates the same model and effective effort');
+        expect(invoke.called).to.equal(false);
+    });
 
     it('uses the native DeepSeek provider for criteria, responses and judging when selected', async () => {
         const { MixDeepSeek, MixOpenRouter } = require('../../..');

@@ -111,6 +111,27 @@ describe('Provider Fallback Chain Tests', () => {
             expect(model.models[1].provider.config.effort).to.equal(20);
         });
 
+        it('should send a named chain level to the official endpoint and its fallback', async () => {
+            model = ModelMix.new({ mix: { openrouter: true }, config: { bottleneck: { minTime: 0 } } })
+                .chain('gpt6luna@high').addText('Hello');
+            const official = nock('https://api.openai.com')
+                .post('/v1/responses', body => {
+                    expect(body.reasoning).to.deep.equal({ effort: 'high' });
+                    return true;
+                })
+                .reply(503, { error: 'Service unavailable' });
+            const fallback = nock('https://openrouter.ai')
+                .post('/api/v1/chat/completions', body => {
+                    expect(body.model).to.equal('openai/gpt-6-luna');
+                    expect(body.reasoning_effort).to.equal('high');
+                    return true;
+                })
+                .reply(200, { choices: [{ message: { role: 'assistant', content: 'Hello' } }] });
+            expect(await model.message()).to.equal('Hello');
+            expect(official.isDone()).to.equal(true);
+            expect(fallback.isDone()).to.equal(true);
+        });
+
         it('should register every supported OpenAI text shortcut with its OpenRouter fallback', () => {
             expect(ModelMix.new().mix.openrouter).to.equal(false);
             const shortcuts = [
