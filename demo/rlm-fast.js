@@ -50,7 +50,7 @@ async function createIvmContext(isolate, contextData, mmixInstance) {
     await jail.set('__mmixCallback', new ivm.Reference(async (system, message, outputJson) => {
         const output = JSON.parse(outputJson);
         const result = await mmixInstance.new()
-            .gpt61sol()
+            .gpt6luna()
             .setSystem(system)
             .addText(message)
             .json(output, output);
@@ -209,7 +209,7 @@ async function demo() {
     // Create base mmix instance for the callbacks
     const model = ModelMix.new({ config: { debug: 2, bottleneck: {} } })
         .gpt61sol()
-        .sonnet55()
+        .gpt6luna()
         .gemini37flash();
 
     // Run the IVM task

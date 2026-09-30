@@ -11,7 +11,7 @@ const isolate = new ivm.Isolate({ memoryLimit: 128 }); // 128MB máximo
 async function replPowersExample() {
     console.log('\n=== JavaScript REPL - Potencias de 2 ===\n');
     const mmix = ModelMix.new({ config: { debug: 2, max_history: 10 } })
-        .gpt61sol()
+        .gpt6luna()
         .sonnet55()
         .gemini37flash()
         .setSystem('You are a helpful assistant with access to a JavaScript REPL. When you use the REPL and get results, always show them to the user in your response.');

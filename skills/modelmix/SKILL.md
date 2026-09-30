@@ -243,7 +243,7 @@ Each method accepts optional `{ options, config }` to override per-model setting
 
 ```javascript
 const answer = await ModelMix.new()
-    .gpt61sol()
+    .gpt6luna()
     .addText("What is the capital of France?")
     .message();
 ```
@@ -252,7 +252,7 @@ const answer = await ModelMix.new()
 
 ```javascript
 const result = await ModelMix.new()
-    .gpt61sol()
+    .gpt6luna()
     .addText("Name and capital of 3 South American countries.")
     .json(
         { countries: [{ name: "", capital: "" }] },
@@ -339,7 +339,7 @@ const result = await model.json([{ name: 'martin' }]);
 
 ```javascript
 await ModelMix.new()
-    .gpt61sol()
+    .gpt6luna()
     .addText("Tell me a story.")
     .stream(({ delta, message }) => {
         process.stdout.write(delta);
@@ -350,7 +350,7 @@ await ModelMix.new()
 
 ```javascript
 const code = await ModelMix.new()
-    .gpt61sol()
+    .gpt6luna()
     .addText("Write a hello world function in JavaScript.")
     .block();
 // Returns only the content inside the first code block
@@ -392,7 +392,7 @@ callbacks receive it as their second argument.
 After calling `message()`, `json()`, `block()`, or `stream()`, use `lastRaw` to access the complete response:
 
 ```javascript
-const model = ModelMix.new().gpt61sol().addText("Hello!");
+const model = ModelMix.new().gpt6luna().addText("Hello!");
 const text = await model.message();
 console.log(model.lastRaw.tokens);
 // {
@@ -417,7 +417,7 @@ console.log(model.lastRaw.response); // raw API response
 
 ```javascript
 const model = ModelMix.new()
-  .gpt61sol({
+  .gpt6luna({
     options: {
       prompt_cache_key: 'stable-prefix-v1',
       prompt_cache_options: { mode: 'explicit', ttl: '30m' }
@@ -456,7 +456,7 @@ All image methods accept an optional second argument `{ role }` (default `"user"
 ### EJS templates
 
 ```javascript
-const model = ModelMix.new().gpt61sol();
+const model = ModelMix.new().gpt6luna();
 model.setSystemFromFile('./prompts/system.md');
 model.addTextFromFile('./prompts/task.md');
 model.assign({
@@ -520,7 +520,7 @@ Omit all weights for equal probabilities. Otherwise every option needs a positiv
 
 ```javascript
 const pool = ModelMix.new({ config: { roundRobin: true } })
-    .gpt61sol()
+    .gpt6luna()
     .sonnet55()
     .gemini38flash();
 
@@ -531,7 +531,7 @@ const r2 = await pool.new().addText("Request 2").message();
 ### MCP integration
 
 ```javascript
-const model = ModelMix.new({ config: { max_history: 10 } }).gpt61sol();
+const model = ModelMix.new({ config: { max_history: 10 } }).gpt6luna();
 model.setSystem('You are an assistant. Today is ' + new Date().toISOString());
 await model.addMCP('@modelcontextprotocol/server-brave-search');
 model.addText('Use Internet: What is the latest news about AI?');
@@ -543,7 +543,7 @@ Requires `BRAVE_API_KEY` in `.env` for Brave Search MCP.
 ### Custom local tools
 
 ```javascript
-const model = ModelMix.new({ config: { max_history: 10 } }).gpt61sol();
+const model = ModelMix.new({ config: { max_history: 10 } }).gpt6luna();
 
 model.addTool({
     name: "get_weather",
@@ -582,13 +582,13 @@ const model = ModelMix.new({
             minTime: 1000
         }
     }
-}).gpt61sol();
+}).gpt6luna();
 ```
 
 ### Conversation history
 
 ```javascript
-const chat = ModelMix.new({ config: { max_history: 10 } }).gpt61sol();
+const chat = ModelMix.new({ config: { max_history: 10 } }).gpt6luna();
 chat.addText("My name is Martin.");
 await chat.message();
 chat.addText("What's my name?");
@@ -602,7 +602,7 @@ const reply = await chat.message();  // "Martin"
 ```javascript
 const model = ModelMix.new({
     config: { debug: 2 }  // 0=silent, 1=minimal, 2=summary, 3=full, 4=verbose
-}).gpt61sol();
+}).gpt6luna();
 ```
 
 For full debug output, also set: `DEBUG=ModelMix* node script.js`

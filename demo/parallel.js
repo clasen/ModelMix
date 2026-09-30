@@ -14,7 +14,7 @@ const mix = new ModelMix({
     }
 })
 
-mix.gpt61sol();
+mix.gpt6luna();
 
 // Function to create a promise that resolves after a random time
 const randomDelay = () => new Promise(resolve => setTimeout(resolve, Math.random() * 2000 + 1000));

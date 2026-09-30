@@ -3,7 +3,7 @@ try { process.loadEnvFile(); } catch {}
 
 // Ejemplo simple: obtener información de tokens
 const model = ModelMix.new()
-    .gpt61sol()
+    .gpt6luna()
     .addText('What is 2+2?');
 
 const result = await model.raw();

@@ -18,7 +18,7 @@ console.log('──────────────────────�
 
 await ModelMix
     .new({ config: { verbose: 0 } })
-    .gpt61sol()
+    .gpt6luna()
     .addText(prompt)
     .message();
 
@@ -33,7 +33,7 @@ console.log('──────────────────────�
 
 await ModelMix
     .new({ config: { verbose: 1 } })
-    .gpt61sol()
+    .gpt6luna()
     .addText(prompt)
     .message();
 
@@ -48,7 +48,7 @@ console.log('──────────────────────�
 
 await ModelMix
     .new({ config: { verbose: 2 } })
-    .gpt61sol()
+    .gpt6luna()
     .addText(prompt)
     .json({ message: 'string' });
 
@@ -63,7 +63,7 @@ console.log('──────────────────────�
 
 await ModelMix
     .new({ config: { verbose: 3 } })
-    .gpt61sol()
+    .gpt6luna()
     .addText(prompt)
     .message();
 
@@ -79,7 +79,7 @@ try {
     const resultFallback = await ModelMix
         .new({ config: { verbose: 2 } })
         .attach('fake-model-that-will-fail', new MixOpenAI())
-        .gpt61sol() // This will be the fallback
+        .gpt6luna() // This will be the fallback
         .addText(prompt)
         .message();
 

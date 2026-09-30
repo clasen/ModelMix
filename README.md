@@ -289,7 +289,7 @@ const result = await ModelMix.new({
         options: { temperature: 0.7 },
         config: { system: "You are a helpful assistant" }
     })
-    .gpt61sol()
+    .gpt6luna()
     .addText("Tell me a story about a cat");
     .message();
 ```
@@ -391,7 +391,7 @@ Analyze the following and provide 3 key insights:
 
 **`app.js`**
 ```javascript
-const gpt = ModelMix.new().gpt61sol();
+const gpt = ModelMix.new().gpt6luna();
 
 gpt.setSystemFromFile('./prompts/system.md');
 gpt.addTextFromFile('./prompts/task.md');
@@ -442,7 +442,7 @@ Summarize the following article in 3 bullet points:
 
 **`app.js`**
 ```javascript
-const gpt = ModelMix.new().gpt61sol();
+const gpt = ModelMix.new().gpt6luna();
 
 gpt.addTextFromFile('./prompts/summarize.md');
 gpt.assign({ articleFile: '../data/article.md' });
@@ -457,7 +457,7 @@ Static and dynamic include paths are resolved relative to the containing templat
 Use `assignKeyFromFile()` when the outer template needs the rendered contents of a file as one data value:
 
 ```javascript
-const gpt = ModelMix.new().gpt61sol();
+const gpt = ModelMix.new().gpt6luna();
 
 gpt.assign({ language: 'Spanish' });
 gpt.assignKeyFromFile('rules', './prompts/rules.md');
@@ -494,7 +494,7 @@ Review the following code and suggest improvements:
 
 **`app.js`**
 ```javascript
-const gpt = ModelMix.new().gpt61sol();
+const gpt = ModelMix.new().gpt6luna();
 
 gpt.setSystemFromFile('./prompts/system.md');
 gpt.addTextFromFile('./prompts/review.md');
@@ -562,7 +562,7 @@ An included template can include itself to render recursive data. Always define 
 ```
 
 ```javascript
-const gpt = ModelMix.new().gpt61sol();
+const gpt = ModelMix.new().gpt6luna();
 
 gpt.addTextFromFile('./prompts/tree.ejs');
 gpt.assign({ node: promptTree, depth: 0, maxDepth: 10 });
@@ -584,7 +584,7 @@ await model.json(schemaExample, schemaDescription, options)
 
 ```javascript
 const model = ModelMix.new()
-    .gpt61sol()
+    .gpt6luna()
     .addText('Name and capital of 3 South American countries.');
 
 const result = await model.json({ countries: [{ name: "", capital: "" }] });
@@ -809,7 +809,7 @@ For GPT-5.6 and GPT-6, keep the long, reusable instructions first, mark the end 
 ```javascript
 async function ask(question) {
     const model = ModelMix.new()
-        .gpt61sol({
+        .gpt6luna({
             options: {
                 prompt_cache_key: 'support-rules-v1',
                 prompt_cache_options: { mode: 'explicit', ttl: '30m' }
@@ -839,7 +839,7 @@ GPT-5.6 and the GPT-6 models (Astra, Sol, Luna, and 6.1 Sol) support implicit or
 
 ```javascript
 const model = ModelMix.new()
-  .gpt61sol({
+  .gpt6luna({
     options: {
       prompt_cache_key: 'support-agent-v1',
       prompt_cache_options: { mode: 'explicit', ttl: '30m' }
@@ -874,7 +874,7 @@ Neutral breakpoints are translated at the last moment by each provider adapter. 
 
 ```javascript
 const model = ModelMix.new()
-  .gpt61sol({
+  .gpt6luna({
     options: {
       prompt_cache_key: 'support-agent-v1',
       prompt_cache_options: { mode: 'explicit', ttl: '30m' }
@@ -986,7 +986,7 @@ const metrics = {
 };
 
 const model = ModelMix.new()
-    .gpt61sol()
+    .gpt6luna()
     .use(metrics)
     .addText('Summarize this request.');
 ```
@@ -1045,7 +1045,7 @@ const { benchmark } = require('modelmix/plugins/benchmark');
 const report = await ModelMix.new()
     .use(benchmark({
         criteriaModel: 'opus55@20',
-        models: ['gpt61sol@20', 'sonnet55@20', 'gemini38flash@20']
+        models: ['gpt6luna@20', 'sonnet55@20', 'gemini38flash@20']
     }))
     .addText('Your benchmark task')
     .json();
@@ -1072,7 +1072,7 @@ const { rlm } = require('@modelmix/rlm');
 const fast = ModelMix.new().gpt6luna();
 
 const result = await ModelMix.new()
-    .gpt61sol()
+    .gpt6luna()
     .use(rlm({
         maxDepth: 2,
         documents: {

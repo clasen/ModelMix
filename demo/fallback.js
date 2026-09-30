@@ -15,7 +15,7 @@ const mmix = new ModelMix({
     }
 });
 
-mmix.sonnet55({ config: { url: 'fail' } }).gpt61sol();
+mmix.sonnet55({ config: { url: 'fail' } }).gpt6luna();
 
 async function main() {
     mmix.addText('hola, como estas?');
