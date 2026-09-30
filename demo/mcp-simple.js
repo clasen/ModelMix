@@ -8,7 +8,7 @@ async function simpleCalculator() {
     console.log('\n=== Smart Calculator ===');
 
     const mmix = ModelMix.new()
-        .gpt5nano()
+        .gpt61sol()
         .setSystem('You are a smart calculator. Use the available tools to perform calculations.');
 
     // Add custom tool for advanced operations

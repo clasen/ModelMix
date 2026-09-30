@@ -36,7 +36,7 @@ async function basicRLM() {
     console.log('🎯 Query: "Find top Engineering talents with Python skills"\n');
 
     const mmix = ModelMix.new({ config: { debug: false, max_history: 20 } })
-        .gpt5nano()
+        .gpt61sol()
         .setSystem(`You are an RLM (Recursive Language Model). 
         
 Instead of reading all data at once, you:
@@ -135,7 +135,7 @@ Be strategic: think about what information you need and query only that.`);
 
         // Create a focused recursive call
         const subMmix = ModelMix.new({ config: { debug: false } })
-            .gpt5nano()
+            .gpt61sol()
             .setSystem(`Solve this focused sub-task concisely. Recursion level: ${recursionCount}`);
 
         subMmix.addText(`Context: ${context}\n\nTask: ${task}`);

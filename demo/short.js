@@ -11,7 +11,7 @@ const setup = {
 const mmix = await ModelMix.new(setup)
     .fable51({ mix: { openrouter: true } }) // (main + provider fallback) Anthropic/OpenRouter Claude Fable 5.1
     .sonnet55() // (fallback 2) Anthropic claude-sonnet-5-5
-    .gpt56luna({ mix: { openrouter: true } }) // (fallback 3 + provider fallback) OpenAI/OpenRouter gpt-5.6-luna
+    .gpt61sol({ mix: { openrouter: true } }) // (fallback 3 + provider fallback) OpenAI/OpenRouter gpt-6.1-sol
     .gemini38flash() // (fallback 4) Google gemini-3.8-flash
     .gpt5nano({ mix: { openrouter: true } }) // (fallback 5 + provider fallback) OpenAI/OpenRouter gpt-5-nano
     .grok46() // (fallback 6) Grok grok-4.6

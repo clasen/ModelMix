@@ -24,14 +24,14 @@ const pplxSettings = {
 
 mmix.assign({ name: 'ALF' });
 
-console.log("\n" + '--------| gpt52() |--------');
-const gptArgs = { options: { reasoning_effort: "none", verbosity: "low" } };
-const gpt = mmix.gpt52(gptArgs).addText("Have you ever eaten a <%- animal %>?");
+console.log("\n" + '--------| gpt61sol() |--------');
+const gptArgs = { options: { reasoning_effort: "low", verbosity: "low" } };
+const gpt = mmix.gpt61sol(gptArgs).addText("Have you ever eaten a <%- animal %>?");
 gpt.assignKey('animal', 'cat');
 await gpt.json({ time: '24:00:00', message: 'Hello' }, { time: 'Time in format HH:MM:SS' });
 
-console.log("\n" + '--------| sonnet45() |--------');
-const claude = mmix.new({ config: { debug: 2 } }).sonnet45();
+console.log("\n" + '--------| sonnet55() |--------');
+const claude = mmix.new({ config: { debug: 2 } }).sonnet55();
 claude.addImageFromUrl('data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAoAAAAKCAYAAACNMs+9AAAAFUlEQVR42mP8z8BQz0AEYBxVSF+FABJADveWkH6oAAAAAElFTkSuQmCC');
 claude.addText('in one word, which is the main color of the image?');
 const imageDescription = await claude.message();

@@ -129,7 +129,7 @@ async function genericRLMExample(variableName, variableData, task) {
             }
         } 
     })
-        .gpt5nano()
+        .gpt61sol()
         .setSystem(`You are a Recursive Language Model (RLM) agent.
 
 Data is in the ENVIRONMENT as variables, not in your context. You work programmatically:
@@ -282,7 +282,7 @@ You decide the strategy based on the data and task.`);
                     } 
                 });
                 
-                callMmix.gpt5nano();
+                callMmix.gpt61sol();
                 
                 if (call.system_prompt) {
                     callMmix.setSystem(call.system_prompt);
@@ -376,7 +376,7 @@ You decide the strategy based on the data and task.`);
                 max_history: 10
             } 
         })
-            .gpt5nano();
+            .gpt61sol();
         
         if (system_prompt) {
             recursiveMmix.setSystem(system_prompt);

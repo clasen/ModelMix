@@ -84,13 +84,13 @@ Chain shorthand methods to attach providers. First model is primary; others are 
 
 ```javascript
 const model = ModelMix.new()
-    .sonnet5()         // primary
-    .gpt52()           // fallback 1
+    .opus55()          // primary
+    .gpt61sol()        // fallback 1
     .gemini38flash()   // fallback 2
     .addText("Hello!")
 ```
 
-If `sonnet5` fails, it automatically tries `gpt52`, then `gemini38flash`.
+If `opus55` fails, it automatically tries `gpt61sol`, then `gemini38flash`.
 
 The equivalent `chain()` form accepts public shortcut names directly in the
 same order. Append `@effort` for a per-model override: a unified integer (`-1` or
@@ -103,7 +103,7 @@ provider default when no chain effort is configured:
 
 ```javascript
 const model = ModelMix.new()
-    .chain('sonnet5@high', 'gpt6luna@high', 'gemini38flash@-1')
+    .chain('opus55@high', 'gpt61sol@high', 'gemini38flash@-1')
     .addText('Hello!');
 ```
 
@@ -133,8 +133,8 @@ Use the included skills plugin to expose local `SKILL.md` instructions to a mode
 import { ModelMix } from 'modelmix';
 import { skills } from 'modelmix/plugins/skills/index.js';
 const model = ModelMix.new()
-    .gpt6astra()
-    .opus5()
+    .gpt61sol()
+    .opus55()
     .use(await skills({ paths: ['./skills/writing'] }))
     .addText('Use the writing skill to revise this paragraph: ...');
 const answer = await model.message();
@@ -151,13 +151,13 @@ With plugin tools, native `options.tools` entries are combined with registered a
 Provider-agnostic reasoning intensity. **Not** an `options` field — use `config.effort` or `.effort(n)`.
 
 ```javascript
-ModelMix.new({ config: { effort: 40 } }).sonnet5().addText('Plan this refactor').message();
+ModelMix.new({ config: { effort: 40 } }).sonnet55().addText('Plan this refactor').message();
 ModelMix.new().deepseekV4Flash({ config: { effort: 100 } }).addText('...').message();
 ModelMix.new().effort(-1).minimaxM3().addText('Quick question').message();
 
 // Native provider fields win when already set
 ModelMix.new({ config: { effort: 80 } })
-  .gpt52({ options: { reasoning_effort: 'none' } }) // stays none
+  .gpt61sol({ options: { reasoning_effort: 'low' } }) // stays low
 ```
 
 | | 0–19 | 20–39 | 40–59 | 60–79 | 80–100 | `-1` |
@@ -183,7 +183,7 @@ Every textual GPT-5 and GPT-6 shortcut registers only the official OpenAI model 
 ### Anthropic
 `fable51()` `fable50()` `opus55()` `opus50()` `opus48()` `opus47()` `opus46()` `sonnet55()` `sonnet5()` `sonnet45()` `haiku45()`
 
-Use `.effort(n)` (or `config.effort`) to enable Anthropic thinking — e.g. `.effort(100).opus50()`. `fable5()` and `opus5()` remain available as compatibility aliases.
+Use `.effort(n)` (or `config.effort`) to enable Anthropic thinking — e.g. `.effort(100).opus55()`. `fable5()` and `opus5()` remain available as compatibility aliases.
 
 `sonnet55()` registers `claude-sonnet-5-5` through Anthropic and supports `.chain('sonnet55@high')`. `sonnet5()` / `sonnet50()` remain Sonnet 5. Sonnet 5.5 uses adaptive thinking by default. To disable up-front thinking, pass `options: { thinking: { type: 'between_tools' }, output_config: { effort: 'high' } }`; this mode accepts only `low`, `medium`, or `high`. Forced tool choices (`any` / `tool`) are unsupported.
 
@@ -243,7 +243,7 @@ Each method accepts optional `{ options, config }` to override per-model setting
 
 ```javascript
 const answer = await ModelMix.new()
-    .gpt5mini()
+    .gpt61sol()
     .addText("What is the capital of France?")
     .message();
 ```
@@ -252,7 +252,7 @@ const answer = await ModelMix.new()
 
 ```javascript
 const result = await ModelMix.new()
-    .gpt5mini()
+    .gpt61sol()
     .addText("Name and capital of 3 South American countries.")
     .json(
         { countries: [{ name: "", capital: "" }] },
@@ -339,7 +339,7 @@ const result = await model.json([{ name: 'martin' }]);
 
 ```javascript
 await ModelMix.new()
-    .gpt5mini()
+    .gpt61sol()
     .addText("Tell me a story.")
     .stream(({ delta, message }) => {
         process.stdout.write(delta);
@@ -350,7 +350,7 @@ await ModelMix.new()
 
 ```javascript
 const code = await ModelMix.new()
-    .gpt5mini()
+    .gpt61sol()
     .addText("Write a hello world function in JavaScript.")
     .block();
 // Returns only the content inside the first code block
@@ -363,7 +363,7 @@ const code = await ModelMix.new()
 ```javascript
 const raw = await ModelMix.new()
     .effort(100)
-    .sonnet45()
+    .sonnet55()
     .addText("Solve this step by step: 2+2*3")
     .raw();
 // raw.message, raw.think, raw.tokens, raw.toolCalls, raw.response
@@ -392,7 +392,7 @@ callbacks receive it as their second argument.
 After calling `message()`, `json()`, `block()`, or `stream()`, use `lastRaw` to access the complete response:
 
 ```javascript
-const model = ModelMix.new().gpt5mini().addText("Hello!");
+const model = ModelMix.new().gpt61sol().addText("Hello!");
 const text = await model.message();
 console.log(model.lastRaw.tokens);
 // {
@@ -417,13 +417,13 @@ console.log(model.lastRaw.response); // raw API response
 
 ```javascript
 const model = ModelMix.new()
-  .gpt56luna({
+  .gpt61sol({
     options: {
       prompt_cache_key: 'stable-prefix-v1',
       prompt_cache_options: { mode: 'explicit', ttl: '30m' }
     }
   })
-  .haiku45({
+  .sonnet55({
     options: {
       cache_control: { type: 'ephemeral', ttl: '1h' }
     }
@@ -443,7 +443,7 @@ GPT-5.6 and GPT-6 replace `prompt_cache_retention` with `prompt_cache_options.tt
 ### Add images
 
 ```javascript
-const model = ModelMix.new().sonnet45();
+const model = ModelMix.new().sonnet55();
 model.addImage('./photo.jpg');                          // from file
 model.addImageFromUrl('https://example.com/img.png');   // from URL
 model.addImageFromBuffer(imageBuffer);                  // from Buffer
@@ -456,7 +456,7 @@ All image methods accept an optional second argument `{ role }` (default `"user"
 ### EJS templates
 
 ```javascript
-const model = ModelMix.new().gpt5mini();
+const model = ModelMix.new().gpt61sol();
 model.setSystemFromFile('./prompts/system.md');
 model.addTextFromFile('./prompts/task.md');
 model.assign({
@@ -520,8 +520,8 @@ Omit all weights for equal probabilities. Otherwise every option needs a positiv
 
 ```javascript
 const pool = ModelMix.new({ config: { roundRobin: true } })
-    .gpt5mini()
-    .sonnet45()
+    .gpt61sol()
+    .sonnet55()
     .gemini38flash();
 
 const r1 = await pool.new().addText("Request 1").message();
@@ -531,7 +531,7 @@ const r2 = await pool.new().addText("Request 2").message();
 ### MCP integration
 
 ```javascript
-const model = ModelMix.new({ config: { max_history: 10 } }).gpt5nano();
+const model = ModelMix.new({ config: { max_history: 10 } }).gpt61sol();
 model.setSystem('You are an assistant. Today is ' + new Date().toISOString());
 await model.addMCP('@modelcontextprotocol/server-brave-search');
 model.addText('Use Internet: What is the latest news about AI?');
@@ -543,7 +543,7 @@ Requires `BRAVE_API_KEY` in `.env` for Brave Search MCP.
 ### Custom local tools
 
 ```javascript
-const model = ModelMix.new({ config: { max_history: 10 } }).gpt5mini();
+const model = ModelMix.new({ config: { max_history: 10 } }).gpt61sol();
 
 model.addTool({
     name: "get_weather",
@@ -582,13 +582,13 @@ const model = ModelMix.new({
             minTime: 1000
         }
     }
-}).gpt5mini();
+}).gpt61sol();
 ```
 
 ### Conversation history
 
 ```javascript
-const chat = ModelMix.new({ config: { max_history: 10 } }).gpt5mini();
+const chat = ModelMix.new({ config: { max_history: 10 } }).gpt61sol();
 chat.addText("My name is Martin.");
 await chat.message();
 chat.addText("What's my name?");
@@ -602,7 +602,7 @@ const reply = await chat.message();  // "Martin"
 ```javascript
 const model = ModelMix.new({
     config: { debug: 2 }  // 0=silent, 1=minimal, 2=summary, 3=full, 4=verbose
-}).gpt5mini();
+}).gpt61sol();
 ```
 
 For full debug output, also set: `DEBUG=ModelMix* node script.js`
@@ -642,7 +642,7 @@ const model = ModelMix.new({
 - When using MCP tools or `addTool()`, set `max_history` to at least 3 — tool call/response pairs consume history slots.
 - Use `.json()` for structured output instead of parsing text manually. Use descriptor objects `{ description, required, enum, default, nullable }` for richer schema control.
 - Use `.message()` for simple text, `.raw()` when you need tokens/thinking/toolCalls.
-- For Anthropic thinking, use unified `effort` (`-1` or `0`–`100`) via `config.effort` or `.effort(n)` — e.g. `.effort(100).opus50()`. Never put `effort` in `options`. Native fields win if already set.
+- For Anthropic thinking, use unified `effort` (`-1` or `0`–`100`) via `config.effort` or `.effort(n)` — e.g. `.effort(100).opus55()`. Never put `effort` in `options`. Native fields win if already set.
 - Templates use EJS syntax in both system prompts and user messages; prefer `<%- key %>` for raw prompt data.
 - The library uses CommonJS internally but supports ESM import via `{ ModelMix }`.
 - GPT-5+ models automatically use `max_completion_tokens` instead of `max_tokens`.

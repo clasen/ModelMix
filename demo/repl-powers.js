@@ -10,10 +10,9 @@ const isolate = new ivm.Isolate({ memoryLimit: 128 }); // 128MB máximo
 // Ejemplo simple: REPL de JavaScript para calcular potencias de 2
 async function replPowersExample() {
     console.log('\n=== JavaScript REPL - Potencias de 2 ===\n');
-    const gptArgs = { options: { reasoning_effort: "none", verbosity: null } };
     const mmix = ModelMix.new({ config: { debug: 2, max_history: 10 } })
-        .gpt5nano()
-        .gpt52(gptArgs)
+        .gpt61sol()
+        .sonnet55()
         .gemini37flash()
         .setSystem('You are a helpful assistant with access to a JavaScript REPL. When you use the REPL and get results, always show them to the user in your response.');
 

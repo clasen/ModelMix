@@ -1,12 +1,12 @@
 import { ModelMix } from '../index.js';
 try { process.loadEnvFile(); } catch {}
 
-await ModelMix.new().gpt5nano()
+await ModelMix.new().gpt61sol()
     .addImageFromUrl('https://pbs.twimg.com/media/F6-GsjraAAADDGy?format=jpg')
     .addText('describe')
     .stream((data) => { console.log(data.message); });
 
-await ModelMix.new().haiku45()
+await ModelMix.new().sonnet55()
     .addImageFromUrl('https://pbs.twimg.com/media/F6-GsjraAAADDGy?format=jpg')
     .addText('describe')
     .stream((data) => { console.log(data.message); });

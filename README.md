@@ -69,7 +69,7 @@ try { process.loadEnvFile(); } catch {}
 
 // Get structured JSON responses
 const model = ModelMix.new()
-    .opus5() // Anthropic claude-opus-5
+    .opus55() // Anthropic claude-opus-5-5
     .addText("Name and capital of 3 South American countries.");
 
 const outputExample = { countries: [{ name: "", capital: "" }] };
@@ -87,8 +87,8 @@ const setup = {
 };
 
 const model = await ModelMix.new(setup)
-    .sonnet5() // (main model) Anthropic claude-sonnet-5
-    .gpt56luna() // (fallback 2) OpenAI gpt-5.6-luna
+    .opus55() // (main model) Anthropic claude-opus-5-5
+    .gpt61sol() // (fallback 2) OpenAI gpt-6.1-sol
     .gemini38flash() // (fallback 3) Google gemini-3.8-flash
     .grok46() // (fallback 4) Grok grok-4.6
     .addText("What's your name?");
@@ -123,7 +123,7 @@ has no configured effort:
 
 ```javascript
 const model = ModelMix.new(setup)
-    .chain('sonnet5@high', 'gpt6luna@high', 'gemini38flash@-1')
+    .chain('opus55@high', 'gpt61sol@high', 'gemini38flash@-1')
     .addText("What's your name?");
 
 console.log(await model.message());
@@ -289,7 +289,7 @@ const result = await ModelMix.new({
         options: { temperature: 0.7 },
         config: { system: "You are a helpful assistant" }
     })
-    .gpt56luna()
+    .gpt61sol()
     .addText("Tell me a story about a cat");
     .message();
 ```
@@ -300,7 +300,7 @@ Control reasoning depth with one ModelMix policy value (`-1` adaptive, or `0`–
 
 ```javascript
 // In config (ModelMix.new or per-model shorthand)
-ModelMix.new({ config: { effort: 50 } }).opus5().addText('...').message();
+ModelMix.new({ config: { effort: 50 } }).opus55().addText('...').message();
 ModelMix.new().deepseekV4Flash({ config: { effort: 100 } }).addText('...').message();
 
 // Fluent
@@ -358,7 +358,7 @@ Templates are executable JavaScript and must be controlled by the developer. Pas
 ### Basic example with `assign`
 
 ```javascript
-const gpt = ModelMix.new().gpt52();
+const gpt = ModelMix.new().gpt61sol();
 
 gpt.addText('Write a short story about a <%- animal %> that lives in <%- place %>.');
 gpt.assign({ animal: 'cat', place: 'a haunted castle' });
@@ -391,7 +391,7 @@ Analyze the following and provide 3 key insights:
 
 **`app.js`**
 ```javascript
-const gpt = ModelMix.new().gpt56luna();
+const gpt = ModelMix.new().gpt61sol();
 
 gpt.setSystemFromFile('./prompts/system.md');
 gpt.addTextFromFile('./prompts/task.md');
@@ -442,7 +442,7 @@ Summarize the following article in 3 bullet points:
 
 **`app.js`**
 ```javascript
-const gpt = ModelMix.new().gpt5mini();
+const gpt = ModelMix.new().gpt61sol();
 
 gpt.addTextFromFile('./prompts/summarize.md');
 gpt.assign({ articleFile: '../data/article.md' });
@@ -457,7 +457,7 @@ Static and dynamic include paths are resolved relative to the containing templat
 Use `assignKeyFromFile()` when the outer template needs the rendered contents of a file as one data value:
 
 ```javascript
-const gpt = ModelMix.new().gpt5mini();
+const gpt = ModelMix.new().gpt61sol();
 
 gpt.assign({ language: 'Spanish' });
 gpt.assignKeyFromFile('rules', './prompts/rules.md');
@@ -494,7 +494,7 @@ Review the following code and suggest improvements:
 
 **`app.js`**
 ```javascript
-const gpt = ModelMix.new().gpt5mini();
+const gpt = ModelMix.new().gpt61sol();
 
 gpt.setSystemFromFile('./prompts/system.md');
 gpt.addTextFromFile('./prompts/review.md');
@@ -562,7 +562,7 @@ An included template can include itself to render recursive data. Always define 
 ```
 
 ```javascript
-const gpt = ModelMix.new().gpt5mini();
+const gpt = ModelMix.new().gpt61sol();
 
 gpt.addTextFromFile('./prompts/tree.ejs');
 gpt.assign({ node: promptTree, depth: 0, maxDepth: 10 });
@@ -584,7 +584,7 @@ await model.json(schemaExample, schemaDescription, options)
 
 ```javascript
 const model = ModelMix.new()
-    .gpt56luna()
+    .gpt61sol()
     .addText('Name and capital of 3 South American countries.');
 
 const result = await model.json({ countries: [{ name: "", capital: "" }] });
@@ -804,12 +804,12 @@ console.log(model.lastRaw.tokens);
 
 Prompt caching reuses the stable beginning of a prompt at the provider level. It does not cache the answer: every call still generates a new response.
 
-For GPT-5.6, keep the long, reusable instructions first, mark the end of that stable prefix, and add the changing request afterward:
+For GPT-5.6 and GPT-6, keep the long, reusable instructions first, mark the end of that stable prefix, and add the changing request afterward:
 
 ```javascript
 async function ask(question) {
     const model = ModelMix.new()
-        .gpt56luna({
+        .gpt61sol({
             options: {
                 prompt_cache_key: 'support-rules-v1',
                 prompt_cache_options: { mode: 'explicit', ttl: '30m' }
@@ -839,7 +839,7 @@ GPT-5.6 and the GPT-6 models (Astra, Sol, Luna, and 6.1 Sol) support implicit or
 
 ```javascript
 const model = ModelMix.new()
-  .gpt56luna({
+  .gpt61sol({
     options: {
       prompt_cache_key: 'support-agent-v1',
       prompt_cache_options: { mode: 'explicit', ttl: '30m' }
@@ -874,13 +874,13 @@ Neutral breakpoints are translated at the last moment by each provider adapter. 
 
 ```javascript
 const model = ModelMix.new()
-  .gpt56luna({
+  .gpt61sol({
     options: {
       prompt_cache_key: 'support-agent-v1',
       prompt_cache_options: { mode: 'explicit', ttl: '30m' }
     }
   })
-  .haiku45({
+  .sonnet55({
     options: {
       cache_control: { type: 'ephemeral', ttl: '1h' }
     }
@@ -903,7 +903,7 @@ BRAVE_API_KEY="BSA0..._fm"
 ```
 
 ```javascript
-const mmix = ModelMix.new({ config: { max_history: 10 } }).gpt56sol();
+const mmix = ModelMix.new({ config: { max_history: 10 } }).gpt61sol();
 mmix.setSystem('You are an assistant and today is ' + new Date().toISOString());
 
 // Add web search capability through MCP
@@ -986,7 +986,7 @@ const metrics = {
 };
 
 const model = ModelMix.new()
-    .gpt56luna()
+    .gpt61sol()
     .use(metrics)
     .addText('Summarize this request.');
 ```
@@ -1020,8 +1020,8 @@ import { ModelMix } from 'modelmix';
 import { skills } from 'modelmix/plugins/skills/index.js';
 
 const model = ModelMix.new()
-    .gpt6astra()
-    .opus5()
+    .gpt61sol()
+    .opus55()
     .use(await skills({ paths: ['./skills/writing', './skills/research/SKILL.md'] }))
     .addText('Use the writing skill to improve this paragraph: ...');
 
@@ -1044,8 +1044,8 @@ const { benchmark } = require('modelmix/plugins/benchmark');
 
 const report = await ModelMix.new()
     .use(benchmark({
-        criteriaModel: 'gpt56luna@20',
-        models: ['gpt56luna@20', 'sonnet5@20', 'gemini38flash@20']
+        criteriaModel: 'opus55@20',
+        models: ['gpt61sol@20', 'sonnet55@20', 'gemini38flash@20']
     }))
     .addText('Your benchmark task')
     .json();
@@ -1069,10 +1069,10 @@ The separately publishable `@modelmix/rlm` workspace package keeps document pars
 const { ModelMix } = require('modelmix');
 const { rlm } = require('@modelmix/rlm');
 
-const fast = ModelMix.new().gpt5nano();
+const fast = ModelMix.new().gpt6luna();
 
 const result = await ModelMix.new()
-    .gpt56luna()
+    .gpt61sol()
     .use(rlm({
         maxDepth: 2,
         documents: {

@@ -18,7 +18,7 @@ console.log('──────────────────────�
 
 await ModelMix
     .new({ config: { verbose: 0 } })
-    .gpt5nano()
+    .gpt61sol()
     .addText(prompt)
     .message();
 
@@ -33,7 +33,7 @@ console.log('──────────────────────�
 
 await ModelMix
     .new({ config: { verbose: 1 } })
-    .gpt5nano()
+    .gpt61sol()
     .addText(prompt)
     .message();
 
@@ -48,7 +48,7 @@ console.log('──────────────────────�
 
 await ModelMix
     .new({ config: { verbose: 2 } })
-    .gpt5nano()
+    .gpt61sol()
     .addText(prompt)
     .json({ message: 'string' });
 
@@ -63,7 +63,7 @@ console.log('──────────────────────�
 
 await ModelMix
     .new({ config: { verbose: 3 } })
-    .gpt5nano()
+    .gpt61sol()
     .addText(prompt)
     .message();
 
@@ -79,7 +79,7 @@ try {
     const resultFallback = await ModelMix
         .new({ config: { verbose: 2 } })
         .attach('fake-model-that-will-fail', new MixOpenAI())
-        .gpt5nano() // This will be the fallback
+        .gpt61sol() // This will be the fallback
         .addText(prompt)
         .message();
 

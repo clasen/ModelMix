@@ -25,7 +25,7 @@ const report = await ModelMix.new({
     options: { max_tokens: 65536 }
 })
     .use(benchmark({
-        criteriaModel: 'opus50@20',
+        criteriaModel: 'opus55@20',
         models,
         mix: { deepseek: true, openrouter: false }
     }))

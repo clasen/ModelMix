@@ -9,7 +9,7 @@ console.log('\n📝 Example 1: Basic token usage tracking');
 console.log('-'.repeat(60));
 
 const model1 = ModelMix.new({ config: { debug: 1 } })
-    .gpt5nano()
+    .gpt61sol()
     .addText('What is 2+2?');
 
 const result1 = await model1.raw();
@@ -24,8 +24,8 @@ console.log('\n\n📝 Example 2: Token usage across providers');
 console.log('-'.repeat(60));
 
 const providers = [
-    { name: 'OpenAI GPT-5-nano', fn: (m) => m.gpt5nano() },
-    { name: 'Anthropic Haiku', fn: (m) => m.haiku45() },
+    { name: 'OpenAI GPT-6.1 Sol', fn: (m) => m.gpt61sol() },
+    { name: 'Anthropic Sonnet 5.5', fn: (m) => m.sonnet55() },
     { name: 'Google Gemini', fn: (m) => m.gemini37flash() }
 ];
 
@@ -51,7 +51,7 @@ console.log('\n\n📝 Example 3: Token usage in conversation history');
 console.log('-'.repeat(60));
 
 const conversation = ModelMix.new({ config: { debug: 0, max_history: 10 } })
-    .gpt5nano();
+    .gpt61sol();
 
 let totalInput = 0;
 let totalOutput = 0;
@@ -87,7 +87,7 @@ console.log('\n\n📝 Example 4: JSON response with token tracking');
 console.log('-'.repeat(60));
 
 const jsonModel = ModelMix.new({ config: { debug: 0 } })
-    .gpt5nano()
+    .gpt61sol()
     .addText('List 3 programming languages');
 
 const jsonResult = await jsonModel.json(
@@ -96,7 +96,7 @@ const jsonResult = await jsonModel.json(
 
 // Get raw result for token info
 const rawJsonModel = ModelMix.new({ config: { debug: 0 } })
-    .gpt5nano()
+    .gpt61sol()
     .addText('List 3 programming languages');
 
 const rawJsonResult = await rawJsonModel.raw();
