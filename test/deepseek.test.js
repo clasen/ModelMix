@@ -54,7 +54,7 @@ describe('DeepSeek Model Registration Tests', () => {
         const originalApiKey = process.env.DEEPSEEK_API_KEY;
         try {
             delete process.env.DEEPSEEK_API_KEY;
-            expect(() => new MixDeepSeek()).to.throw(/DEEPSEEK_API_KEY/);
+            expect(() => ModelMix.new().attach('deepseek-flash', new MixDeepSeek())).to.throw(/DEEPSEEK_API_KEY/);
             process.env.DEEPSEEK_API_KEY = 'native-test-key';
             const model = ModelMix.new().deepseekV41Flash({ mix: { deepseek: true, openrouter: false } });
             expect(model.models).to.have.length(1);

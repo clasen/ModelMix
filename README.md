@@ -284,6 +284,10 @@ Muse Spark methods ending in `c` select Contributor: prompts and outputs may be 
 
 Each method accepts optional `options`, `config`, and (for multi-provider methods) `mix` parameters to customize behavior.  
 
+Provider routing flags resolve in this order: the shortcut's defaults, then flags set on `ModelMix.new({ mix })`. A `mix` passed to the shortcut itself replaces the shortcut's defaults, so `kimiK26({ mix: { openrouter: true } })` uses only OpenRouter while `ModelMix.new({ mix: { openrouter: true } }).kimiK26()` keeps Fireworks and appends OpenRouter. `fable51()` keeps its official Anthropic route unless `mix.anthropic` is `false`.
+
+Attaching a model checks that every selected provider has its API key (`config.apiKey` or the provider's environment variable). A missing key fails at build time, before any request: `.chain()` and multi-provider shortcuts throw one error with `code: 'MISSING_API_KEY'` and `missingKeys: [{ provider, env, model }]` listing every missing key, and attach nothing.
+
 ```javascript
 const result = await ModelMix.new({ 
         options: { temperature: 0.7 },
@@ -957,7 +961,7 @@ const setup = {
 };
 ```
 
-Attached models share this limiter, which queues requests when capacity is exhausted.
+Attached models share this limiter, which queues requests when capacity is exhausted. Each provider request round takes one slot, including its retries and fallbacks; tool callbacks run outside the slot, so a tool may call another ModelMix instance without waiting on its caller. Instances created with `.new()` and plugin child invocations share the parent's limiter unless they pass their own `config.bottleneck`.
 
 ## 🐛 Enabling Debug Mode
 
@@ -1124,6 +1128,7 @@ new ModelMix(args = { options: {}, config: {} })
   - **config**: This object contains configuration settings that control the behavior of the `ModelMix` instance. These settings can also be overridden for specific model instances. Examples of configuration settings include:
     - `system`: Sets the default system message for the model, e.g., "You are an assistant."
     - `max_history`: Limits the number of historical messages to retain, e.g., 1.
+    - `max_tool_rounds`: Maximum tool call rounds per request (default `25`, `-1` = unlimited). When the model keeps requesting tools past the limit, the request rejects with `error.code === 'MAX_TOOL_ROUNDS'`.
     - `effort`: Unified reasoning effort (`-1` adaptive, or `0`–`100`). Not a native provider field — use `config.effort` or `.effort(n)`.
     - `roundRobin`: When `true`, rotates through attached models on each request for load balancing. When `false` (default), uses fallback mode where models are tried sequentially only if previous ones fail.
     - `bottleneck`: Configures the rate limiting behavior using Bottleneck. For example:
@@ -1210,6 +1215,14 @@ new MixCustom(args = { config: {}, options: {}, headers: {} })
     - `authorization`: The authorization header, typically including a Bearer token for API access.
     - `x-api-key`: A custom header for API key if needed.
     - ...(Additional headers can be added as needed)
+
+Subclasses declare provider-level policy with static fields:
+
+- `static apiKeyEnv`: Environment variable that supplies `config.apiKey`. When set, attaching the provider without a key fails with `code: 'MISSING_API_KEY'`, and so does calling `create()` directly.
+- `static apiKeyName`: Provider name shown in missing key errors.
+- `static family`: Unified effort mapping (`'openai'`, `'anthropic'`, `'google'`, or `null` for none). Subclasses inherit their parent's family.
+
+Override `getReportedCost(response)` to return the cost billed by the provider for a response; ModelMix uses it instead of catalog pricing when it is a non-negative number.
 
 ### MixOpenAI Class Overview
 

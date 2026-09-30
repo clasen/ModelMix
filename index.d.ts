@@ -58,6 +58,8 @@ export interface ModelMixConfig {
   system?: string;
   /** 0 = stateless, N = last N messages, -1 = unlimited */
   max_history?: number;
+  /** Tool call rounds allowed per request before failing with code MAX_TOOL_ROUNDS; -1 = unlimited. Default 25. */
+  max_tool_rounds?: number;
   /** 0=silent, 1=minimal, 2=summary, 3=full, 4=verbose */
   debug?: DebugLevel | number;
   bottleneck?: BottleneckConfig;
@@ -368,7 +370,8 @@ export declare class ModelMix {
   config: ModelMixConfig;
   mix: ModelMixMixFlags;
   lastRaw: ModelMixResult | null;
-  streamCallback: StreamCallback | null;
+  /** Rate limiter shared with instances derived through new() unless they pass config.bottleneck. */
+  limiter: unknown;
 
   constructor(setup?: ModelMixSetup);
 
@@ -566,10 +569,31 @@ export declare class ModelMix {
   listTools(): ListedTools;
 }
 
+/** Entry of MissingApiKeyError.missingKeys. */
+export interface MissingApiKey {
+  provider: string;
+  env: string;
+  model?: string;
+}
+
+/** Thrown when attaching a model whose provider has no API key (code 'MISSING_API_KEY'). */
+export interface MissingApiKeyError extends Error {
+  code: 'MISSING_API_KEY';
+  missingKeys: MissingApiKey[];
+}
+
 export declare class MixCustom {
+  /** Effort mapping family used by unified effort; null when the provider has none. */
+  static family: ProviderFamily | null;
+  /** Environment variable that supplies the API key; attach() fails when it is missing. */
+  static apiKeyEnv?: string;
+  /** Provider name used in missing API key errors. */
+  static apiKeyName?: string;
+
   config: ModelMixConfig & { url?: string; apiKey?: string };
   options: ModelMixOptions;
   headers: Record<string, string>;
+  /** Fallback stream callback; ModelMix passes the per-request callback without mutating the provider. */
   streamCallback: StreamCallback | null;
 
   constructor(args?: ProviderConstructorArgs);
@@ -601,10 +625,12 @@ export declare class MixCustom {
     details: unknown;
     stack?: string;
   };
-  processStream(response: { data: NodeJS.ReadableStream }): Promise<ModelMixResult>;
+  processStream(response: { data: NodeJS.ReadableStream }, onStream?: StreamCallback | null): Promise<ModelMixResult>;
   extractDelta(data: unknown): string;
   processResponse(response: { data: unknown }): ModelMixResult;
   getOptionsTools(tools: Record<string, ToolDefinition[]>): Partial<ModelMixOptions>;
+  /** Cost billed by the provider for this response, when it reports one; overrides catalog pricing. */
+  getReportedCost(response: unknown): number | undefined;
 }
 
 export declare class MixOpenAI extends MixCustom {}

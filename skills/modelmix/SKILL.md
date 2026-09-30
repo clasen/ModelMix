@@ -71,6 +71,7 @@ const model = ModelMix.new({
     config: {
         system: "You are a helpful assistant.",
         max_history: 5,   // -1 = unlimited, 0 = none (default), N = keep last N
+        max_tool_rounds: 25, // tool call rounds per request, -1 = unlimited
         debug: 0,          // 0=silent, 1=minimal, 2=summary, 3=full, 4=verbose
         roundRobin: false, // false=fallback, true=rotate models
         effort: 50         // unified 0..100, or -1 adaptive
@@ -572,6 +573,8 @@ model.addTools([
 
 Manage tools: `model.removeTool("tool_a")` and `model.listTools()` → `{ local, mcp }`.
 
+A request runs at most `config.max_tool_rounds` tool call rounds (default 25, `-1` = unlimited); past that it rejects with `error.code === 'MAX_TOOL_ROUNDS'`. Tool callbacks run outside the rate limiter slot, so a callback may call another ModelMix instance.
+
 ### Rate limiting
 
 ```javascript
@@ -584,6 +587,8 @@ const model = ModelMix.new({
     }
 }).gpt6luna();
 ```
+
+Each provider request round (fallbacks and retries included) takes one limiter slot. Instances created with `.new()` and plugin child invocations share the parent's limiter unless they pass their own `config.bottleneck`.
 
 ### Conversation history
 
@@ -632,6 +637,8 @@ const model = ModelMix.new({
     }
 }).kimiK26();
 ```
+
+Flags set on `ModelMix.new({ mix })` override a shortcut's defaults. A `mix` passed to the shortcut itself replaces those defaults and selects only the routes it enables, e.g. `kimiK26({ mix: { openrouter: true } })` uses only OpenRouter.
 
 ## Agent Usage Rules
 
@@ -686,7 +693,10 @@ const model = ModelMix.new({
 ## Troubleshooting
 
 **Model fails with "API key not found"**
-The provider's API key env var is not set. Add it to `.env` and ensure it loads before ModelMix runs. Each provider looks for its standard env var (e.g. `OPENAI_API_KEY`, `ANTHROPIC_API_KEY`, `GEMINI_API_KEY`).
+The provider's API key env var is not set. Add it to `.env` and ensure it loads before ModelMix runs. Each provider looks for its standard env var (e.g. `OPENAI_API_KEY`, `ANTHROPIC_API_KEY`, `GEMINI_API_KEY`). Attaching a model checks its keys up front: `.chain()` and multi-provider shortcuts throw one error with `code: 'MISSING_API_KEY'` and `missingKeys: [{ provider, env, model }]` listing every missing key, and attach nothing.
+
+**Tool loop fails with `MAX_TOOL_ROUNDS`**
+The model kept requesting tools. Raise `config.max_tool_rounds` or set it to `-1` for no limit.
 
 **Tool calls not working**
 Set `max_history` to at least 3. Tool call/response pairs are stored in history and the model needs to see them to complete the conversation loop.

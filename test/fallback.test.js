@@ -888,21 +888,27 @@ describe('Provider Fallback Chain Tests', () => {
                 send() {}
             }
 
-            const indexPath = require.resolve('../index.js');
-            const cachedIndex = require.cache[indexPath];
+            // Reload the provider modules so they pick up the stubbed ws module.
+            const providerPaths = [
+                require.resolve('../lib/providers.js'),
+                require.resolve('../lib/providers/openai.js')
+            ];
+            const cachedProviders = providerPaths.map(modulePath => require.cache[modulePath]);
             const originalLoad = Module._load;
             let RealtimeProvider;
             try {
-                delete require.cache[indexPath];
+                for (const modulePath of providerPaths) delete require.cache[modulePath];
                 Module._load = function (request, parent, isMain) {
                     if (request === 'ws') return ClosingWebSocket;
                     return originalLoad.call(this, request, parent, isMain);
                 };
-                ({ MixOpenAIWebSocket: RealtimeProvider } = require('../index.js'));
+                ({ MixOpenAIWebSocket: RealtimeProvider } = require('../lib/providers.js'));
             } finally {
                 Module._load = originalLoad;
-                delete require.cache[indexPath];
-                if (cachedIndex) require.cache[indexPath] = cachedIndex;
+                providerPaths.forEach((modulePath, index) => {
+                    delete require.cache[modulePath];
+                    if (cachedProviders[index]) require.cache[modulePath] = cachedProviders[index];
+                });
             }
 
             const apiKey = 'secret-realtime-key';

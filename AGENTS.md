@@ -6,8 +6,10 @@ ModelMix is a CommonJS Node.js library for LLM providers, fallback chains, rate 
 
 ## Project Structure & Module Organization
 
-- `index.js` owns the public API and provider classes; synchronize public contracts with `index.d.ts`.
-- Root helper modules isolate effort mapping, schemas, HTTP, multipart, and MCP behavior.
+- `index.js` owns the public API and the execution pipeline; synchronize public contracts with `index.d.ts`.
+- `lib/providers/` holds the `Mix*` provider classes, which never depend on `ModelMix`. Providers declare `static apiKeyEnv`, `apiKeyName`, and `family`.
+- `lib/model-registry.js` is the single source for model shortcuts, their provider routes, and `mix` defaults; `index.js` generates the fluent methods and `chain()` validates against it.
+- Root helper modules isolate effort mapping, schemas, HTTP, multipart, and MCP behavior; `lib/` holds the remaining internals (API key checks, debug formatting, templates, token usage).
 - `test/*.test.js` contains Mocha suites; fixtures and setup live under `test/`.
 - `demo/` holds examples and a separate npm manifest; `skills/modelmix/` contains the published skill.
 - `node_modules/` is generated and ignored. Update `pnpm-lock.yaml` only through pnpm.

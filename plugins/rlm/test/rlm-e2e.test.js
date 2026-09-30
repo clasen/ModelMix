@@ -81,7 +81,7 @@ describe('RLM mocked end-to-end execution', () => {
                 tokens: { input: 3, output: 2, total: 5, cost: 0.0001 }
             };
         });
-        const translator = ModelMix.new().attach('translator', workerProvider);
+        const translator = ModelMix.new({ config: { bottleneck: { minTime: 0 } } }).attach('translator', workerProvider);
         const sandbox = {
             async execute({ variables, query }) {
                 if (variables.chapters) {
@@ -273,7 +273,7 @@ describe('RLM mocked end-to-end execution', () => {
                 toolCalls: []
             };
         });
-        const translator = ModelMix.new().attach('translator', createProvider(async request => {
+        const translator = ModelMix.new({ config: { bottleneck: { minTime: 0 } } }).attach('translator', createProvider(async request => {
             if (request.config.system.includes('# Recursive Language Model Planner')) {
                 plannerRequests.push(request);
                 return {

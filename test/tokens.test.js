@@ -811,7 +811,8 @@ describe('Token Usage Tracking', () => {
         delete process.env.MIMO_API_KEY;
 
         try {
-            expect(() => new MixMiMo()).to.throw('MIMO_API_KEY');
+            expect(() => ModelMix.new().attach('mimo-v2.5', new MixMiMo())).to.throw('MIMO_API_KEY');
+            expect(() => ModelMix.new().mimo25({ mix: { mimo: true } })).to.throw('MIMO_API_KEY');
         } finally {
             if (originalMimoApiKey === undefined) delete process.env.MIMO_API_KEY;
             else process.env.MIMO_API_KEY = originalMimoApiKey;

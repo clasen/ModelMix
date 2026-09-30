@@ -81,7 +81,7 @@
     "test:skills": "mocha plugins/skills/test/**/*.test.js --timeout 10000 --require test/setup.js",
     "test:benchmark": "mocha plugins/benchmark/test/**/*.test.js --timeout 10000 --require test/setup.js",
     "test:rlm": "mocha plugins/rlm/test/**/*.test.js --timeout 10000 --require test/setup.js",
-    "test:offline": "mocha test/abort.test.js test/json.test.js test/fallback.test.js test/templates.test.js test/images.test.js test/bottleneck.test.js test/tokens.test.js test/history.test.js test/anthropic.test.js test/effort.test.js test/grok.test.js test/google.test.js test/moderation.test.js test/plugins.test.js plugins/skills/test/**/*.test.js plugins/benchmark/test/**/*.test.js plugins/rlm/test/**/*.test.js --timeout 10000 --require test/setup.js"
+    "test:offline": "mocha test/abort.test.js test/execution.test.js test/model-registry.test.js test/model-chain.test.js test/json.test.js test/fallback.test.js test/templates.test.js test/images.test.js test/bottleneck.test.js test/tokens.test.js test/history.test.js test/anthropic.test.js test/effort.test.js test/grok.test.js test/google.test.js test/moderation.test.js test/plugins.test.js plugins/skills/test/**/*.test.js plugins/benchmark/test/**/*.test.js plugins/rlm/test/**/*.test.js --timeout 10000 --require test/setup.js"
   },
   "packageManager": "pnpm@12.4.1"
 }

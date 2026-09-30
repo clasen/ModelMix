@@ -3,7 +3,6 @@ const { randomUUID } = require('crypto');
 const ejs = require('ejs');
 const fileType = require('file-type');
 const detectFileTypeFromBuffer = fileType.fileTypeFromBuffer || fileType.fromBuffer;
-const { inspect } = require('util');
 const log = require('lemonlog')('ModelMix');
 const Bottleneck = require('bottleneck');
 const path = require('path');
@@ -23,7 +22,12 @@ const {
 const { isPlainObject } = require('./lib/object-utils');
 const { normalizeContentCache } = require('./lib/content-cache');
 const tokenUsage = require('./lib/token-usage');
-const { parseChainModels, attachChainModel } = require('./lib/model-chain');
+const debugFormat = require('./lib/debug-format');
+const { hasToolInteraction } = require('./lib/messages');
+const { assertProviderApiKeys } = require('./lib/provider-api-key');
+const { runWithStreamCallback } = require('./lib/stream-context');
+const { listModelShortcuts, resolveModelShortcut } = require('./lib/model-registry');
+const { parseChainModels, resolveChainModel } = require('./lib/model-chain');
 const {
     validateTemplateData,
     validateTemplateDataKey,
@@ -36,33 +40,36 @@ const {
     resolveProviderFamily,
     resolveGrok420ModelKey
 } = require('./effort');
+const {
+    MixCustom,
+    MixOpenAI,
+    MixModeration,
+    MixOpenAIResponses,
+    MixOpenAIModeration,
+    MixOpenAIWebSocket,
+    MixOpenRouter,
+    MixKimi,
+    MixAnthropic,
+    MixMiniMax,
+    MixMiMo,
+    MixDeepSeek,
+    MixPerplexity,
+    MixOllama,
+    MixGrok,
+    MixLambda,
+    MixLMStudio,
+    MixGroq,
+    MixTogether,
+    MixCerebras,
+    MixFireworks,
+    MixNVIDIA,
+    MixGoogle
+} = require('./lib/providers');
 
-let MixCustom;
-let MixOpenAI;
-let MixModeration;
-let MixOpenAIResponses;
-let MixOpenAIModeration;
-let MixOpenAIWebSocket;
-let MixOpenRouter;
-let MixKimi;
-let MixAnthropic;
-let MixMiniMax;
-let MixMiMo;
-let MixDeepSeek;
-let MixPerplexity;
-let MixOllama;
-let MixGrok;
-let MixLambda;
-let MixLMStudio;
-let MixGroq;
-let MixTogether;
-let MixCerebras;
-let MixFireworks;
-let MixNVIDIA;
-let MixGoogle;
-let ModerationMix;
 
 const DEFAULT_RETRYABLE_STATUS_CODES = [408, 425, 429, 500, 502, 503, 504, 529];
+const DEFAULT_MAX_TOOL_ROUNDS = 25;
+const DEFAULT_MIX = { openrouter: false, together: false, lambda: false };
 
 function getErrorStatusCode(error) {
     return error?.statusCode ?? error?.response?.status ?? error?.response?.statusCode ?? null;
@@ -100,7 +107,7 @@ function validatePluginResult(result, pluginName) {
 
 class ModelMix {
 
-    constructor({ options = {}, config = {}, mix = {} } = {}) {
+    constructor({ options = {}, config = {}, mix = {} } = {}, { limiter = null } = {}) {
         assertNoStoredSignal(options, 'options');
         assertNoStoredSignal(config, 'config');
         this.models = [];
@@ -128,6 +135,7 @@ class ModelMix {
         this.config = {
             system: 'You are an assistant.',
             max_history: 0, // 0=no history (stateless), N=keep last N messages, -1=unlimited
+            max_tool_rounds: DEFAULT_MAX_TOOL_ROUNDS, // tool call rounds per request, -1=unlimited
             debug: 0, // 0=silent, 1=minimal, 2=readable summary, 3=full (no truncate), 4=verbose (raw details)
             bottleneck: defaultBottleneckConfig,
             retry: {
@@ -151,10 +159,12 @@ class ModelMix {
         if (this.config.effort !== undefined && this.config.effort !== null) {
             this.config.effort = normalizeEffort(this.config.effort);
         }
-        const freeMix = { openrouter: false, cerebras: true, groq: true, together: false, lambda: false };
-        this.mix = { ...freeMix, ...mix };
+        // Only flags set by the caller override shortcut defaults; this.mix also shows library defaults.
+        this._mixOverrides = { ...mix };
+        this.mix = { ...DEFAULT_MIX, ...mix };
 
-        this.limiter = new Bottleneck(this.config.bottleneck);
+        // One slot per provider request round; derived instances share it by default.
+        this.limiter = limiter || new Bottleneck(this.config.bottleneck);
 
     }
 
@@ -183,17 +193,9 @@ class ModelMix {
     }
 
     chain(...modelSpecs) {
-        const models = parseChainModels(modelSpecs);
-        const start = this.models.length;
-        try {
-            for (const model of models) {
-                attachChainModel(this, model);
-            }
-        } catch (error) {
-            this.models.splice(start);
-            throw error;
-        }
-        return this;
+        const models = parseChainModels(modelSpecs)
+            .flatMap(model => resolveChainModel(this, model));
+        return this._attachModels(models);
     }
 
     use(plugin) {
@@ -217,13 +219,17 @@ class ModelMix {
         return new ModelMix({ options, config, mix });
     }
 
+    _sharedLimiter(config) {
+        return Object.prototype.hasOwnProperty.call(config, 'bottleneck') ? null : this.limiter;
+    }
+
     new({ options = {}, config = {}, mix = {} } = {}) {
         const hasSystemOverride = Object.prototype.hasOwnProperty.call(config, 'system');
         const instance = new ModelMix({
             options: { ...this.options, ...options },
             config: { ...this.config, ...config },
-            mix: { ...this.mix, ...mix }
-        });
+            mix: { ...this._mixOverrides, ...mix }
+        }, { limiter: this._sharedLimiter(config) });
         if (!hasSystemOverride) {
             instance.systemTemplate = { ...this.systemTemplate };
         }
@@ -311,7 +317,7 @@ class ModelMix {
         }
 
         const child = model === this
-            ? ModelMix.new({ options, config, mix })
+            ? new ModelMix({ options, config, mix }, { limiter: this._sharedLimiter(config) })
             : model.new({ options, config, mix });
         child.models = model.models;
         child.plugins = this._pluginsForPolicy(plugins);
@@ -331,38 +337,25 @@ class ModelMix {
             parentExecutionId: parentExecution.executionId,
             depth: parentExecution.depth + 1
         };
-        const result = await child.execute({
+        const result = await child._execute({
             outputMode,
             signal,
-            _executionMetadata: execution
+            executionMetadata: execution
         });
         return { ...result, execution };
     }
 
     static formatJSON(obj) {
-        return inspect(obj, {
-            depth: null,
-            colors: true,
-            maxArrayLength: null,
-            breakLength: 80,
-            compact: false
-        });
+        return debugFormat.formatJSON(obj);
     }
 
     static formatMessage(message) {
-        if (typeof message !== 'string') return message;
-
-        try {
-            return ModelMix.formatJSON(JSON.parse(message.trim()));
-        } catch (e) {
-            return message;
-        }
+        return debugFormat.formatMessage(message);
     }
 
     // debug logging helpers
     static truncate(str, maxLen = 1000) {
-        if (!str || typeof str !== 'string') return str;
-        return str.length > maxLen ? str.substring(0, maxLen) + '...' : str;
+        return debugFormat.truncate(str, maxLen);
     }
 
     static normalizeTokenUsage(usage = {}) {
@@ -390,404 +383,50 @@ class ModelMix {
     }
 
     static formatInputSummary(messages, system, debug = 2) {
-        const lastMessage = messages[messages.length - 1];
-        let inputText = '';
-
-        if (lastMessage && Array.isArray(lastMessage.content)) {
-            const textContent = lastMessage.content.find(c => c.type === 'text');
-            if (textContent) inputText = textContent.text;
-        } else if (lastMessage && typeof lastMessage.content === 'string') {
-            inputText = lastMessage.content;
-        }
-
-        const noTruncate = debug >= 3;
-        const systemStr = noTruncate ? (system || '') : ModelMix.truncate(system, 500);
-        const inputStr = noTruncate ? inputText : ModelMix.truncate(inputText, 1200);
-        const msgCount = `(${messages.length} msg${messages.length !== 1 ? 's' : ''})`;
-
-        return `| SYSTEM\n${systemStr}\n| INPUT ${msgCount}\n${inputStr}`;
+        return debugFormat.formatInputSummary(messages, system, debug);
     }
 
     static formatOutputSummary(result, debug) {
-        const parts = [];
-        const noTruncate = debug >= 3;
-        if (result.message) {
-            // Try to parse as JSON for better formatting
-            try {
-                const parsed = JSON.parse(result.message.trim());
-                // If it's valid JSON and debug >= 2, show it formatted
-                if (debug >= 2) {
-                    parts.push(`| OUTPUT (JSON)\n${ModelMix.formatJSON(parsed)}`);
-                } else {
-                    parts.push(`| OUTPUT\n${ModelMix.truncate(result.message, 1500)}`);
-                }
-            } catch (e) {
-                parts.push(`| OUTPUT\n${noTruncate ? result.message : ModelMix.truncate(result.message, 1500)}`);
-            }
-        }
-        if (result.think) {
-            parts.push(`| THINK\n${noTruncate ? result.think : ModelMix.truncate(result.think, 800)}`);
-        }
-        if (result.toolCalls && result.toolCalls.length > 0) {
-            const toolNames = result.toolCalls.map(t => t.function?.name || t.name).join(', ');
-            parts.push(`| TOOLS\n${toolNames}`);
-        }
-        return parts.join('\n');
+        return debugFormat.formatOutputSummary(result, debug);
     }
 
     attach(key, provider) {
+        return this._attachModels([{ key, provider }]);
+    }
 
-        assertNoStoredSignal(provider?.options, 'provider.options');
-        assertNoStoredSignal(provider?.config, 'provider.config');
+    /** Hook for subclasses that accept only some provider types. */
+    _assertAttachable(provider) {
+    }
 
-        if (this.models.some(model => model.key === key
-            && model.provider.constructor === provider.constructor)) {
-            return this;
+    /**
+     * Attach { key, provider } entries atomically: every entry is validated and every
+     * required API key is checked before any model is added.
+     */
+    _attachModels(models) {
+        const pending = [];
+        for (const { key, provider } of models) {
+            assertNoStoredSignal(provider?.options, 'provider.options');
+            assertNoStoredSignal(provider?.config, 'provider.config');
+            this._assertAttachable(provider);
+
+            const isAttached = model => model.key === key
+                && model.provider.constructor === provider.constructor;
+            if (this.models.some(isAttached) || pending.some(isAttached)) continue;
+            pending.push({ key, provider });
         }
+        if (pending.length === 0) return this;
 
         if (this.messages.length > 0) {
             throw new Error("Cannot add models after message generation has started.");
         }
+        assertProviderApiKeys(pending);
 
-        this.models.push({ key, provider });
-        return this;
-    }
-
-    _attachOpenAIWithOpenRouter(officialKey, Provider, {
-        options = {},
-        config = {},
-        mix = {},
-        openRouterKey = `openai/${officialKey}`
-    } = {}) {
-        mix = { ...this.mix, ...mix };
-        this.attach(officialKey, new Provider({ options, config }));
-        if (mix.openrouter) this.attach(openRouterKey, new MixOpenRouter({ options, config }));
-        return this;
-    }
-
-    gpt5mini(args = {}) {
-        return this._attachOpenAIWithOpenRouter('gpt-5-mini', MixOpenAI, args);
-    }
-    gpt5nano(args = {}) {
-        return this._attachOpenAIWithOpenRouter('gpt-5-nano', MixOpenAI, args);
-    }
-    gpt52(args = {}) {
-        return this._attachOpenAIWithOpenRouter('gpt-5.2', MixOpenAIResponses, args);
-    }
-    gpt54(args = {}) {
-        return this._attachOpenAIWithOpenRouter('gpt-5.4', MixOpenAIResponses, args);
-    }
-    gpt54mini(args = {}) {
-        return this._attachOpenAIWithOpenRouter('gpt-5.4-mini', MixOpenAIResponses, args);
-    }
-    gpt54nano(args = {}) {
-        return this._attachOpenAIWithOpenRouter('gpt-5.4-nano', MixOpenAIResponses, args);
-    }
-    gpt54pro(args = {}) {
-        return this._attachOpenAIWithOpenRouter('gpt-5.4-pro', MixOpenAIResponses, args);
-    }
-    gpt55(args = {}) {
-        return this._attachOpenAIWithOpenRouter('gpt-5.5', MixOpenAIResponses, args);
-    }
-    gpt55pro(args = {}) {
-        return this._attachOpenAIWithOpenRouter('gpt-5.5-pro', MixOpenAIResponses, args);
-    }
-    gpt6astra(args = {}) {
-        return this._attachOpenAIWithOpenRouter('gpt-6-astra', MixOpenAIResponses, args);
-    }
-    gpt61sol(args = {}) {
-        return this._attachOpenAIWithOpenRouter('gpt-6.1-sol', MixOpenAIResponses, args);
-    }
-    gpt6sol(args = {}) {
-        return this._attachOpenAIWithOpenRouter('gpt-6-sol', MixOpenAIResponses, args);
-    }
-    gpt6luna(args = {}) {
-        return this._attachOpenAIWithOpenRouter('gpt-6-luna', MixOpenAIResponses, args);
-    }
-    gpt56sol(args = {}) {
-        return this._attachOpenAIWithOpenRouter('gpt-5.6-sol', MixOpenAIResponses, args);
-    }
-    gpt56terra(args = {}) {
-        return this._attachOpenAIWithOpenRouter('gpt-5.6-terra', MixOpenAIResponses, args);
-    }
-    gpt56luna(args = {}) {
-        return this._attachOpenAIWithOpenRouter('gpt-5.6-luna', MixOpenAIResponses, args);
-    }
-    gptRealtime({ options = {}, config = {} } = {}) {
-        return this.attach('gpt-realtime', new MixOpenAIWebSocket({ options, config }));
-    }
-    gptRealtimeMini({ options = {}, config = {} } = {}) {
-        return this.attach('gpt-realtime-mini', new MixOpenAIWebSocket({ options, config }));
-    }
-    fable50({ options = {}, config = {} } = {}) {
-        return this.attach('claude-fable-5', new MixAnthropic({ options, config }));
-    }
-    fable5(args = {}) {
-        return this.fable50(args);
-    }
-    fable51({ options = {}, config = {}, mix = {} } = {}) {
-        mix = { anthropic: true, ...this.mix, ...mix };
-        if (mix.anthropic) this.attach('claude-fable-5-1', new MixAnthropic({ options, config }));
-        if (mix.openrouter) this.attach('anthropic/claude-fable-5.1', new MixOpenRouter({ options, config }));
-        return this;
-    }
-    opus55({ options = {}, config = {} } = {}) {
-        return this.attach('claude-opus-5-5', new MixAnthropic({ options, config }));
-    }
-    opus50({ options = {}, config = {} } = {}) {
-        return this.attach('claude-opus-5', new MixAnthropic({ options, config }));
-    }
-    opus5(args = {}) {
-        return this.opus50(args);
-    }
-    opus48({ options = {}, config = {} } = {}) {
-        return this.attach('claude-opus-4-8', new MixAnthropic({ options, config }));
-    }
-    opus47({ options = {}, config = {} } = {}) {
-        return this.attach('claude-opus-4-7', new MixAnthropic({ options, config }));
-    }    
-    opus46({ options = {}, config = {} } = {}) {
-        return this.attach('claude-opus-4-6', new MixAnthropic({ options, config }));
-    }
-    sonnet55({ options = {}, config = {} } = {}) {
-        return this.attach('claude-sonnet-5-5', new MixAnthropic({ options, config }));
-    }
-    sonnet50({ options = {}, config = {} } = {}) {
-        return this.attach('claude-sonnet-5', new MixAnthropic({ options, config }));
-    }
-    sonnet5(args = {}) {
-        return this.sonnet50(args);
-    }
-    sonnet45({ options = {}, config = {} } = {}) {
-        return this.attach('claude-sonnet-4-5-20250929', new MixAnthropic({ options, config }));
-    }
-    haiku45({ options = {}, config = {} } = {}) {
-        return this.attach('claude-haiku-4-5-20251001', new MixAnthropic({ options, config }));
-    }
-    gemini38flash({ options = {}, config = {} } = {}) {
-        return this.attach('gemini-3.8-flash', new MixGoogle({ options, config }));
-    }
-    gemini37flash({ options = {}, config = {} } = {}) {
-        return this.attach('gemini-3.7-flash', new MixGoogle({ options, config }));
-    }
-    gemini36flash({ options = {}, config = {} } = {}) {
-        return this.attach('gemini-3.6-flash', new MixGoogle({ options, config }));
-    }
-    gemini35flash({ options = {}, config = {} } = {}) {
-        return this.attach('gemini-3.5-flash', new MixGoogle({ options, config }));
-    }
-    gemini35flashLite({ options = {}, config = {} } = {}) {
-        return this.attach('gemini-3.5-flash-lite', new MixGoogle({ options, config }));
-    }
-    gemini31flashLite({ options = {}, config = {} } = {}) {
-        return this.attach('gemini-3.1-flash-lite-preview', new MixGoogle({ options, config }));
-    }
-    sonarPro({ options = {}, config = {} } = {}) {
-        return this.attach('sonar-pro', new MixPerplexity({ options, config }));
-    }
-    sonar({ options = {}, config = {} } = {}) {
-        return this.attach('sonar', new MixPerplexity({ options, config }));
-    }
-
-    grok47({ options = {}, config = {} } = {}) {
-        return this.attach('grok-4.7', new MixGrok({ options, config }));
-    }
-    grok46({ options = {}, config = {} } = {}) {
-        return this.attach('grok-4.6', new MixGrok({ options, config }));
-    }
-    grok43({ options = {}, config = {} } = {}) {
-        return this.attach('grok-4.3', new MixGrok({ options, config }));
-    }
-
-    museGlimmer30b({ options = {}, config = {}, mix = { fireworks: true } } = {}) {
-        mix = { ...this.mix, ...mix };
-        if (mix.nvidia) this.attach('meta/muse-glimmer-30b', new MixNVIDIA({ options, config }));
-        if (mix.fireworks) this.attach('accounts/fireworks/models/muse-glimmer-30b', new MixFireworks({ options, config }));
-        if (mix.openrouter) this.attach('meta/muse-glimmer-30b', new MixOpenRouter({ options, config }));
-        if (mix.together) this.attach('meta-models/Muse-Glimmer-30B', new MixTogether({ options, config }));
-        return this;
-    }
-
-    museSpark12({ options = {}, config = {} } = {}) {
-        return this.attach('meta/muse-spark-1.2', new MixOpenRouter({ options, config }));
-    }
-
-    museSpark12c({ options = {}, config = {} } = {}) {
-        return this.attach('meta/muse-spark-1.2-contributor', new MixOpenRouter({ options, config }));
-    }
-
-    museSpark13({ options = {}, config = {} } = {}) {
-        return this.attach('meta/muse-spark-1.3', new MixOpenRouter({ options, config }));
-    }
-
-    museSpark13c({ options = {}, config = {} } = {}) {
-        return this.attach('meta/muse-spark-1.3-contributor', new MixOpenRouter({ options, config }));
-    }
-
-    qwen35397b({ options = {}, config = {} } = {}) {
-        return this.attach('qwen/qwen3.5-397b-a17b', new MixOpenRouter({ options, config }));
-    }
-
-    qwen36plus({ options = {}, config = {}, mix = { fireworks: false, openrouter: true } } = {}) {
-        mix = { ...this.mix, ...mix };
-        if (mix.fireworks) this.attach('accounts/fireworks/models/qwen3p6-plus', new MixFireworks({ options, config }));
-        if (mix.openrouter) this.attach('qwen/qwen3.6-plus', new MixOpenRouter({ options, config }));
-        if (mix.together) this.attach('Qwen/Qwen3.6-Plus', new MixTogether({ options, config }));
-        return this;
-    }
-
-    qwen37plus({ options = {}, config = {}, mix = { fireworks: true } } = {}) {
-        mix = { ...this.mix, ...mix };
-        if (mix.fireworks) this.attach('accounts/fireworks/models/qwen3p7-plus', new MixFireworks({ options, config }));
-        if (mix.openrouter) this.attach('qwen/qwen3.7-plus', new MixOpenRouter({ options, config }));
-        if (mix.together) this.attach('Qwen/Qwen3.7-Plus', new MixTogether({ options, config }));
-        return this;
-    }
-
-    qwen38max({ options = {}, config = {}, mix = { fireworks: true } } = {}) {
-        mix = { ...this.mix, ...mix };
-        if (mix.fireworks) this.attach('accounts/fireworks/models/qwen3p8-2p4t-a95b', new MixFireworks({ options, config }));
-        if (mix.openrouter) this.attach('qwen/qwen3.8-max', new MixOpenRouter({ options, config }));
-        return this;
-    }
-
-    qwen3827b({ options = {}, config = {} } = {}) {
-        return this.attach('qwen/qwen3.8-27b', new MixOpenRouter({ options, config }));
-    }
-
-    qwen38flash({ options = {}, config = {} } = {}) {
-        return this.attach('qwen/qwen3.8-flash', new MixOpenRouter({ options, config }));
-    }
-
-    hermes470b({ options = {}, config = {} } = {}) {
-        return this.attach('nousresearch/hermes-4-70b', new MixOpenRouter({ options, config }));
-    }
-
-    hermes4405b({ options = {}, config = {} } = {}) {
-        return this.attach('nousresearch/hermes-4-405b', new MixOpenRouter({ options, config }));
-    }
-
-    hermes3({ options = {}, config = {}, mix = { openrouter: true } } = {}) {
-        mix = { ...this.mix, ...mix };
-        if (mix.lambda) this.attach('Hermes-3-Llama-3.1-405B-FP8', new MixLambda({ options, config }));
-        if (mix.openrouter) this.attach('nousresearch/hermes-3-llama-3.1-405b:free', new MixOpenRouter({ options, config }));
-        return this;
-    }
-
-    kimiK26({ options = {}, config = {}, mix = { fireworks: true } } = {}) {
-        mix = { ...this.mix, ...mix };
-        if (mix.fireworks) this.attach('accounts/fireworks/models/kimi-k2p6', new MixFireworks({ options, config }));
-        if (mix.openrouter) this.attach('moonshotai/kimi-k2.6', new MixOpenRouter({ options, config }));
-        if (mix.together) this.attach('moonshotai/Kimi-K2.6', new MixTogether({ options, config }));
-        return this;
-    }    
-
-    kimiK27Code({ options = {}, config = {}, mix = { together: true } } = {}) {
-        mix = { ...this.mix, ...mix };
-        if (mix.together) this.attach('moonshotai/Kimi-K2.7-Code', new MixTogether({ options, config }));
-        if (mix.fireworks) this.attach('accounts/fireworks/models/kimi-k2p7-code', new MixFireworks({ options, config }));
-        if (mix.openrouter) this.attach('moonshotai/kimi-k2.7-code', new MixOpenRouter({ options, config }));
-        return this;
-    }
-
-    kimiK3({ options = {}, config = {}, mix = { moonshot: true, openrouter: false } } = {}) {
-        mix = { ...this.mix, ...mix };
-        if (mix.moonshot) this.attach('kimi-k3', new MixKimi({ options, config }));
-        if (mix.fireworks) this.attach('accounts/fireworks/models/kimi-k3', new MixFireworks({ options, config }));
-        if (mix.openrouter) this.attach('moonshotai/kimi-k3', new MixOpenRouter({ options, config }));
-        if (mix.together) this.attach('moonshotai/Kimi-K3', new MixTogether({ options, config }));
+        this.models.push(...pending);
         return this;
     }
 
     lmstudio(model = 'lmstudio', { options = {}, config = {} } = {}) {
         return this.attach(model, new MixLMStudio({ options, config }));
-    }
-
-
-    minimaxM27({ options = {}, config = {}, mix = { minimax: true } } = {}) {
-        mix = { ...this.mix, ...mix };
-        if (mix.nvidia) this.attach('minimaxai/minimax-m2.7', new MixNVIDIA({ options, config }));
-        if (mix.fireworks) this.attach('accounts/fireworks/models/minimax-m2p7', new MixFireworks({ options, config }));
-        if (mix.openrouter) this.attach('minimax/minimax-m2.7', new MixOpenRouter({ options, config }));
-        if (mix.minimax) this.attach('MiniMax-M2.7', new MixMiniMax({ options, config }));
-        if (mix.together) this.attach('MiniMaxAI/MiniMax-M2.7', new MixTogether({ options, config }));
-        return this;
-    }
-
-    minimaxM3({ options = {}, config = {}, mix = { minimax: true, openrouter: false } } = {}) {
-        mix = { ...this.mix, ...mix };
-        if (mix.fireworks) this.attach('accounts/fireworks/models/minimax-m3', new MixFireworks({ options, config }));
-        if (mix.openrouter) this.attach('minimax/minimax-m3', new MixOpenRouter({ options, config }));
-        if (mix.minimax) this.attach('MiniMax-M3', new MixMiniMax({ options, config }));
-        if (mix.together) this.attach('MiniMaxAI/MiniMax-M3', new MixTogether({ options, config }));
-        return this;
-    }
-
-    mimo25({ options = {}, config = {}, mix = { openrouter: true } } = {}) {
-        mix = { ...this.mix, ...mix };
-        if (mix.mimo) this.attach('mimo-v2.5', new MixMiMo({ options, config }));
-        if (mix.openrouter) this.attach('xiaomi/mimo-v2.5', new MixOpenRouter({ options, config }));
-        return this;
-    }
-
-    mimo25pro({ options = {}, config = {}, mix = { openrouter: true } } = {}) {
-        mix = { ...this.mix, ...mix };
-        if (mix.mimo) this.attach('mimo-v2.5-pro', new MixMiMo({ options, config }));
-        if (mix.openrouter) this.attach('xiaomi/mimo-v2.5-pro', new MixOpenRouter({ options, config }));
-        return this;
-    }
-
-    mimo26pro({ options = {}, config = {}, mix = { openrouter: true } } = {}) {
-        mix = { ...this.mix, ...mix };
-        if (mix.mimo) this.attach('mimo-v2.6-pro', new MixMiMo({ options, config }));
-        if (mix.openrouter) this.attach('xiaomi/mimo-v2.6-pro', new MixOpenRouter({ options, config }));
-        return this;
-    }
-
-    deepseekPro({ options = {}, config = {} } = {}) {
-        return this.attach('deepseek/deepseek-v4-pro-0813', new MixOpenRouter({ options, config }));
-    }
-
-    deepseekV4Pro({ options = {}, config = {}, mix = { fireworks: true } } = {}) {
-        mix = { ...this.mix, ...mix };
-        if (mix.nvidia) this.attach('deepseek-ai/deepseek-v4-pro', new MixNVIDIA({ options, config }));
-        if (mix.fireworks) this.attach('accounts/fireworks/models/deepseek-v4-pro-0813', new MixFireworks({ options, config }));
-        if (mix.openrouter) this.attach('deepseek/deepseek-v4-pro', new MixOpenRouter({ options, config }));
-        if (mix.together) this.attach('deepseek-ai/DeepSeek-V4-Pro', new MixTogether({ options, config }));
-        return this;
-    }
-
-    deepseekV4Flash({ options = {}, config = {}, mix = { fireworks: true } } = {}) {
-        mix = { ...this.mix, ...mix };
-        if (mix.nvidia) this.attach('deepseek-ai/deepseek-v4-flash', new MixNVIDIA({ options, config }));
-        if (mix.fireworks) this.attach('accounts/fireworks/models/deepseek-v4-flash', new MixFireworks({ options, config }));
-        if (mix.openrouter) this.attach('deepseek/deepseek-v4-flash', new MixOpenRouter({ options, config }));
-        if (mix.together) this.attach('deepseek-ai/DeepSeek-V4-Flash', new MixTogether({ options, config }));
-        return this;
-    }
-
-    deepseekV41Flash({ options = {}, config = {}, mix = { deepseek: true } } = {}) {
-        mix = { ...this.mix, ...mix };
-        if (mix.deepseek) this.attach('deepseek-flash', new MixDeepSeek({ options, config }));
-        if (mix.fireworks) this.attach('accounts/fireworks/models/deepseek-v4p1-flash', new MixFireworks({ options, config }));
-        if (mix.openrouter) this.attach('deepseek/deepseek-v4.1-flash', new MixOpenRouter({ options, config }));
-        return this;
-    }
-
-    GLM52({ options = {}, config = {}, mix = { together: true } } = {}) {
-        mix = { ...this.mix, ...mix };
-        if (mix.together) this.attach('zai-org/GLM-5.2', new MixTogether({ options, config }));
-        if (mix.fireworks) this.attach('accounts/fireworks/models/glm-5p2', new MixFireworks({ options, config }));
-        if (mix.openrouter) this.attach('z-ai/glm-5.2', new MixOpenRouter({ options, config }));
-        return this;
-    }
-
-    GLM53({ options = {}, config = {} } = {}) {
-        return this.attach('z-ai/glm-5.3', new MixOpenRouter({ options, config }));
-    }
-
-    GLM53Flash({ options = {}, config = {} } = {}) {
-        return this.attach('z-ai/glm-5.3-flash', new MixOpenRouter({ options, config }));
     }
 
     addText(text, { role = "user", cache } = {}) {
@@ -1027,8 +666,7 @@ class ModelMix {
 
     async stream(callback, signal) {
         assertAbortSignal(signal);
-        this.streamCallback = callback;
-        return this.execute({ options: { stream: true }, outputMode: 'stream', signal });
+        return this._execute({ options: { stream: true }, outputMode: 'stream', signal, streamCallback: callback });
     }
 
     assignKeyFromFile(key, filePath) {
@@ -1125,13 +763,7 @@ class ModelMix {
     }
 
     static hasToolInteraction(message) {
-        if (!message) return false;
-        if (message.role === 'tool' || message.tool_calls || message.tool_call_id) return true;
-        // Anthropic-native assistant turns store tool_use blocks in content (no tool_calls).
-        if (message.role === 'assistant' && Array.isArray(message.content)) {
-            return message.content.some(block => block?.type === 'tool_use');
-        }
-        return false;
+        return hasToolInteraction(message);
     }
 
     groupByRoles(messages) {
@@ -1275,15 +907,8 @@ class ModelMix {
         return templateContext.renderedSystems.get(systemCacheKey) + systemSuffix;
     }
 
-    async _executePlugins({
-        config,
-        options,
-        signal,
-        systemSuffix,
-        outputMode,
-        templateContext,
-        executionMetadata
-    }) {
+    async _executePlugins(execution) {
+        const { config, options, signal, systemSuffix, outputMode, templateContext } = execution;
         const preparedMessages = await this.prepareMessages(templateContext, signal);
         this._requirePreparedMessages(preparedMessages);
 
@@ -1295,7 +920,7 @@ class ModelMix {
             config: clonePluginValue(this._mergeRequestConfig(config)),
             outputMode
         };
-        const metadata = executionMetadata || {
+        const metadata = execution.executionMetadata || {
             executionId: randomUUID(),
             parentExecutionId: null,
             depth: 0
@@ -1305,16 +930,10 @@ class ModelMix {
         const dispatch = async index => {
             if (index === this.plugins.length) {
                 providerInvoked = true;
-                return this.execute({
-                    config,
-                    options,
-                    signal,
-                    systemSuffix,
-                    outputMode,
-                    _templateContext: templateContext,
-                    _pluginRequest: request,
-                    _executionMetadata: metadata,
-                    _pluginsApplied: true
+                return this._executeProviderChain({
+                    ...execution,
+                    pluginRequest: request,
+                    executionMetadata: metadata
                 });
             }
 
@@ -1432,30 +1051,8 @@ class ModelMix {
         return { provider, currentOptions, currentConfig, resolvedModelKey };
     }
 
-    _logProviderAttempt({ attempt, originalIndex, provider, currentConfig, resolvedModelKey, preparedMessages }) {
-        if (currentConfig.debug < 1) return;
-
-        const isPrimary = attempt === 0;
-        const prefix = isPrimary ? '→' : '↻';
-        const suffix = isPrimary
-            ? (currentConfig.roundRobin ? ` (round-robin #${originalIndex + 1})` : '')
-            : ' (fallback)';
-        const providerName = provider.constructor.name.replace(/^Mix/, '').toLowerCase();
-        const effort = currentConfig.effort === undefined ? '' : `@${currentConfig.effort}`;
-        const header = `\n${prefix} [${providerName}:${resolvedModelKey}${effort}] #${originalIndex + 1}${suffix}`;
-
-        if (currentConfig.debug >= 2) {
-            console.log(`${header}\n${ModelMix.formatInputSummary(preparedMessages, currentConfig.system, currentConfig.debug)}`);
-        } else {
-            console.log(header);
-        }
-    }
-
-    async _invokeProviderWithRetry(provider, currentOptions, currentConfig, resolvedModelKey, signal) {
-        if (currentOptions.stream && this.streamCallback) {
-            provider.streamCallback = this.streamCallback;
-        }
-
+    async _invokeProviderWithRetry(provider, currentOptions, currentConfig, resolvedModelKey, signal, streamCallback) {
+        const onStream = currentOptions.stream && streamCallback ? streamCallback : undefined;
         const retryConfig = currentConfig.retry || {};
         const retries = retryConfig.enabled ? Math.max(0, retryConfig.retries || 0) : 0;
         const baseDelayMs = Math.max(0, retryConfig.baseDelayMs || 0);
@@ -1471,7 +1068,11 @@ class ModelMix {
             const startTime = Date.now();
             try {
                 throwIfAborted(signal);
-                const result = await provider.create({ options: currentOptions, config: currentConfig, signal });
+                const result = await runWithStreamCallback(onStream, () => provider.create({
+                    options: currentOptions,
+                    config: currentConfig,
+                    signal
+                }));
                 throwIfAborted(signal);
                 return { result, elapsedMs: Date.now() - startTime };
             } catch (error) {
@@ -1495,10 +1096,7 @@ class ModelMix {
         const normalizedTokens = ModelMix.normalizeTokenUsage(result.tokens);
         const costBreakdown = ModelMix.calculateCostBreakdown(resolvedModelKey, normalizedTokens);
         const cacheMetrics = ModelMix.calculateCacheMetrics(resolvedModelKey, normalizedTokens);
-        const response = Array.isArray(result.response)
-            ? result.response.findLast(chunk => chunk.usage)
-            : result.response;
-        const reportedCost = provider instanceof MixOpenRouter ? response?.usage?.cost : undefined;
+        const reportedCost = provider.getReportedCost?.(result.response);
         result.tokens = {
             ...result.tokens,
             ...normalizedTokens,
@@ -1510,8 +1108,8 @@ class ModelMix {
         result.tokens.speed = elapsedSec > 0 ? Math.round(result.tokens.output / elapsedSec) : 0;
     }
 
-    async _continueToolCalls(result, pluginRequest, execution, pluginTools) {
-        const originalMessages = this.messages;
+    /** Append the assistant tool call turn and tool results; returns the next plugin request. */
+    async _appendToolResults(result, pluginRequest, signal, pluginTools) {
         const toolMessages = pluginRequest
             ? clonePluginValue(pluginRequest.messages)
             : clonePluginValue(this.messages);
@@ -1538,7 +1136,7 @@ class ModelMix {
         if (!result.assistantMessage) {
             toolMessages.push({ role: 'assistant', content: null, tool_calls: result.toolCalls });
         }
-        const toolResults = await this.processToolCalls(result.toolCalls, execution.signal, pluginTools);
+        const toolResults = await this.processToolCalls(result.toolCalls, signal, pluginTools);
         for (const toolResult of toolResults) {
             toolMessages.push({
                 role: 'tool',
@@ -1548,49 +1146,7 @@ class ModelMix {
             });
         }
         this.messages = toolMessages;
-
-        try {
-            return await this.execute({
-                ...execution,
-                _pluginRequest: pluginRequest
-                    ? { ...pluginRequest, messages: toolMessages }
-                    : null
-            });
-        } catch (error) {
-            if (execution.signal?.aborted) this.messages = originalMessages;
-            throw error;
-        }
-    }
-
-    _logProviderSuccess(result, currentConfig) {
-        if (currentConfig.debug === 1) console.log('✓ Success');
-
-        if (currentConfig.debug >= 2) {
-            const tokenInfo = result.tokens
-                ? ` ${result.tokens.input} → ${result.tokens.output} tok`
-                    + (result.tokens.cached ? ` (cached:${result.tokens.cached})` : '')
-                    + (result.tokens.speed ? ` | ${result.tokens.speed} t/s` : '')
-                    + (result.tokens.cost != null ? ` $${result.tokens.cost.toFixed(4)}` : '')
-                : '';
-            console.log(`✓${tokenInfo}\n${ModelMix.formatOutputSummary(result, currentConfig.debug).trim()}`);
-        }
-
-        if (currentConfig.debug >= 4) {
-            if (result.response) {
-                console.log('\n[RAW RESPONSE]');
-                console.log(ModelMix.formatJSON(result.response));
-            }
-            if (result.message) {
-                console.log('\n[FULL MESSAGE]');
-                console.log(ModelMix.formatMessage(result.message));
-            }
-            if (result.think) {
-                console.log('\n[FULL THINKING]');
-                console.log(result.think);
-            }
-        }
-
-        if (currentConfig.debug >= 1) console.log('');
+        return pluginRequest ? { ...pluginRequest, messages: toolMessages } : null;
     }
 
     _recordProviderResult(result) {
@@ -1631,16 +1187,74 @@ class ModelMix {
         log.info(`-> Proceeding to next model: ${modelsToTry[attempt + 1].model.key}`);
     }
 
-    async _executeProviderChain({
+    _registerPluginTools(pluginRequest) {
+        if (!Array.isArray(pluginRequest.tools)) {
+            throw new TypeError('Plugin request tools must be an array.');
+        }
+        const pluginTools = new MCPToolsManager();
+        const names = new Set(Object.values(this.tools).flat().map(tool => tool.name));
+        for (const entry of pluginRequest.tools) {
+            if (!isPlainObject(entry) || !isPlainObject(entry.tool)) {
+                throw new TypeError('Plugin request tools must contain { tool, callback }.');
+            }
+            if (names.has(entry.tool.name)) {
+                throw new Error(`Duplicate tool name: ${entry.tool.name}`);
+            }
+            pluginTools.registerTool(entry.tool, entry.callback);
+            names.add(entry.tool.name);
+        }
+        return pluginTools;
+    }
+
+    /** Run the fallback chain, then execute requested tools and repeat until the model answers. */
+    async _executeProviderChain(execution) {
+        if (!this.models || this.models.length === 0) {
+            throw new Error('No models specified. Use methods like .gpt5mini(), .sonnet5() first.');
+        }
+
+        let { pluginRequest } = execution;
+        const pluginTools = pluginRequest ? this._registerPluginTools(pluginRequest) : null;
+        const finalConfig = pluginRequest ? pluginRequest.config : this._mergeRequestConfig(execution.config);
+        const maxToolRounds = finalConfig.max_tool_rounds ?? DEFAULT_MAX_TOOL_ROUNDS;
+        let originalMessages = null;
+
+        try {
+            for (let toolRound = 0; ; toolRound++) {
+                // One limiter slot per round (fallbacks and retries included). Tools run
+                // outside the slot, so tool callbacks and nested ModelMix calls never
+                // wait on a slot their caller holds.
+                const result = await this.limiter.schedule(() => {
+                    throwIfAborted(execution.signal);
+                    return this._executeProviderRound({ ...execution, pluginRequest });
+                });
+                if (!result.toolCalls || result.toolCalls.length === 0) {
+                    this._recordProviderResult(result);
+                    return result;
+                }
+                if (maxToolRounds >= 0 && toolRound >= maxToolRounds) {
+                    const error = new Error(`Tool call limit reached: the model requested tools after ${toolRound} round(s) (config.max_tool_rounds = ${maxToolRounds}).`);
+                    error.code = 'MAX_TOOL_ROUNDS';
+                    error.toolCalls = result.toolCalls;
+                    throw error;
+                }
+                originalMessages ??= this.messages;
+                pluginRequest = await this._appendToolResults(result, pluginRequest, execution.signal, pluginTools);
+            }
+        } catch (error) {
+            if (execution.signal?.aborted && originalMessages) this.messages = originalMessages;
+            throw error;
+        }
+    }
+
+    /** One request through the fallback chain; returns the first successful provider result. */
+    async _executeProviderRound({
         config,
         options,
         signal,
         systemSuffix,
-        outputMode,
         templateContext,
         pluginRequest,
-        executionMetadata,
-        pluginsApplied
+        streamCallback
     }) {
         const preparedMessages = pluginRequest
             ? pluginRequest.messages
@@ -1648,23 +1262,6 @@ class ModelMix {
         this._requirePreparedMessages(preparedMessages);
 
         const finalConfig = pluginRequest ? pluginRequest.config : this._mergeRequestConfig(config);
-        const pluginTools = pluginRequest ? new MCPToolsManager() : null;
-        if (pluginRequest) {
-            if (!Array.isArray(pluginRequest.tools)) {
-                throw new TypeError('Plugin request tools must be an array.');
-            }
-            const names = new Set(Object.values(this.tools).flat().map(tool => tool.name));
-            for (const entry of pluginRequest.tools) {
-                if (!isPlainObject(entry) || !isPlainObject(entry.tool)) {
-                    throw new TypeError('Plugin request tools must contain { tool, callback }.');
-                }
-                if (names.has(entry.tool.name)) {
-                    throw new Error(`Duplicate tool name: ${entry.tool.name}`);
-                }
-                pluginTools.registerTool(entry.tool, entry.callback);
-                names.add(entry.tool.name);
-            }
-        }
         const modelsToTry = this.models.map((model, index) => ({ model, index }));
         if (finalConfig.roundRobin && this.models.length > 1) {
             this.models.push(this.models.shift());
@@ -1683,7 +1280,7 @@ class ModelMix {
                 systemSuffix,
                 templateContext
             });
-            this._logProviderAttempt({
+            debugFormat.logProviderAttempt({
                 attempt,
                 originalIndex,
                 preparedMessages,
@@ -1696,25 +1293,14 @@ class ModelMix {
                     providerAttempt.currentOptions,
                     providerAttempt.currentConfig,
                     providerAttempt.resolvedModelKey,
-                    signal
+                    signal,
+                    streamCallback
                 );
                 this._enrichResultTokens(result, providerAttempt.resolvedModelKey, elapsedMs, providerAttempt.provider);
 
-                if (result.toolCalls && result.toolCalls.length > 0) {
-                    return this._continueToolCalls(result, pluginRequest, {
-                        options,
-                        config,
-                        signal,
-                        systemSuffix,
-                        outputMode,
-                        _templateContext: templateContext,
-                        _executionMetadata: executionMetadata,
-                        _pluginsApplied: pluginsApplied
-                    }, pluginTools);
+                if (!result.toolCalls || result.toolCalls.length === 0) {
+                    debugFormat.logProviderSuccess(result, providerAttempt.currentConfig);
                 }
-
-                this._logProviderSuccess(result, providerAttempt.currentConfig);
-                this._recordProviderResult(result);
                 return result;
             } catch (error) {
                 throwIfAborted(signal);
@@ -1732,11 +1318,24 @@ class ModelMix {
         options = {},
         signal,
         systemSuffix = '',
+        outputMode = 'raw'
+    } = {}) {
+        return this._execute({ config, options, signal, systemSuffix, outputMode });
+    }
+
+    /**
+     * Root of one execution. Per-request state (stream callback, template renders,
+     * plugin metadata) travels in the execution object instead of on the instance
+     * or on shared providers.
+     */
+    async _execute({
+        config = {},
+        options = {},
+        signal,
+        systemSuffix = '',
         outputMode = 'raw',
-        _templateContext = null,
-        _pluginRequest = null,
-        _executionMetadata = null,
-        _pluginsApplied = false
+        streamCallback = null,
+        executionMetadata = null
     } = {}) {
         assertAbortSignal(signal);
         assertNoStoredSignal(this.config, 'config');
@@ -1747,45 +1346,32 @@ class ModelMix {
             assertNoStoredSignal(model.provider?.config, 'provider.config');
             assertNoStoredSignal(model.provider?.options, 'provider.options');
         }
-        const isRootExecution = _templateContext === null;
-        const templateContext = _templateContext || createTemplateRenderContext(() => this._choiceRandom());
-        let execution;
-
-        if (!_pluginsApplied && this.plugins.length > 0) {
-            execution = this._executePlugins({
-                config,
-                options,
-                signal,
-                systemSuffix,
-                outputMode,
-                templateContext,
-                executionMetadata: _executionMetadata
-            });
-        } else {
-            if (!this.models || this.models.length === 0) {
-                throw new Error('No models specified. Use methods like .gpt5mini(), .sonnet5() first.');
-            }
-            execution = this.limiter.schedule(() => {
-                throwIfAborted(signal);
-                return this._executeProviderChain({
-                    config,
-                    options,
-                    signal,
-                    systemSuffix,
-                    outputMode,
-                    templateContext,
-                    pluginRequest: _pluginRequest,
-                    executionMetadata: _executionMetadata,
-                    pluginsApplied: _pluginsApplied
-                });
-            });
+        if (this.plugins.length === 0 && (!this.models || this.models.length === 0)) {
+            throw new Error('No models specified. Use methods like .gpt5mini(), .sonnet5() first.');
         }
 
-        const result = await raceWithSignal(execution, signal);
+        const templateContext = createTemplateRenderContext(() => this._choiceRandom());
+        const execution = {
+            config,
+            options,
+            signal,
+            systemSuffix,
+            outputMode,
+            streamCallback,
+            templateContext,
+            executionMetadata,
+            pluginRequest: null
+        };
+        const run = this.plugins.length > 0
+            ? this._executePlugins(execution)
+            : this._executeProviderChain(execution);
+
+        const result = await raceWithSignal(run, signal);
         throwIfAborted(signal);
-        if (isRootExecution) this._commitTemplateRenderContext(templateContext);
+        this._commitTemplateRenderContext(templateContext);
         return result;
     }
+
     async processToolCalls(toolCalls, signal, pluginTools) {
         assertAbortSignal(signal);
         const result = []
@@ -1954,34 +1540,49 @@ class ModelMix {
     }
 }
 
-({
-    MixCustom,
-    MixOpenAI,
-    MixModeration,
-    MixOpenAIResponses,
-    MixOpenAIModeration,
-    MixOpenAIWebSocket,
-    MixOpenRouter,
-    MixKimi,
-    MixAnthropic,
-    MixMiniMax,
-    MixMiMo,
-    MixDeepSeek,
-    MixPerplexity,
-    MixOllama,
-    MixGrok,
-    MixLambda,
-    MixLMStudio,
-    MixGroq,
-    MixTogether,
-    MixCerebras,
-    MixFireworks,
-    MixNVIDIA,
-    MixGoogle,
-    ModerationMix
-} = require('./lib/providers')({
-    ModelMix,
-    log
-}));
+for (const shortcut of listModelShortcuts()) {
+    ModelMix.prototype[shortcut] = function (args = {}) {
+        return this._attachModels(resolveModelShortcut(shortcut, args, this._mixOverrides));
+    };
+}
+
+class ModerationMix extends ModelMix {
+    static new(setup = {}) {
+        return new ModerationMix(setup);
+    }
+
+    new({ options = {}, config = {} } = {}) {
+        return new ModerationMix({
+            options: { ...this.options, ...options },
+            config: { ...this.config, ...config }
+        }, { limiter: this._sharedLimiter(config) });
+    }
+
+    _assertAttachable(provider) {
+        if (!(provider instanceof MixModeration)) {
+            throw new Error('ModerationMix only accepts moderation providers.');
+        }
+    }
+
+    openai({ options = {}, config = {} } = {}) {
+        return this.attach('omni-moderation-latest', new MixOpenAIModeration({ options, config }));
+    }
+
+    async message() {
+        throw new Error('ModerationMix does not generate messages. Use raw() and read result.moderation.');
+    }
+
+    async json() {
+        throw new Error('ModerationMix does not generate JSON. Use raw() and read result.moderation.');
+    }
+
+    async block() {
+        throw new Error('ModerationMix does not generate blocks. Use raw() and read result.moderation.');
+    }
+
+    async stream() {
+        throw new Error('ModerationMix does not support streaming. Use raw().');
+    }
+}
 
 module.exports = { MixCustom, ModelMix, ModerationMix, MixModeration, MixAnthropic, MixKimi, MixMiniMax, MixMiMo, MixDeepSeek, MixOpenAI, MixOpenAIResponses, MixOpenAIModeration, MixOpenAIWebSocket, MixOpenRouter, MixPerplexity, MixOllama, MixLambda, MixLMStudio, MixGroq, MixTogether, MixGrok, MixCerebras, MixGoogle, MixFireworks, MixNVIDIA, normalizeEffort, applyUnifiedEffort, resolveProviderFamily };

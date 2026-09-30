@@ -13,6 +13,10 @@ const mmix = new ModelMix({
 });
 
 class MixTogether extends MixCustom {
+    // attach() fails fast when this variable and config.apiKey are both missing.
+    static apiKeyEnv = 'TOGETHER_API_KEY';
+    static apiKeyName = 'Together';
+
     getDefaultConfig(customConfig) {
         return super.getDefaultConfig({
             url: 'https://api.together.xyz/v1/chat/completions',
@@ -38,10 +42,6 @@ class MixTogether extends MixCustom {
     }
 
     async create({ config = {}, options = {} } = {}) {
-        if (!this.config.apiKey) {
-            throw new Error('Together API key not found. Please provide it in config or set TOGETHER_API_KEY environment variable.');
-        }
-
         const content = config.system + config.systemExtra;
         options.messages = [{ role: 'system', content }, ...options.messages || []];
         options.messages = MixTogether.convertMessages(options.messages);

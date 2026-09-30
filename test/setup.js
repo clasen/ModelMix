@@ -35,6 +35,10 @@ process.env.NVIDIA_API_KEY = process.env.NVIDIA_API_KEY || 'nvapi-test-dummy-key
 process.env.GEMINI_API_KEY = process.env.GEMINI_API_KEY || 'AIzatest-dummy-key-for-testing-purposes';
 process.env.LAMBDA_API_KEY = process.env.LAMBDA_API_KEY || 'secret_test-dummy-key-for-testing-purposes';
 process.env.BRAVE_API_KEY = process.env.BRAVE_API_KEY || 'BSA0test-dummy-key-for-testing-purposes_fm';
+process.env.DEEPSEEK_API_KEY = process.env.DEEPSEEK_API_KEY || 'sk-deepseek-test-dummy-key-for-testing-purposes';
+process.env.MOONSHOT_API_KEY = process.env.MOONSHOT_API_KEY || 'sk-moonshot-test-dummy-key-for-testing-purposes';
+process.env.MINIMAX_API_KEY = process.env.MINIMAX_API_KEY || 'minimax-test-dummy-key-for-testing-purposes';
+process.env.MIMO_API_KEY = process.env.MIMO_API_KEY || 'mimo-test-dummy-key-for-testing-purposes';
 
 // Global test configuration
 global.TEST_CONFIG = {

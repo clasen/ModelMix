@@ -118,30 +118,6 @@ const GEMINI_25_BUDGET_MAX = {
     'gemini-2.5-flash-lite': 24576,
 };
 
-const PROVIDER_FAMILY_BY_CLASS = {
-    MixAnthropic: 'anthropic',
-    MixGoogle: 'google',
-    MixOpenAI: 'openai',
-    MixOpenAIResponses: 'openai',
-    MixOpenAIWebSocket: 'openai',
-    MixOpenRouter: 'openai',
-    MixKimi: 'openai',
-    MixMiniMax: 'openai',
-    MixMiMo: 'openai',
-    MixDeepSeek: 'openai',
-    MixGrok: 'openai',
-    MixGroq: 'openai',
-    MixTogether: 'openai',
-    MixCerebras: 'openai',
-    MixFireworks: 'openai',
-    MixNVIDIA: 'openai',
-    MixPerplexity: null,
-    MixOllama: null,
-    MixLMStudio: null,
-    MixLambda: null,
-    MixCustom: null,
-};
-
 /** Logical alias key `grok-4.20-0309` — resolved to reasoning / non-reasoning at request time. */
 const GROK420_ALIAS = 'grok-4.20-0309';
 const GROK420_REASONING = 'grok-4.20-0309-reasoning';
@@ -349,20 +325,11 @@ function gemini25BudgetMax(modelKey) {
 }
 
 /**
+ * Provider classes declare their effort mapping family with `static family`.
  * @returns {'openai'|'anthropic'|'google'|null}
  */
 function resolveProviderFamily(providerInstance) {
-    if (!providerInstance || !providerInstance.constructor) return null;
-    let proto = providerInstance;
-    while (proto) {
-        const name = proto.constructor?.name;
-        if (name && Object.prototype.hasOwnProperty.call(PROVIDER_FAMILY_BY_CLASS, name)) {
-            return PROVIDER_FAMILY_BY_CLASS[name];
-        }
-        proto = Object.getPrototypeOf(proto);
-        if (!proto || proto === Object.prototype) break;
-    }
-    return null;
+    return providerInstance?.constructor?.family ?? null;
 }
 
 function hasNativeEffort(family, options = {}, modelKey) {
