@@ -15,9 +15,9 @@ minimumReleaseAgeExclude:
 overrides:
   brace-expansion: 5.0.9
   diff: 8.0.4
-  fast-uri: 3.1.6
+  fast-uri: 3.1.7
   hono: 4.13.5
-  ip-address: 10.3.1
+  ip-address: 10.5.1
   js-yaml: 4.3.2
   qs: 6.16.0
   serialize-javascript: 7.0.5
