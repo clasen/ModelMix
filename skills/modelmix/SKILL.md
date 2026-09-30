@@ -85,12 +85,12 @@ Chain shorthand methods to attach providers. First model is primary; others are 
 ```javascript
 const model = ModelMix.new()
     .opus55()          // primary
-    .gpt61sol()        // fallback 1
+    .gpt6astra()       // fallback 1
     .gemini38flash()   // fallback 2
     .addText("Hello!")
 ```
 
-If `opus55` fails, it automatically tries `gpt61sol`, then `gemini38flash`.
+If `opus55` fails, it automatically tries `gpt6astra`, then `gemini38flash`.
 
 The equivalent `chain()` form accepts public shortcut names directly in the
 same order. Append `@effort` for a per-model override: a unified integer (`-1` or
@@ -103,7 +103,7 @@ provider default when no chain effort is configured:
 
 ```javascript
 const model = ModelMix.new()
-    .chain('opus55@high', 'gpt61sol@high', 'gemini38flash@-1')
+    .chain('opus55@high', 'gpt6astra@high', 'gemini38flash@-1')
     .addText('Hello!');
 ```
 
@@ -133,7 +133,7 @@ Use the included skills plugin to expose local `SKILL.md` instructions to a mode
 import { ModelMix } from 'modelmix';
 import { skills } from 'modelmix/plugins/skills/index.js';
 const model = ModelMix.new()
-    .gpt61sol()
+    .gpt6astra()
     .opus55()
     .use(await skills({ paths: ['./skills/writing'] }))
     .addText('Use the writing skill to revise this paragraph: ...');

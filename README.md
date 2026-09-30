@@ -88,9 +88,9 @@ const setup = {
 
 const model = await ModelMix.new(setup)
     .opus55() // (main model) Anthropic claude-opus-5-5
-    .gpt61sol() // (fallback 2) OpenAI gpt-6.1-sol
+    .gpt6astra() // (fallback 2) OpenAI gpt-6-astra
     .gemini38flash() // (fallback 3) Google gemini-3.8-flash
-    .grok46() // (fallback 4) Grok grok-4.6
+    .grok47() // (fallback 4) Grok grok-4.7
     .addText("What's your name?");
 
 console.log(await model.message());
@@ -123,7 +123,7 @@ has no configured effort:
 
 ```javascript
 const model = ModelMix.new(setup)
-    .chain('opus55@high', 'gpt61sol@high', 'gemini38flash@-1')
+    .chain('opus55@high', 'gpt6astra@high', 'gemini38flash@-1')
     .addText("What's your name?");
 
 console.log(await model.message());
@@ -131,8 +131,8 @@ console.log(await model.message());
 
 The suffix accepts an integer (`-1` or `0`–`100`) or an exact named level supported
 by the model's effort mapping, such as `none`, `minimal`, `low`, `medium`, `high`,
-`xhigh`, or `max`. For example, `gpt6luna@high` selects GPT-6 Luna's `high` level;
-`gpt6luna@50` still uses the numeric scale. `adaptive` and `disabled` are accepted
+`xhigh`, or `max`. For example, `gpt6astra@max` selects GPT-6 Astra's `max` level;
+`gpt6astra@50` still uses the numeric scale. `adaptive` and `disabled` are accepted
 where the mapping exposes those thinking modes. Unsupported names throw an error;
 models using only numeric thinking budgets require a numeric suffix. Names resolve
 separately for each enabled provider, and explicit native options still take precedence.
@@ -1020,7 +1020,7 @@ import { ModelMix } from 'modelmix';
 import { skills } from 'modelmix/plugins/skills/index.js';
 
 const model = ModelMix.new()
-    .gpt61sol()
+    .gpt6astra()
     .opus55()
     .use(await skills({ paths: ['./skills/writing', './skills/research/SKILL.md'] }))
     .addText('Use the writing skill to improve this paragraph: ...');
