@@ -43,6 +43,7 @@ const GLM53_BANDS = [
 /** Exact model → supported OpenAI reasoning_effort values */
 const OPENAI_MODEL_LEVELS = {
     'gpt-6-astra': ['low', 'medium', 'high', 'xhigh', 'max'],
+    'gpt-6.1-sol': ['low', 'medium', 'high', 'xhigh', 'max'],
     'gpt-6-sol': ['none', 'low', 'medium', 'high', 'xhigh', 'max'],
     'gpt-6-luna': ['none', 'low', 'medium', 'high', 'xhigh', 'max'],
     'gpt-5.6-sol': ['none', 'low', 'medium', 'high', 'xhigh', 'max'],

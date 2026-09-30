@@ -495,6 +495,9 @@ class ModelMix {
     gpt6astra(args = {}) {
         return this._attachOpenAIWithOpenRouter('gpt-6-astra', MixOpenAIResponses, args);
     }
+    gpt61sol(args = {}) {
+        return this._attachOpenAIWithOpenRouter('gpt-6.1-sol', MixOpenAIResponses, args);
+    }
     gpt6sol(args = {}) {
         return this._attachOpenAIWithOpenRouter('gpt-6-sol', MixOpenAIResponses, args);
     }

@@ -455,6 +455,7 @@ export declare class ModelMix {
   gpt55(args?: ModelAttachArgs): this;
   gpt55pro(args?: ModelAttachArgs): this;
   gpt6astra(args?: ModelAttachArgs): this;
+  gpt61sol(args?: ModelAttachArgs): this;
   gpt6sol(args?: ModelAttachArgs): this;
   gpt6luna(args?: ModelAttachArgs): this;
   gpt56sol(args?: ModelAttachArgs): this;

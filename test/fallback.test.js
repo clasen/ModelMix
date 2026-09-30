@@ -136,6 +136,7 @@ describe('Provider Fallback Chain Tests', () => {
             expect(ModelMix.new().mix.openrouter).to.equal(false);
             const shortcuts = [
                 ['gpt6astra', 'gpt-6-astra', 'openai/gpt-6-astra', MixOpenAIResponses],
+                ['gpt61sol', 'gpt-6.1-sol', 'openai/gpt-6.1-sol', MixOpenAIResponses],
                 ['gpt6sol', 'gpt-6-sol', 'openai/gpt-6-sol', MixOpenAIResponses],
                 ['gpt6luna', 'gpt-6-luna', 'openai/gpt-6-luna', MixOpenAIResponses],
                 ['gpt5mini', 'gpt-5-mini', 'openai/gpt-5-mini', MixOpenAI],
@@ -251,8 +252,9 @@ describe('Provider Fallback Chain Tests', () => {
             expect(openRouterRequest).to.not.have.property('temperature');
         });
 
-        it('should fallback from the official GPT-6 Sol and Luna endpoints to OpenRouter', async () => {
+        it('should fallback from the official GPT-6.1 Sol, GPT-6 Sol, and Luna endpoints to OpenRouter', async () => {
             const cases = [
+                ['gpt61sol', 'gpt-6.1-sol', 'Hello from GPT-6.1 Sol through OpenRouter!'],
                 ['gpt6sol', 'gpt-6-sol', 'Hello from GPT-6 Sol through OpenRouter!'],
                 ['gpt6luna', 'gpt-6-luna', 'Hello from GPT-6 Luna through OpenRouter!']
             ];

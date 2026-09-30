@@ -11,13 +11,14 @@ const { benchmark } = benchmarkPlugin;
 const task = await readFile(process.argv[2] || new URL('./prompts/story.txt', import.meta.url), 'utf8');
 
 const models = [
+    'gpt61sol@40',
     'gpt6sol@40',
     'gpt6luna@40',
     'gpt56sol@40',
     'gpt56luna@40'
 ];
 
-console.log(`Running benchmark: ${models.length} models, 17 sequential model calls.`);
+console.log(`Running benchmark: ${models.length} models, 26 sequential model calls.`);
 
 const report = await ModelMix.new({
     config: { debug: 1 },

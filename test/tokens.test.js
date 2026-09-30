@@ -262,7 +262,7 @@ describe('Token Usage Tracking', () => {
         expect(messages[0].content[0]).to.deep.include({ cache: { breakpoint: true } });
         expect(messages[0].content[0]).to.not.have.property('prompt_cache_breakpoint');
 
-        for (const key of ['gpt-5.6-luna', 'gpt-6-astra', 'gpt-6-sol', 'gpt-6-luna']) {
+        for (const key of ['gpt-5.6-luna', 'gpt-6-astra', 'gpt-6.1-sol', 'gpt-6-sol', 'gpt-6-luna']) {
             const request = MixOpenAIResponses.buildResponsesRequest({
                 model: key,
                 messages,
@@ -360,6 +360,12 @@ describe('Token Usage Tracking', () => {
         })).to.throw('prompt_cache_options.ttl');
 
         expect(() => MixOpenAIResponses.buildResponsesRequest({
+            model: 'gpt-6.1-sol',
+            messages: [{ role: 'user', content: 'Hi' }],
+            prompt_cache_retention: '24h'
+        })).to.throw('prompt_cache_options.ttl');
+
+        expect(() => MixOpenAIResponses.buildResponsesRequest({
             model: 'gpt-5.4',
             messages: [{ role: 'user', content: 'Hi' }],
             prompt_cache_options: { mode: 'explicit', ttl: '30m' }
@@ -426,6 +432,25 @@ describe('Token Usage Tracking', () => {
             const tokens = { input: 272_000, cached: 100_000, cacheWrite: 20_000, output: 1_000 };
             expect(ModelMix.calculateCost(key, tokens)).to.be.closeTo(1.92, 1e-10);
             expect(ModelMix.calculateCost(key, { ...tokens, input: 272_001 })).to.be.closeTo(3.81502, 1e-10);
+        }
+    });
+
+    it('should register the GPT-6.1 Sol shortcut with OpenAI Responses provider', function () {
+        const model = ModelMix.new({ mix: { openrouter: true } }).gpt61sol();
+
+        expect(model.models.map(({ key }) => key)).to.deep.equal([
+            'gpt-6.1-sol',
+            'openai/gpt-6.1-sol'
+        ]);
+        expect(model.models[0].provider).to.be.instanceOf(MixOpenAIResponses);
+        expect(model.models[1].provider).to.be.instanceOf(MixOpenRouter);
+    });
+
+    it('should account for GPT-6.1 Sol cache usage and the long-context boundary', function () {
+        const tokens = { input: 272_000, cached: 100_000, cacheWrite: 20_000, output: 1_000 };
+        for (const key of ['gpt-6.1-sol', 'openai/gpt-6.1-sol']) {
+            expect(ModelMix.calculateCost(key, tokens)).to.be.closeTo(0.374, 1e-10);
+            expect(ModelMix.calculateCost(key, { ...tokens, input: 272_001 })).to.be.closeTo(0.743004, 1e-10);
         }
     });
 
