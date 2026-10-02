@@ -362,4 +362,5 @@ All providers inherit from `MixCustom` base class which provides common function
   - Uses OpenAI-compatible API interface
   - Requires `MINIMAX_API_KEY` environment variable
   - Inherits all OpenAI functionality including tool calling
-  - Available models: `MiniMax-M2.5`, `MiniMax-M2.7`, `MiniMax-M3`
+  - Available models: `MiniMax-M2.5`, `MiniMax-M2.7`, `MiniMax-M3`, `MiniMax-M3.1-Flash-Preview`
+  - `MiniMax-M3.1-Flash-Preview` (`minimaxM31Flash()`) requires a Token Plan subscription key and uses `reasoning_effort` (`low` to `max`) instead of `thinking.type`

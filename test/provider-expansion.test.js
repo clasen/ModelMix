@@ -93,6 +93,36 @@ describe('Provider expansion regressions', () => {
         expect(model.models[0].provider).to.be.instanceOf(MixFireworks);
     });
 
+    it('should send MiniMax M3.1 Flash Preview requests to the native MiniMax API', async () => {
+        const originalMiniMaxApiKey = process.env.MINIMAX_API_KEY;
+        process.env.MINIMAX_API_KEY = 'test-minimax-key';
+
+        const api = nock('https://api.minimax.io')
+            .post('/v1/chat/completions', body => {
+                expect(body.model).to.equal('MiniMax-M3.1-Flash-Preview');
+                expect(body.reasoning_effort).to.equal('high');
+                expect(body).not.to.have.property('thinking');
+                return true;
+            })
+            .reply(200, {
+                choices: [{ message: { role: 'assistant', content: 'ok' } }]
+            });
+
+        try {
+            const model = ModelMix.new({ config: { effort: 50 } }).minimaxM31Flash();
+            expect(model.models).to.have.length(1);
+            expect(model.models[0].provider).to.be.instanceOf(MixMiniMax);
+
+            const result = await model.addText('ping').message();
+            expect(result).to.equal('ok');
+            expect(api.isDone()).to.equal(true);
+        } finally {
+            nock.cleanAll();
+            if (originalMiniMaxApiKey === undefined) delete process.env.MINIMAX_API_KEY;
+            else process.env.MINIMAX_API_KEY = originalMiniMaxApiKey;
+        }
+    });
+
     it('should send MiMo 2.6 Pro requests to the native MiMo API', async () => {
         const api = nock('https://api.xiaomimimo.com')
             .post('/v1/chat/completions', body => {

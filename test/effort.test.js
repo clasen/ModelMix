@@ -355,6 +355,15 @@ describe('Unified effort scale', () => {
             });
         });
 
+        it('maps MiniMax M3.1 Flash Preview to reasoning_effort without thinking', () => {
+            const key = 'MiniMax-M3.1-Flash-Preview';
+            for (const [effort, level] of [[0, 'low'], [30, 'medium'], [50, 'high'], [70, 'xhigh'], [100, 'max']]) {
+                expect(mapEffort('openai', effort, key), String(effort)).to.deep.equal({ reasoning_effort: level });
+            }
+            // Reasoning is always on and there is no adaptive control → no-op
+            expect(mapEffort('openai', -1, key)).to.equal(null);
+        });
+
         it('returns null for unsupported families', () => {
             expect(mapEffort(null, 50)).to.equal(null);
         });
@@ -371,6 +380,12 @@ describe('Unified effort scale', () => {
             const options = {};
             applyUnifiedEffort(options, { effort: -1 }, 'openai', 'MiniMax-M3');
             expect(options.thinking).to.deep.equal({ type: 'adaptive' });
+        });
+
+        it('keeps native thinking from overriding MiniMax M3.1 Flash Preview effort', () => {
+            const options = { thinking: { type: 'adaptive' } };
+            applyUnifiedEffort(options, { effort: 100 }, 'openai', 'MiniMax-M3.1-Flash-Preview');
+            expect(options.reasoning_effort).to.equal('max');
         });
 
         it('applies DeepSeek mapping on Fireworks model key', () => {

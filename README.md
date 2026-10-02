@@ -220,6 +220,7 @@ ModelMix provides convenient shorthand methods for quickly accessing different A
 | `GLM53()` | OpenRouter | z-ai/glm-5.3 | [\$1.40][16] | [\$4.40][16] |
 | `GLM53Flash()` | OpenRouter | z-ai/glm-5.3-flash | [\$0.075][20] | [\$0.25][20] |
 | `GLM52()` | Together | zai-org/GLM-5.2 | [\$1.40][7] | [\$4.40][7] |
+| `minimaxM31Flash()` | MiniMax | MiniMax-M3.1-Flash-Preview | — | — |
 | `minimaxM3()` | MiniMax | MiniMax-M3 | [\$0.30][9] | [\$1.20][9] |
 | `minimaxM27()` | MiniMax | MiniMax-M2.7 | [\$0.30][9] | [\$1.20][9] |
 | `mimo26pro()` | MiMo | mimo-v2.6-pro | — | — |
@@ -242,7 +243,9 @@ Gemini 3.8 Flash, 3.7 Flash, and 3.6 Flash use Google's introductory standard pr
 
 Every textual GPT-5 and GPT-6 shortcut in the table uses the official OpenAI API by default. Pass `mix: { openrouter: true }` to `ModelMix.new()` or to an individual shortcut to append the matching [`openai/*` OpenRouter route][23] as its fallback. Realtime shortcuts remain official-only because they use OpenAI's WebSocket transport.
 
-OpenRouter fallbacks are disabled globally by default and are appended only with `mix.openrouter: true`. Shortcuts whose primary provider is OpenRouter, such as `qwen36plus()`, are unaffected. The multi-provider shortcuts also expose the current catalog alternatives: `qwen37plus()` supports Together; `kimiK27Code()` supports Fireworks and OpenRouter; `kimiK3()` supports Fireworks, OpenRouter, and Together; `GLM52()` supports Fireworks and OpenRouter; and both MiniMax shortcuts support Fireworks. `minimaxM27()` keeps every explicitly enabled provider in its fallback chain.
+OpenRouter fallbacks are disabled globally by default and are appended only with `mix.openrouter: true`. Shortcuts whose primary provider is OpenRouter, such as `qwen36plus()`, are unaffected. The multi-provider shortcuts also expose the current catalog alternatives: `qwen37plus()` supports Together; `kimiK27Code()` supports Fireworks and OpenRouter; `kimiK3()` supports Fireworks, OpenRouter, and Together; `GLM52()` supports Fireworks and OpenRouter; and `minimaxM27()` and `minimaxM3()` support Fireworks. `minimaxM27()` keeps every explicitly enabled provider in its fallback chain.
+
+`minimaxM31Flash()` uses MiniMax's native API with `MiniMax-M3.1-Flash-Preview`, a preview coding model with a 1M-token context window. MiniMax currently serves it only through Token Plan subscriptions, so `MINIMAX_API_KEY` must hold a Token Plan subscription key (`sk-cp-…`); pay-as-you-go keys are rejected and no per-token price is published. No third-party routes are attached yet.
 
 [1]: https://platform.openai.com/docs/pricing "Pricing | OpenAI"
 [2]: https://docs.anthropic.com/en/docs/about-claude/pricing "Pricing - Anthropic"
@@ -320,6 +323,7 @@ ModelMix.new().effort(-1).minimaxM3().addText('...').message();
 | Gemini 3+ | `minimal` | `low` | `medium` | `high` | — | dynamic |
 | DeepSeek V4 | off | `low`↑ | `high`↑ | `high`↑ | `max`↑ | — |
 | MiniMax M3 | off | adaptive | adaptive | adaptive | adaptive | adaptive |
+| MiniMax M3.1 Flash | `low` | `medium` | `high` | `xhigh` | `max` | — |
 
 ### Provider-specific behavior
 
@@ -331,7 +335,7 @@ ModelMix.new().effort(-1).minimaxM3().addText('...').message();
 - **Qwen 3.8 27B and Flash:** 0–39 / 40–79 / 80–100 map to `low` / `medium` / `xhigh`; `-1` leaves the native `xhigh` default unchanged. Qwen 3.8 Flash is the managed production version based on the open-weight Flash-Next architecture.
 - **GLM 5.3 and GLM 5.3 Flash:** reasoning is mandatory; 0–39 / 40–79 / 80–100 map to `low` / `high` / `max`; `-1` leaves the native `max` default unchanged.
 - **DeepSeek:** `↑` means thinking is enabled; `off` means it is disabled.
-- **MiniMax:** `off` maps to `thinking.disabled`; `adaptive` maps to `thinking.type=adaptive`.
+- **MiniMax:** `off` maps to `thinking.disabled`; `adaptive` maps to `thinking.type=adaptive`. MiniMax M3.1 Flash Preview always reasons and uses `reasoning_effort` instead; `-1` leaves its native default unchanged.
 - **Anthropic:** Claude 5, Fable, Opus 4.6+, and Sonnet 4.6+ use adaptive thinking with `output_config.effort`. Sonnet 4.5 and Haiku 4.5 use `thinking.type=enabled` with `budget_tokens`.
 - **Grok 4.6:** 0–39 / 40–59 / 60–79 / 80–100 map to `low` / `medium` / `high` / `xhigh`. Without effort, Grok uses its native `high` default.
 

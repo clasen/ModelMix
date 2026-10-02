@@ -5,7 +5,7 @@ const main = async () => {
 
     const bot = ModelMix
         .new({ config: { debug: 3 } })
-        .minimaxM27()
+        .minimaxM27() // or .minimaxM31Flash() with a MiniMax Token Plan key
         .setSystem('You are a helpful assistant.');
 
     bot.addText('What is the capital of France?');

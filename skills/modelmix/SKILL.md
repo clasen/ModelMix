@@ -168,8 +168,9 @@ ModelMix.new({ config: { effort: 80 } })
 | Gemini 3+\* | `minimal` | `low` | `medium` | `high` | — | dynamic |
 | DeepSeek V4 | off | `low`↑ | `high`↑ | `high`↑ | `max`↑ | — |
 | MiniMax M3 | off | adaptive | adaptive | adaptive | adaptive | adaptive |
+| MiniMax M3.1 Flash | `low` | `medium` | `high` | `xhigh` | `max` | — |
 
-\* GPT-6 Astra and GPT-6.1 Sol map 0–39 / 40–59 / 60–79 / 80–99 / 100 to `low` / `medium` / `high` / `xhigh` / `max`; neither supports `none`. GPT-6 Sol, GPT-6 Luna, and GPT-5.6 map `100` to `max` and keep `xhigh` for 80–99, with OpenAI's `none` band at 0–19. Qwen 3.8 27B and Flash map 0–39 / 40–79 / 80–100 to `low` / `medium` / `xhigh`; Qwen 3.8 Flash is the managed production version based on Flash-Next. GLM 5.3 and GLM 5.3 Flash require reasoning and map those bands to `low` / `high` / `max`. Gemini bands: 0–24 / 25–49 / 50–74 / 75–100. Gemini 3.8 Flash and 3.7 Flash support only `low` / `medium` / `high`, so the first two bands clamp to `low`; `-1` keeps their native `medium` default. DeepSeek `↑` = thinking on; `off` = thinking disabled. MiniMax `off`/`adaptive` = `thinking.disabled` / `thinking.type=adaptive`. Gemini 2.5 maps 0–100 to `thinkingBudget`. Anthropic: adaptive + `output_config.effort` on Claude 5 / Fable / Opus 4.6+ / Sonnet 4.6+; Sonnet 4.5 / Haiku 4.5 use `thinking.type=enabled` + `budget_tokens`. Grok 4.6 maps 0–39 / 40–59 / 60–79 / 80–100 to `low` / `medium` / `high` / `xhigh`; without effort it uses native `high`. `-1` = adaptive/dynamic when available, else no-op. Levels clamp per model. Former `*think()` methods are removed — use `.effort(n).<model>()`. Kimi: `kimiK26()`.
+\* GPT-6 Astra and GPT-6.1 Sol map 0–39 / 40–59 / 60–79 / 80–99 / 100 to `low` / `medium` / `high` / `xhigh` / `max`; neither supports `none`. GPT-6 Sol, GPT-6 Luna, and GPT-5.6 map `100` to `max` and keep `xhigh` for 80–99, with OpenAI's `none` band at 0–19. Qwen 3.8 27B and Flash map 0–39 / 40–79 / 80–100 to `low` / `medium` / `xhigh`; Qwen 3.8 Flash is the managed production version based on Flash-Next. GLM 5.3 and GLM 5.3 Flash require reasoning and map those bands to `low` / `high` / `max`. Gemini bands: 0–24 / 25–49 / 50–74 / 75–100. Gemini 3.8 Flash and 3.7 Flash support only `low` / `medium` / `high`, so the first two bands clamp to `low`; `-1` keeps their native `medium` default. DeepSeek `↑` = thinking on; `off` = thinking disabled. MiniMax `off`/`adaptive` = `thinking.disabled` / `thinking.type=adaptive`; MiniMax M3.1 Flash Preview always reasons and maps to `reasoning_effort`. Gemini 2.5 maps 0–100 to `thinkingBudget`. Anthropic: adaptive + `output_config.effort` on Claude 5 / Fable / Opus 4.6+ / Sonnet 4.6+; Sonnet 4.5 / Haiku 4.5 use `thinking.type=enabled` + `budget_tokens`. Grok 4.6 maps 0–39 / 40–59 / 60–79 / 80–100 to `low` / `medium` / `high` / `xhigh`; without effort it uses native `high`. `-1` = adaptive/dynamic when available, else no-op. Levels clamp per model. Former `*think()` methods are removed — use `.effort(n).<model>()`. Kimi: `kimiK26()`.
 
 ## Available Model Shorthands
 
@@ -209,7 +210,7 @@ Use `.effort(n)` (or `config.effort`) to enable Anthropic thinking — e.g. `.ef
 `kimiK3()` — requires `MOONSHOT_API_KEY`; Fireworks, OpenRouter, and Together are available through `mix`.
 
 ### MiniMax
-`minimaxM27()` `minimaxM3()`
+`minimaxM27()` `minimaxM3()` `minimaxM31Flash()` — `minimaxM31Flash()` uses `MiniMax-M3.1-Flash-Preview`, which MiniMax currently serves only with a Token Plan subscription key (`sk-cp-…`) in `MINIMAX_API_KEY`.
 
 ### MiMo
 `mimo26pro()` — uses OpenRouter (`xiaomi/mimo-v2.6-pro`) by default; the native API requires `MIMO_API_KEY` and `mix: { mimo: true }`.

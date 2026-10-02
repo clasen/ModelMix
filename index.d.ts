@@ -521,6 +521,8 @@ export declare class ModelMix {
   lmstudio(model?: string, args?: ModelAttachArgs): this;
   minimaxM27(args?: ModelAttachArgs): this;
   minimaxM3(args?: ModelAttachArgs): this;
+  /** MiniMax M3.1 Flash Preview; requires a MiniMax Token Plan key in MINIMAX_API_KEY. */
+  minimaxM31Flash(args?: ModelAttachArgs): this;
   mimo25(args?: ModelAttachArgs): this;
   mimo25pro(args?: ModelAttachArgs): this;
   mimo26pro(args?: ModelAttachArgs): this;

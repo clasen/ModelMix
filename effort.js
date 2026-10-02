@@ -74,6 +74,7 @@ const OPENAI_MODEL_LEVELS = {
     'moonshotai/kimi-k3': ['low', 'high', 'max'],
     'accounts/fireworks/models/kimi-k3': ['low', 'high', 'max'],
     'moonshotai/Kimi-K3': ['low', 'high', 'max'],
+    'MiniMax-M3.1-Flash-Preview': ['low', 'medium', 'high', 'xhigh', 'max'],
     'zai-org/GLM-5.2': ['high', 'xhigh'],
     'accounts/fireworks/models/glm-5p2': ['high', 'xhigh'],
     'z-ai/glm-5.2': ['high', 'xhigh'],
@@ -220,6 +221,11 @@ function isMiniMax(modelKey) {
     return typeof modelKey === 'string' && modelKey.toLowerCase().includes('minimax');
 }
 
+/** MiniMax models controlled by thinking.type; M3.1 Flash Preview uses reasoning_effort instead. */
+function usesMiniMaxThinking(modelKey) {
+    return isMiniMax(modelKey) && !OPENAI_MODEL_LEVELS[modelKey];
+}
+
 /** Max budget_tokens when mapping unified effort onto manual Anthropic thinking. */
 const ANTHROPIC_MANUAL_BUDGET_MAX = 16384;
 
@@ -310,7 +316,7 @@ function mapAdaptiveEffort(providerFamily, modelKey) {
         // Gemini dynamic thinking: thinkingBudget -1 (2.5 official; accepted on 3.x as dynamic)
         return { thinkingConfig: { thinkingBudget: -1 } };
     }
-    if (providerFamily === 'openai' && isMiniMax(modelKey)) {
+    if (providerFamily === 'openai' && usesMiniMaxThinking(modelKey)) {
         return { thinking: { type: 'adaptive' } };
     }
     // OpenAI / DeepSeek: no adaptive enum — cannot set adaptive
@@ -336,7 +342,7 @@ function hasNativeEffort(family, options = {}, modelKey) {
     if (family === 'openai') {
         if (options.reasoning_effort != null && options.reasoning_effort !== '') return true;
         // DeepSeek / MiniMax use thinking.type as the on/off (or adaptive) control
-        if ((isDeepSeekV4(modelKey) || isMiniMax(modelKey)) && options.thinking != null) return true;
+        if ((isDeepSeekV4(modelKey) || usesMiniMaxThinking(modelKey)) && options.thinking != null) return true;
         return false;
     }
     if (family === 'anthropic') {
@@ -371,7 +377,7 @@ function mapEffort(providerFamily, effort, modelKey) {
         if (isDeepSeekV4(modelKey)) {
             return mapDeepSeekEffort(normalized);
         }
-        if (isMiniMax(modelKey)) {
+        if (usesMiniMaxThinking(modelKey)) {
             return mapMiniMaxEffort(normalized);
         }
         // Non-reasoning Grok 4.20 has no reasoning_effort control
@@ -381,7 +387,7 @@ function mapEffort(providerFamily, effort, modelKey) {
         const supported = supportedOpenAILevels(modelKey);
         const desired = modelKey === 'z-ai/glm-5.3' || modelKey === 'z-ai/glm-5.3-flash'
             ? levelFromBands(normalized, GLM53_BANDS)
-            : modelKey === 'anthropic/claude-fable-5.1'
+            : modelKey === 'anthropic/claude-fable-5.1' || modelKey === 'MiniMax-M3.1-Flash-Preview'
                 ? levelFromBands(normalized, ANTHROPIC_BANDS)
                 : normalized === 100 && supported.includes('max')
                     ? 'max'
