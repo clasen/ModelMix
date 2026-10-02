@@ -66,7 +66,7 @@ describe('DeepSeek Model Registration Tests', () => {
         }
     });
 
-    it('registers DeepSeek V4.1 Flash through OpenRouter and preserves caller settings', () => {
+    it('registers DeepSeek V4.1 Flash through the native API by default and preserves caller settings', () => {
         const model = ModelMix.new();
         expect(model.deepseekV41Flash({
             options: { temperature: 0.5 },
@@ -74,8 +74,8 @@ describe('DeepSeek Model Registration Tests', () => {
         })).to.equal(model);
 
         expect(model.models).to.have.length(1);
-        expect(model.models[0].key).to.equal('deepseek/deepseek-v4.1-flash');
-        expect(model.models[0].provider).to.be.instanceOf(MixOpenRouter);
+        expect(model.models[0].key).to.equal('deepseek-flash');
+        expect(model.models[0].provider).to.be.instanceOf(MixDeepSeek);
         expect(model.models[0].provider.options.temperature).to.equal(0.5);
         expect(model.models[0].provider.config.effort).to.equal(100);
     });
@@ -247,9 +247,9 @@ describe('DeepSeek Model Registration Tests', () => {
 
         for (const [effort, level] of [[0, null], [20, 'low'], [60, 'high'], [100, 'max'], [-1, undefined]]) {
             it(`sends chain effort ${effort} and accounts for cached input`, async () => {
-                const scope = nock('https://openrouter.ai')
-                    .post('/api/v1/chat/completions', body => {
-                        expect(body.model).to.equal('deepseek/deepseek-v4.1-flash');
+                const scope = nock('https://api.deepseek.com')
+                    .post('/chat/completions', body => {
+                        expect(body.model).to.equal('deepseek-flash');
                         expect(body.reasoning_effort).to.equal(level || undefined);
                         expect(body.thinking).to.deep.equal(level === undefined
                             ? undefined
@@ -258,18 +258,14 @@ describe('DeepSeek Model Registration Tests', () => {
                     })
                     .reply(200, {
                         choices: [{ message: { role: 'assistant', content: 'ok' }, finish_reason: 'stop' }],
-                        usage: {
-                            prompt_tokens: 1000,
-                            completion_tokens: 100,
-                            prompt_tokens_details: { cached_tokens: 400 }
-                        }
+                        usage: { prompt_tokens: 1000, completion_tokens: 100, prompt_cache_hit_tokens: 400 }
                     });
 
                 const model = ModelMix.new().chain(`deepseekV41Flash@${effort}`).addText('Hello');
                 expect(await model.message()).to.equal('ok');
                 expect(scope.isDone()).to.equal(true);
                 expect(model.lastRaw.tokens).to.include({ input: 1000, cached: 400, output: 100 });
-                expect(model.lastRaw.tokens.cost).to.be.closeTo(0.000156, 1e-12);
+                expect(model.lastRaw.tokens.cost).to.be.closeTo(0.0003024, 1e-12);
             });
         }
     });
