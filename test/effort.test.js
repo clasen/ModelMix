@@ -252,6 +252,14 @@ describe('Unified effort scale', () => {
             });
         });
 
+        it('maps Claude Haiku 5.5 to adaptive thinking + output_config.effort', () => {
+            expect(mapEffort('anthropic', 50, 'claude-haiku-5-5')).to.deep.equal({
+                thinking: { type: 'adaptive', display: 'summarized' },
+                output_config: { effort: 'high' }
+            });
+            expect(resolveNamedEffort('anthropic', 'xhigh', 'claude-haiku-5-5')).to.be.a('number');
+        });
+
         it('maps Anthropic adaptive to thinking.type=adaptive', () => {
             expect(mapEffort('anthropic', -1)).to.deep.equal({ thinking: { type: 'adaptive' } });
         });

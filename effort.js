@@ -231,7 +231,7 @@ const ANTHROPIC_MANUAL_BUDGET_MAX = 16384;
 
 /**
  * Models that use adaptive thinking + output_config.effort (Claude 5 / Fable /
- * Opus 4.6+ / Sonnet 4.6+). Older ones (Sonnet 4.5, Haiku 4.5, Opus 4.5) use
+ * Opus 4.6+ / Sonnet 4.6+ / Haiku 5+). Older ones (Sonnet 4.5, Haiku 4.5, Opus 4.5) use
  * thinking.type=enabled + budget_tokens.
  */
 function usesAnthropicAdaptiveThinking(modelKey) {
@@ -255,6 +255,8 @@ function usesAnthropicAdaptiveThinking(modelKey) {
     }
 
     // Haiku 4.5 and earlier: manual extended thinking only
+    const haiku = id.match(/claude-haiku-(\d+)/);
+    if (haiku) return Number(haiku[1]) >= 5;
     if (id.includes('haiku')) return false;
 
     return true;

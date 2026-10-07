@@ -481,6 +481,7 @@ export declare class ModelMix {
   sonnet50(args?: ModelAttachArgs): this;
   sonnet5(args?: ModelAttachArgs): this;
   sonnet45(args?: ModelAttachArgs): this;
+  haiku55(args?: ModelAttachArgs): this;
   haiku45(args?: ModelAttachArgs): this;
 
   // Google

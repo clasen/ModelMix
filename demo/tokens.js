@@ -26,6 +26,7 @@ console.log('-'.repeat(60));
 const providers = [
     { name: 'OpenAI GPT-6 Luna', fn: (m) => m.gpt6luna() },
     { name: 'Anthropic Sonnet 5.5', fn: (m) => m.sonnet55() },
+    { name: 'Anthropic Haiku 5.5', fn: (m) => m.haiku55() },
     { name: 'Google Gemini', fn: (m) => m.gemini37flash() }
 ];
 

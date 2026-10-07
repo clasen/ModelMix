@@ -192,6 +192,7 @@ ModelMix provides convenient shorthand methods for quickly accessing different A
 | `opus46()` | Anthropic | claude-opus-4-6 | [\$5.00][2] | [\$25.00][2] |
 | `sonnet55()` | Anthropic | claude-sonnet-5-5 | [\$2.00][2] | [\$10.00][2] |
 | `sonnet5()` | Anthropic | claude-sonnet-5 | [\$3.00][2] | [\$15.00][2] |
+| `haiku55()` | Anthropic | claude-haiku-5-5 | [\$0.10][2] | [\$0.50][2] |
 | `haiku45()` | Anthropic | claude-haiku-4-5-20251001 | [\$1.00][2] | [\$5.00][2] |
 | `gemini38flash()` | Google | gemini-3.8-flash | [\$0.75][3] | [\$3.75][3] |
 | `gemini37flash()` | Google | gemini-3.7-flash | [\$0.75][3] | [\$3.75][3] |
@@ -238,6 +239,8 @@ Gemini 3.8 Flash, 3.7 Flash, and 3.6 Flash use Google's introductory standard pr
 `museGlimmer30b()` uses Fireworks by default. OpenRouter, NVIDIA NIM, and Together are available through `mix.openrouter`, `mix.nvidia`, and `mix.together`.
 
 `sonnet55()` uses Anthropic's `claude-sonnet-5-5` and supports unified effort, including `.chain('sonnet55@high')`. Existing `sonnet5()` / `sonnet50()` still select Sonnet 5. Sonnet 5.5 uses adaptive thinking by default; to disable up-front thinking, pass `options: { thinking: { type: 'between_tools' }, output_config: { effort: 'high' } }` (only `low`, `medium`, and `high` are supported in this mode). Forced tool choices (`any` / `tool`) are not supported. See the [Sonnet 5.5 documentation](https://platform.claude.com/docs/en/models/sonnet-5-5/overview).
+
+`haiku55()` uses Anthropic's `claude-haiku-5-5` (1M context, 128K output) and supports unified effort, including `.chain('haiku55@high')`. `haiku45()` still selects Haiku 4.5. Haiku 5.5 uses adaptive thinking by default with a native `medium` effort, rejects `budget_tokens`, sampling parameters (`temperature` / `top_p` / `top_k` are stripped automatically), and assistant prefill, and has no server-side refusal fallback. The listed prices apply to prompts up to 100K tokens; longer prompts are billed at $0.50 / $2.50, and `calculateCostBreakdown()` applies that rate automatically.
 
 `fable51()` uses the official Anthropic API by default (`claude-fable-5-1`). Pass `mix: { openrouter: true }` to append [`anthropic/claude-fable-5.1`][21] as its fallback.
 
@@ -336,7 +339,7 @@ ModelMix.new().effort(-1).minimaxM3().addText('...').message();
 - **GLM 5.3 and GLM 5.3 Flash:** reasoning is mandatory; 0–39 / 40–79 / 80–100 map to `low` / `high` / `max`; `-1` leaves the native `max` default unchanged.
 - **DeepSeek:** `↑` means thinking is enabled; `off` means it is disabled.
 - **MiniMax:** `off` maps to `thinking.disabled`; `adaptive` maps to `thinking.type=adaptive`. MiniMax M3.1 Flash Preview always reasons and uses `reasoning_effort` instead; `-1` leaves its native default unchanged.
-- **Anthropic:** Claude 5, Fable, Opus 4.6+, and Sonnet 4.6+ use adaptive thinking with `output_config.effort`. Sonnet 4.5 and Haiku 4.5 use `thinking.type=enabled` with `budget_tokens`.
+- **Anthropic:** Claude 5, Fable, Opus 4.6+, Sonnet 4.6+, and Haiku 5.5 use adaptive thinking with `output_config.effort`. Sonnet 4.5 and Haiku 4.5 use `thinking.type=enabled` with `budget_tokens`.
 - **Grok 4.6:** 0–39 / 40–59 / 60–79 / 80–100 map to `low` / `medium` / `high` / `xhigh`. Without effort, Grok uses its native `high` default.
 
 `-1` uses the provider's adaptive or dynamic mode when available; otherwise it is a no-op. Effort levels are clamped to each model's supported range.

@@ -175,6 +175,7 @@ describe('Anthropic Model Registration Tests', () => {
             expect(MixAnthropic.rejectsSamplingParams('claude-opus-4-7')).to.equal(true);
             expect(MixAnthropic.rejectsSamplingParams('claude-sonnet-5')).to.equal(true);
             expect(MixAnthropic.rejectsSamplingParams('claude-fable-5')).to.equal(true);
+            expect(MixAnthropic.rejectsSamplingParams('claude-haiku-5-5')).to.equal(true);
             expect(MixAnthropic.rejectsSamplingParams('anthropic/claude-opus-5')).to.equal(true);
 
             expect(MixAnthropic.rejectsSamplingParams('claude-opus-4-6')).to.equal(false);
@@ -370,6 +371,108 @@ describe('Anthropic Model Registration Tests', () => {
         applyUnifiedEffort(options, model.config, 'anthropic', 'claude-opus-4-8');
         expect(options.thinking).to.deep.equal({ type: 'adaptive', display: 'summarized' });
         expect(options.output_config).to.deep.equal({ effort: 'max' });
+    });
+
+    describe('Claude Haiku 5.5', () => {
+        it('should register Claude Haiku 5.5 without replacing Haiku 4.5', () => {
+            const model = ModelMix.new();
+
+            expect(model.haiku55({
+                options: { max_tokens: 123 },
+                config: { effort: 50 }
+            })).to.equal(model);
+            model.haiku45();
+            expect(model.models.map(({ key }) => key)).to.deep.equal([
+                'claude-haiku-5-5', 'claude-haiku-4-5-20251001'
+            ]);
+            expect(model.models[0].provider).to.be.instanceOf(MixAnthropic);
+            expect(model.models[0].provider.options.max_tokens).to.equal(123);
+            expect(model.models[0].provider.config.effort).to.equal(50);
+        });
+
+        it('should support chain effort overrides', () => {
+            const model = ModelMix.new().effort(20);
+
+            expect(model.chain('haiku55@high', 'haiku45')).to.equal(model);
+            expect(model.models.map(({ key }) => key)).to.deep.equal([
+                'claude-haiku-5-5', 'claude-haiku-4-5-20251001'
+            ]);
+            expect(model.models[0].provider.config.effort).to.equal(40);
+        });
+
+        it('should use adaptive thinking with output_config.effort', () => {
+            const { applyUnifiedEffort } = require('../effort.js');
+            const options = { model: 'claude-haiku-5-5' };
+
+            applyUnifiedEffort(options, { effort: 100 }, 'anthropic', 'claude-haiku-5-5');
+            expect(options.thinking).to.deep.equal({ type: 'adaptive', display: 'summarized' });
+            expect(options.output_config).to.deep.equal({ effort: 'max' });
+            expect(options).to.not.have.nested.property('thinking.budget_tokens');
+        });
+
+        it('should strip sampling params from Haiku 5.5 requests', async () => {
+            const originalApiKey = process.env.ANTHROPIC_API_KEY;
+            process.env.ANTHROPIC_API_KEY = 'test-anthropic-key';
+
+            try {
+                const provider = new MixAnthropic();
+                let requestBody;
+                nock('https://api.anthropic.com')
+                    .post('/v1/messages', body => {
+                        requestBody = body;
+                        return true;
+                    })
+                    .reply(200, {
+                        content: [{ type: 'text', text: 'Done' }],
+                        usage: { input_tokens: 1, output_tokens: 1 }
+                    });
+
+                await provider.create({
+                    config: { system: 'You are an assistant.' },
+                    options: {
+                        model: 'claude-haiku-5-5',
+                        messages: [{ role: 'user', content: 'Hello' }],
+                        max_tokens: 100,
+                        temperature: 1,
+                        top_p: 0.9,
+                        top_k: 40
+                    }
+                });
+
+                expect(requestBody).to.not.have.property('temperature');
+                expect(requestBody).to.not.have.property('top_p');
+                expect(requestBody).to.not.have.property('top_k');
+                expect(requestBody.model).to.equal('claude-haiku-5-5');
+            } finally {
+                if (originalApiKey === undefined) delete process.env.ANTHROPIC_API_KEY;
+                else process.env.ANTHROPIC_API_KEY = originalApiKey;
+                nock.cleanAll();
+            }
+        });
+
+        it('should price prompts above 100K tokens at the long-context rate', () => {
+            const short = { input: 100_000, uncachedInput: 100_000, output: 1_000_000 };
+            const long = { input: 100_001, uncachedInput: 100_001, output: 1_000_000 };
+
+            expect(ModelMix.calculateCostBreakdown('claude-haiku-5-5', short)).to.deep.equal({
+                uncachedInput: 0.01,
+                cachedInput: 0,
+                cacheWrite: 0,
+                cacheWrite5m: 0,
+                cacheWrite1h: 0,
+                output: 0.5,
+                total: 0.51
+            });
+            expect(ModelMix.calculateCostBreakdown('claude-haiku-5-5', long)).to.deep.equal({
+                uncachedInput: 0.0500005,
+                cachedInput: 0,
+                cacheWrite: 0,
+                cacheWrite5m: 0,
+                cacheWrite1h: 0,
+                output: 2.5,
+                total: 2.5500005
+            });
+        });
     });
 
     describe('Claude Sonnet 5.5', () => {
