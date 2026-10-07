@@ -131,6 +131,28 @@ describe('Anthropic Model Registration Tests', () => {
         expect(model.models[0].provider).to.be.instanceOf(MixAnthropic);
     });
 
+    it('should price Claude Opus 5.5 at $4 / $20 per million tokens', () => {
+        const tokens = {
+            input: 3_000_000,
+            uncachedInput: 1_000_000,
+            cached: 1_000_000,
+            cacheWrite: 1_000_000,
+            cacheWrite5m: 500_000,
+            cacheWrite1h: 500_000,
+            output: 1_000_000
+        };
+
+        expect(ModelMix.calculateCostBreakdown('claude-opus-5-5', tokens)).to.deep.equal({
+            uncachedInput: 4,
+            cachedInput: 0.2,
+            cacheWrite: 6.5,
+            cacheWrite5m: 2.5,
+            cacheWrite1h: 4,
+            output: 20,
+            total: 30.7
+        });
+    });
+
     it('should keep opus5() as an alias for opus50()', () => {
         const model = ModelMix.new();
 

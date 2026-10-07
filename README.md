@@ -185,7 +185,7 @@ ModelMix provides convenient shorthand methods for quickly accessing different A
 | `gpt5nano()` | OpenAI | gpt-5-nano | [\$0.05][1] | [\$0.40][1] |
 | `fable51()` | Anthropic | claude-fable-5-1 | [\$10.00][2] | [\$50.00][2] |
 | `fable5()` | Anthropic | claude-fable-5 | [\$10.00][2] | [\$50.00][2] |
-| `opus55()` | Anthropic | claude-opus-5-5 | [\$5.00][2] | [\$25.00][2] |
+| `opus55()` | Anthropic | claude-opus-5-5 | [\$4.00][2] | [\$20.00][2] |
 | `opus5()` | Anthropic | claude-opus-5 | [\$5.00][2] | [\$25.00][2] |
 | `opus48()` | Anthropic | claude-opus-4-8 | [\$5.00][2] | [\$25.00][2] |
 | `opus47()` | Anthropic | claude-opus-4-7 | [\$5.00][2] | [\$25.00][2] |
