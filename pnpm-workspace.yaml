@@ -21,3 +21,4 @@ overrides:
   js-yaml: 4.3.2
   qs: 6.16.0
   serialize-javascript: 7.0.5
+  proxy-addr@>=2.0.0 <2.0.8: 2.0.8
