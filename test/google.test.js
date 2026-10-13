@@ -45,6 +45,25 @@ describe('Google message and JSON contracts', () => {
         expect(bodies[0].generationConfig.responseMimeType).to.equal('application/json');
     });
 
+    it('sends Gemini 4 Argon thinking levels and omits adaptive thinkingBudget', async () => {
+        const bodies = [];
+        sinon.stub(global, 'fetch').callsFake(async (url, input) => {
+            bodies.push({ url, body: JSON.parse(input.body) });
+            return new Response(JSON.stringify({
+                candidates: [{ content: { parts: [{ text: 'ok' }] } }]
+            }), { status: 200 });
+        });
+
+        await ModelMix.new({ config: { apiKey: 'test-key' } })
+            .chain('gemini4argon@high').addText('Hi').message();
+        await ModelMix.new({ config: { apiKey: 'test-key' } })
+            .effort(-1).gemini4argon().addText('Hi').message();
+
+        expect(bodies[0].url).to.include('/gemini-4-argon:generateContent');
+        expect(bodies[0].body.generationConfig.thinkingConfig).to.deep.equal({ thinkingLevel: 'high' });
+        expect(bodies[1].body.generationConfig).not.to.have.property('thinkingConfig');
+    });
+
     it('combines answer text parts without including thought parts', () => {
         expect(MixGoogle.extractMessage({ candidates: [{ content: { parts: [
             { thought: true, text: 'Internal analysis' },

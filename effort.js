@@ -104,6 +104,7 @@ const MINIMAX_BANDS = [
 
 /** Exact model → supported Gemini thinkingLevel values */
 const GEMINI_MODEL_LEVELS = {
+    'gemini-4-argon': ['low', 'medium', 'high'],
     'gemini-3.8-flash': ['low', 'medium', 'high'],
     'gemini-3.7-flash': ['low', 'medium', 'high'],
     'gemini-3-pro-preview': ['low', 'high'],
@@ -314,7 +315,8 @@ function mapAdaptiveEffort(providerFamily, modelKey) {
         return { thinking: { type: 'adaptive' } };
     }
     if (providerFamily === 'google') {
-        if (modelKey === 'gemini-3.8-flash' || modelKey === 'gemini-3.7-flash') return null;
+        // Gemini 4 Argon and 3.7+ Flash reject thinkingBudget
+        if (['gemini-4-argon', 'gemini-3.8-flash', 'gemini-3.7-flash'].includes(modelKey)) return null;
         // Gemini dynamic thinking: thinkingBudget -1 (2.5 official; accepted on 3.x as dynamic)
         return { thinkingConfig: { thinkingBudget: -1 } };
     }

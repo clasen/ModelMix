@@ -286,6 +286,19 @@ describe('Unified effort scale', () => {
             expect(mapEffort('google', -1, 'gemini-3.7-flash')).to.equal(null);
         });
 
+        it('clamps Gemini 4 Argon to low, medium, and high', () => {
+            expect(mapEffort('google', 0, 'gemini-4-argon')).to.deep.equal({
+                thinkingConfig: { thinkingLevel: 'low' }
+            });
+            expect(mapEffort('google', 50, 'gemini-4-argon')).to.deep.equal({
+                thinkingConfig: { thinkingLevel: 'medium' }
+            });
+            expect(mapEffort('google', 100, 'gemini-4-argon')).to.deep.equal({
+                thinkingConfig: { thinkingLevel: 'high' }
+            });
+            expect(mapEffort('google', -1, 'gemini-4-argon')).to.equal(null);
+        });
+
         it('clamps Gemini 3.8 Flash to low, medium, and high', () => {
             expect(mapEffort('google', 0, 'gemini-3.8-flash')).to.deep.equal({
                 thinkingConfig: { thinkingLevel: 'low' }
@@ -634,6 +647,7 @@ describe('Unified effort scale', () => {
                     thinking: { type: 'adaptive', display: 'summarized' }, output_config: { effort: 'high' }
                 }],
                 ['google', 'gemini-3.8-flash', 'high', { thinkingConfig: { thinkingLevel: 'high' } }],
+                ['google', 'gemini-4-argon', 'medium', { thinkingConfig: { thinkingLevel: 'medium' } }],
                 ['openai', 'deepseek-flash', 'max', { reasoning_effort: 'max', thinking: { type: 'enabled' } }],
                 ['openai', 'deepseek-flash', 'disabled', { thinking: { type: 'disabled' } }],
                 ['openai', 'MiniMax-M3', 'disabled', { thinking: { type: 'disabled' } }]
@@ -656,6 +670,7 @@ describe('Unified effort scale', () => {
             for (const [family, key, name] of [
                 ['openai', 'gpt-6-luna', 'minimal'], ['google', 'gemini-3.8-flash', 'minimal'],
                 ['google', 'gemini-3.8-flash', 'xhigh'], ['google', 'gemini-3.8-flash', 'adaptive'],
+                ['google', 'gemini-4-argon', 'minimal'], ['google', 'gemini-4-argon', 'adaptive'],
                 ['openai', 'deepseek-flash', 'adaptive'], ['google', 'gemini-2.5-flash', 'high'],
                 ['anthropic', 'claude-haiku-4-5', 'high'], [null, 'sonar-pro', 'high'],
                 ['openai', 'gpt-6-luna', 50]

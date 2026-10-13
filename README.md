@@ -194,6 +194,7 @@ ModelMix provides convenient shorthand methods for quickly accessing different A
 | `sonnet5()` | Anthropic | claude-sonnet-5 | [\$3.00][2] | [\$15.00][2] |
 | `haiku55()` | Anthropic | claude-haiku-5-5 | [\$0.10][2] | [\$0.50][2] |
 | `haiku45()` | Anthropic | claude-haiku-4-5-20251001 | [\$1.00][2] | [\$5.00][2] |
+| `gemini4argon()` | Google | gemini-4-argon | [\$2.00][3] | [\$10.00][3] |
 | `gemini38flash()` | Google | gemini-3.8-flash | [\$0.75][3] | [\$3.75][3] |
 | `gemini37flash()` | Google | gemini-3.7-flash | [\$0.75][3] | [\$3.75][3] |
 | `gemini36flash()` | Google | gemini-3.6-flash | [\$0.75][3] | [\$3.75][3] |
@@ -235,6 +236,8 @@ ModelMix provides convenient shorthand methods for quickly accessing different A
 | `kimiK26()` | Fireworks | models/kimi-k2p6 | [\$0.95][10] | [\$4.00][10] |
 
 Gemini 3.8 Flash, 3.7 Flash, and 3.6 Flash use Google's introductory standard pricing through December 31, 2026; standard rates double on January 1, 2027.
+
+`gemini4argon()` registers `gemini-4-argon` through Google and supports `.chain('gemini4argon@high')`. It accepts `thinkingLevel` `low`, `medium` (default), or `high`; `minimal` and `thinkingBudget` are rejected, so `-1` leaves the native default unchanged. The listed introductory pricing ($2 input, $0.10 cached input, $10 output per 1M tokens) runs through November 30, 2026; standard rates of $4 / $20 apply from December 1, 2026.
 
 `museGlimmer30b()` uses Fireworks by default. OpenRouter, NVIDIA NIM, and Together are available through `mix.openrouter`, `mix.nvidia`, and `mix.together`.
 
@@ -330,7 +333,7 @@ ModelMix.new().effort(-1).minimaxM3().addText('...').message();
 
 ### Provider-specific behavior
 
-- **Gemini:** Gemini 3+ uses bands 0–24 / 25–49 / 50–74 / 75–100. Gemini 3.8 Flash and 3.7 Flash clamp these bands to `low` / `low` / `medium` / `high`; `-1` leaves their native `medium` default unchanged. Gemini 2.5 maps 0–100 to `thinkingBudget`.
+- **Gemini:** Gemini 3+ uses bands 0–24 / 25–49 / 50–74 / 75–100. Gemini 4 Argon, 3.8 Flash, and 3.7 Flash clamp these bands to `low` / `low` / `medium` / `high`; `-1` leaves their native `medium` default unchanged. Gemini 2.5 maps 0–100 to `thinkingBudget`.
 - **GPT-6 Astra:** 0–39 maps to `low`, 40–59 to `medium`, 60–79 to `high`, 80–99 to `xhigh`, and 100 to `max`. [Model details](https://developers.openai.com/api/docs/models/gpt-6-astra). Cache reads cost $1.00 and cache writes $12.50 per 1M tokens; requests over 272K input tokens apply 2× input/cache and 1.5× output rates.
 - **GPT-6.1 Sol:** uses the same bands as Astra because it does not support `none`: 0–39 maps to `low`, 40–59 to `medium`, 60–79 to `high`, 80–99 to `xhigh`, and 100 to `max`. [Model details](https://developers.openai.com/api/docs/models/gpt-6.1-sol). Cache reads cost $0.10 and cache writes $2.50 per 1M tokens; requests over 272K input tokens apply 2× input/cache and 1.5× output rates.
 - **GPT-6 Sol and GPT-6 Luna:** `100` maps to `max`; the remaining bands match OpenAI, so 0–19 is `none` and 80–99 is `xhigh`. [Sol model details](https://developers.openai.com/api/docs/models/gpt-6-sol), [Luna model details](https://developers.openai.com/api/docs/models/gpt-6-luna). Cache reads cost $0.20 and $0.01 and cache writes $2.50 and $0.125 per 1M tokens; requests over 272K input tokens apply the same 2× input/cache and 1.5× output rates as Astra.

@@ -485,6 +485,7 @@ export declare class ModelMix {
   haiku45(args?: ModelAttachArgs): this;
 
   // Google
+  gemini4argon(args?: ModelAttachArgs): this;
   gemini38flash(args?: ModelAttachArgs): this;
   gemini37flash(args?: ModelAttachArgs): this;
   gemini36flash(args?: ModelAttachArgs): this;

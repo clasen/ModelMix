@@ -20,6 +20,14 @@ const flash = await mmix.gemini38flash()
 
 console.log(flash);
 
+// Using Gemini 4 Argon with high thinking
+console.log("\n" + '--------| gemini4argon() |--------');
+const argon = await mmix.new().gemini4argon({ options: { thinkingLevel: 'high' } })
+    .addText('In one sentence, why do cats purr?')
+    .message();
+
+console.log(argon);
+
 // Using Gemini 3.7 Flash with custom config
 console.log("\n" + '--------| gemini37flash() with JSON response |--------');
 const pro = mmix.new().gemini37flash();

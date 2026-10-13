@@ -673,6 +673,31 @@ describe('Token Usage Tracking', () => {
         expect(ModelMix.calculateCost('gemini-3.5-flash-lite', { input: 1_000_000, output: 1_000_000 })).to.equal(2.8);
     });
 
+    it('should register gemini4argon() with Google at the introductory rate', function () {
+        const options = { thinkingLevel: 'high' };
+        const config = { max_history: 3 };
+        const model = ModelMix.new().gemini4argon({ options, config });
+
+        expect(model.models.map(({ key }) => key)).to.deep.equal(['gemini-4-argon']);
+        expect(model.models[0].provider).to.be.instanceOf(MixGoogle);
+        expect(model.models[0].provider.options).to.deep.equal(options);
+        expect(model.models[0].provider.config).to.include(config);
+        expect(ModelMix.calculateCostBreakdown('gemini-4-argon', {
+            input: 2_000_000,
+            output: 1_000_000,
+            thinking: 500_000,
+            cached: 1_000_000
+        })).to.deep.equal({
+            uncachedInput: 2,
+            cachedInput: 0.1,
+            cacheWrite: 0,
+            cacheWrite5m: 0,
+            cacheWrite1h: 0,
+            output: 15,
+            total: 17.1
+        });
+    });
+
     it('should calculate Gemini 3.8 Flash cache reads and thinking at the introductory rate', function () {
         expect(ModelMix.calculateCostBreakdown('gemini-3.8-flash', {
             input: 1_000_000,
