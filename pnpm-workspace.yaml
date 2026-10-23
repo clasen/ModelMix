@@ -17,7 +17,7 @@ overrides:
   diff: 8.0.4
   fast-uri: 3.1.8
   hono: 4.13.11
-  ip-address: 10.7.1
+  ip-address: 10.7.4
   js-yaml: 4.3.2
   qs: 6.16.0
   serialize-javascript: 7.0.5
