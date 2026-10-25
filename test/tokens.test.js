@@ -673,6 +673,16 @@ describe('Token Usage Tracking', () => {
         expect(ModelMix.calculateCost('gemini-3.5-flash-lite', { input: 1_000_000, output: 1_000_000 })).to.equal(2.8);
     });
 
+    it('should register Gemini 4 Argon with Google at the introductory rate', function () {
+        const model = ModelMix.new().chain('gemini4argon@high');
+
+        expect(model.models.map(({ key }) => key)).to.deep.equal(['gemini-4-argon']);
+        expect(model.models[0].provider).to.be.instanceOf(MixGoogle);
+        expect(ModelMix.calculateCost('gemini-4-argon', {
+            input: 1_000_000, cached: 500_000, output: 1_000_000
+        })).to.equal(11.05);
+    });
+
     it('should calculate Gemini 3.8 Flash cache reads and thinking at the introductory rate', function () {
         expect(ModelMix.calculateCostBreakdown('gemini-3.8-flash', {
             input: 1_000_000,

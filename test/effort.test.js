@@ -151,6 +151,24 @@ describe('Unified effort scale', () => {
             });
         });
 
+        it('maps Kimi K3.1 Pro to low, high, and max reasoning', () => {
+            for (const key of ['kimi-k3.1-pro', 'kimi-k3.1-pro-highspeed', 'moonshotai/kimi-k3.1-pro']) {
+                expect(mapEffort('openai', 0, key)).to.deep.equal({ reasoning_effort: 'low' });
+                expect(mapEffort('openai', 60, key)).to.deep.equal({ reasoning_effort: 'high' });
+                expect(mapEffort('openai', 100, key)).to.deep.equal({ reasoning_effort: 'max' });
+                expect(mapEffort('openai', -1, key)).to.equal(null);
+            }
+        });
+
+        it('maps Muse Wonder from minimal to max reasoning', () => {
+            const key = 'meta/muse-wonder';
+            expect(mapEffort('openai', 0, key)).to.deep.equal({ reasoning_effort: 'minimal' });
+            expect(mapEffort('openai', 40, key)).to.deep.equal({ reasoning_effort: 'medium' });
+            expect(mapEffort('openai', 80, key)).to.deep.equal({ reasoning_effort: 'xhigh' });
+            expect(mapEffort('openai', 100, key)).to.deep.equal({ reasoning_effort: 'max' });
+            expect(mapEffort('openai', -1, key)).to.equal(null);
+        });
+
         it('maps Muse Glimmer 30B to provider-supported reasoning levels', () => {
             expect(mapEffort('openai', 0, 'accounts/fireworks/models/muse-glimmer-30b')).to.deep.equal({
                 reasoning_effort: 'low'
@@ -297,6 +315,19 @@ describe('Unified effort scale', () => {
                 thinkingConfig: { thinkingLevel: 'high' }
             });
             expect(mapEffort('google', -1, 'gemini-3.8-flash')).to.equal(null);
+        });
+
+        it('clamps Gemini 4 Argon to low, medium, and high without thinkingBudget', () => {
+            expect(mapEffort('google', 0, 'gemini-4-argon')).to.deep.equal({
+                thinkingConfig: { thinkingLevel: 'low' }
+            });
+            expect(mapEffort('google', 50, 'gemini-4-argon')).to.deep.equal({
+                thinkingConfig: { thinkingLevel: 'medium' }
+            });
+            expect(mapEffort('google', 100, 'gemini-4-argon')).to.deep.equal({
+                thinkingConfig: { thinkingLevel: 'high' }
+            });
+            expect(mapEffort('google', -1, 'gemini-4-argon')).to.equal(null);
         });
 
         it('clamps Gemini levels for models with fewer steps', () => {

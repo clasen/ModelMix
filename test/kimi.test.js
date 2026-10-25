@@ -179,4 +179,60 @@ describe('Kimi Model Registration Tests', () => {
             else process.env.MOONSHOT_API_KEY = originalMoonshotApiKey;
         }
     });
+
+    it('should register Kimi K3.1 Pro with the native Moonshot provider by default', () => {
+        const model = ModelMix.new().kimiK31Pro();
+
+        expect(model.models.map(({ key }) => key)).to.deep.equal(['kimi-k3.1-pro']);
+        expect(model.models[0].provider).to.be.instanceOf(MixKimi);
+        expect(model.models[0].provider.config.url).to.equal('https://api.moonshot.ai/v1/chat/completions');
+    });
+
+    it('should append OpenRouter Kimi K3.1 Pro when requested', () => {
+        const model = ModelMix.new({ mix: { openrouter: true } }).kimiK31Pro();
+
+        expect(model.models.map(({ key }) => key)).to.deep.equal([
+            'kimi-k3.1-pro',
+            'moonshotai/kimi-k3.1-pro'
+        ]);
+        expect(model.models[1].provider).to.be.instanceOf(MixOpenRouter);
+    });
+
+    it('should register Kimi K3.1 Pro Highspeed only through Moonshot', () => {
+        const model = ModelMix.new().chain('kimiK31ProHighspeed');
+
+        expect(model.models.map(({ key }) => key)).to.deep.equal(['kimi-k3.1-pro-highspeed']);
+        expect(model.models[0].provider).to.be.instanceOf(MixKimi);
+    });
+
+    it('should send Kimi K3.1 Pro effort without fixed sampling parameters', async () => {
+        let requestBody;
+        nock('https://api.moonshot.ai')
+            .post('/v1/chat/completions', body => {
+                requestBody = body;
+                return true;
+            })
+            .reply(200, {
+                choices: [{ message: { content: 'Done' } }]
+            });
+
+        const model = ModelMix.new({ options: { temperature: 0.5, top_p: 0.9 } })
+            .chain('kimiK31Pro@0')
+            .addText('Hello');
+
+        expect(await model.message()).to.equal('Done');
+        expect(requestBody.model).to.equal('kimi-k3.1-pro');
+        expect(requestBody.reasoning_effort).to.equal('low');
+        expect(requestBody).to.not.have.property('temperature');
+        expect(requestBody).to.not.have.property('top_p');
+        expect(requestBody).to.not.have.property('thinking');
+    });
+
+    it('should price Kimi K3.1 Pro and Highspeed with cached input', () => {
+        const usage = { input: 1_000_000, cached: 500_000, output: 1_000_000 };
+
+        expect(ModelMix.calculateCost('kimi-k3.1-pro', usage)).to.equal(11.1);
+        expect(ModelMix.calculateCost('moonshotai/kimi-k3.1-pro', usage)).to.equal(11.1);
+        expect(ModelMix.calculateCost('kimi-k3.1-pro-highspeed', usage)).to.equal(22.1);
+    });
 });

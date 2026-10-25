@@ -351,8 +351,8 @@ All providers inherit from `MixCustom` base class which provides common function
 - **Output Format**: Same as OpenAI
 - **Special Notes**:
   - Requires `MOONSHOT_API_KEY` environment variable
-  - Available model: `kimi-k3`
-  - K3 always uses thinking and requires fixed sampling parameters to be omitted
+  - Available models: `kimi-k3`, `kimi-k3.1-pro`, `kimi-k3.1-pro-highspeed`
+  - K3 and K3.1 Pro always use thinking, take `reasoning_effort` (`low`, `high`, `max`), and require fixed sampling parameters to be omitted
 
 ### MiniMax (MixMiniMax)
 - **Base URL**: `https://api.minimax.io/v1/chat/completions`

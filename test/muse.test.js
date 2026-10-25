@@ -79,7 +79,14 @@ describe('Muse Model Registration Tests', () => {
         ]);
     });
 
+    it('prices Muse Wonder with cached input', () => {
+        expect(ModelMix.calculateCost('meta/muse-wonder', {
+            input: 1_000_000, cached: 500_000, output: 1_000_000
+        })).to.equal(22.1);
+    });
+
     for (const [shortcut, key] of [
+        ['museWonder10', 'meta/muse-wonder'],
         ['museSpark12', 'meta/muse-spark-1.2'],
         ['museSpark12c', 'meta/muse-spark-1.2-contributor'],
         ['museSpark13', 'meta/muse-spark-1.3'],

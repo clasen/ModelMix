@@ -485,6 +485,7 @@ export declare class ModelMix {
   haiku45(args?: ModelAttachArgs): this;
 
   // Google
+  gemini4argon(args?: ModelAttachArgs): this;
   gemini38flash(args?: ModelAttachArgs): this;
   gemini37flash(args?: ModelAttachArgs): this;
   gemini36flash(args?: ModelAttachArgs): this;
@@ -503,6 +504,7 @@ export declare class ModelMix {
 
   // Multi-provider
   museGlimmer30b(args?: ModelAttachArgs): this;
+  museWonder10(args?: ModelAttachArgs): this;
   museSpark12(args?: ModelAttachArgs): this;
   museSpark12c(args?: ModelAttachArgs): this;
   museSpark13(args?: ModelAttachArgs): this;
@@ -519,6 +521,8 @@ export declare class ModelMix {
   kimiK26(args?: ModelAttachArgs): this;
   kimiK27Code(args?: ModelAttachArgs): this;
   kimiK3(args?: ModelAttachArgs): this;
+  kimiK31Pro(args?: ModelAttachArgs): this;
+  kimiK31ProHighspeed(args?: ModelAttachArgs): this;
   lmstudio(model?: string, args?: ModelAttachArgs): this;
   minimaxM27(args?: ModelAttachArgs): this;
   minimaxM3(args?: ModelAttachArgs): this;

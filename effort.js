@@ -53,6 +53,7 @@ const OPENAI_MODEL_LEVELS = {
     'meta/muse-glimmer-30b': ['low', 'medium', 'high'],
     'accounts/fireworks/models/muse-glimmer-30b': ['low', 'medium', 'high', 'xhigh'],
     'meta-models/Muse-Glimmer-30B': ['low', 'medium', 'high', 'xhigh'],
+    'meta/muse-wonder': ['minimal', 'low', 'medium', 'high', 'xhigh', 'max'],
     'meta/muse-spark-1.2': ['minimal', 'low', 'medium', 'high', 'xhigh'],
     'meta/muse-spark-1.3-contributor': ['minimal', 'low', 'medium', 'high', 'xhigh'],
     'meta/muse-spark-1.2-contributor': ['minimal', 'low', 'medium', 'high', 'xhigh'],
@@ -74,6 +75,9 @@ const OPENAI_MODEL_LEVELS = {
     'moonshotai/kimi-k3': ['low', 'high', 'max'],
     'accounts/fireworks/models/kimi-k3': ['low', 'high', 'max'],
     'moonshotai/Kimi-K3': ['low', 'high', 'max'],
+    'kimi-k3.1-pro': ['low', 'high', 'max'],
+    'kimi-k3.1-pro-highspeed': ['low', 'high', 'max'],
+    'moonshotai/kimi-k3.1-pro': ['low', 'high', 'max'],
     'MiniMax-M3.1-Flash-Preview': ['low', 'medium', 'high', 'xhigh', 'max'],
     'zai-org/GLM-5.2': ['high', 'xhigh'],
     'accounts/fireworks/models/glm-5p2': ['high', 'xhigh'],
@@ -104,6 +108,7 @@ const MINIMAX_BANDS = [
 
 /** Exact model → supported Gemini thinkingLevel values */
 const GEMINI_MODEL_LEVELS = {
+    'gemini-4-argon': ['low', 'medium', 'high'],
     'gemini-3.8-flash': ['low', 'medium', 'high'],
     'gemini-3.7-flash': ['low', 'medium', 'high'],
     'gemini-3-pro-preview': ['low', 'high'],
@@ -314,7 +319,8 @@ function mapAdaptiveEffort(providerFamily, modelKey) {
         return { thinking: { type: 'adaptive' } };
     }
     if (providerFamily === 'google') {
-        if (modelKey === 'gemini-3.8-flash' || modelKey === 'gemini-3.7-flash') return null;
+        // These models reject thinkingBudget; omitting thinking keeps their native default
+        if (['gemini-4-argon', 'gemini-3.8-flash', 'gemini-3.7-flash'].includes(modelKey)) return null;
         // Gemini dynamic thinking: thinkingBudget -1 (2.5 official; accepted on 3.x as dynamic)
         return { thinkingConfig: { thinkingBudget: -1 } };
     }

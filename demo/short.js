@@ -30,6 +30,8 @@ const mmix = await ModelMix.new(setup)
     .chain('gpt6astra@high') // (fallback 19) OpenAI gpt-6-astra, high reasoning effort
     .deepseekV41Flash({ mix: { deepseek: true, fireworks: true, openrouter: true } }) // (fallback 20 + provider fallback) DeepSeek/Fireworks/OpenRouter V4.1 Flash
     .deepseekPro() // (fallback 21) OpenRouter deepseek/deepseek-v4-pro-0813
+    .museWonder10() // (fallback 22) OpenRouter meta/muse-wonder
+    .kimiK31Pro({ mix: { openrouter: true } }) // (fallback 23 + provider fallback) Moonshot/OpenRouter Kimi K3.1 Pro
     .addText("What's your name?");
 
 console.log(await mmix.message());
