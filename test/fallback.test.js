@@ -137,6 +137,7 @@ describe('Provider Fallback Chain Tests', () => {
             const shortcuts = [
                 ['gpt6astra', 'gpt-6-astra', 'openai/gpt-6-astra', MixOpenAIResponses],
                 ['gpt61sol', 'gpt-6.1-sol', 'openai/gpt-6.1-sol', MixOpenAIResponses],
+                ['gpt61terra', 'gpt-6.1-terra', 'openai/gpt-6.1-terra', MixOpenAIResponses],
                 ['gpt6sol', 'gpt-6-sol', 'openai/gpt-6-sol', MixOpenAIResponses],
                 ['gpt6luna', 'gpt-6-luna', 'openai/gpt-6-luna', MixOpenAIResponses],
                 ['gpt5mini', 'gpt-5-mini', 'openai/gpt-5-mini', MixOpenAI],

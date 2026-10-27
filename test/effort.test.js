@@ -100,8 +100,8 @@ describe('Unified effort scale', () => {
             }
         });
 
-        it('maps GPT-6 Sol and Luna effort from none to max', () => {
-            for (const model of ['gpt-6-sol', 'gpt-6-luna']) {
+        it('maps GPT-6.1 Terra, GPT-6 Sol, and Luna effort from none to max', () => {
+            for (const model of ['gpt-6.1-terra', 'gpt-6-sol', 'gpt-6-luna']) {
                 for (const [effort, level] of [[0, 'none'], [20, 'low'], [40, 'medium'], [60, 'high'], [99, 'xhigh'], [100, 'max']]) {
                     expect(mapEffort('openai', effort, model)).to.deep.equal({ reasoning_effort: level });
                 }
