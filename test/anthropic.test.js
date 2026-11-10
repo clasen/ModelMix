@@ -3,6 +3,44 @@ const nock = require('nock');
 const { ModelMix, MixAnthropic, MixOpenRouter } = require('../index.js');
 
 describe('Anthropic Model Registration Tests', () => {
+    it('should register Claude Fable 5.2 through Anthropic with an optional OpenRouter route', () => {
+        const native = ModelMix.new().fable52();
+        const both = ModelMix.new().fable52({ mix: { openrouter: true } });
+        const routed = ModelMix.new({ mix: { anthropic: false, openrouter: true } }).fable52();
+
+        expect(native.models.map(({ key }) => key)).to.deep.equal(['claude-fable-5-2']);
+        expect(native.models[0].provider).to.be.instanceOf(MixAnthropic);
+        expect(both.models.map(({ key }) => key)).to.deep.equal([
+            'claude-fable-5-2',
+            'anthropic/claude-fable-5.2'
+        ]);
+        expect(both.models[1].provider).to.be.instanceOf(MixOpenRouter);
+        expect(routed.models.map(({ key }) => key)).to.deep.equal(['anthropic/claude-fable-5.2']);
+    });
+
+    it('should price Claude Fable 5.2 cache usage equally across providers', () => {
+        const tokens = {
+            input: 3_000_000,
+            uncachedInput: 1_000_000,
+            cached: 1_000_000,
+            cacheWrite: 1_000_000,
+            cacheWrite5m: 1_000_000,
+            output: 1_000_000
+        };
+        const expected = {
+            uncachedInput: 8,
+            cachedInput: 0.2,
+            cacheWrite: 10,
+            cacheWrite5m: 10,
+            cacheWrite1h: 0,
+            output: 40,
+            total: 58.2
+        };
+
+        expect(ModelMix.calculateCostBreakdown('claude-fable-5-2', tokens)).to.deep.equal(expected);
+        expect(ModelMix.calculateCostBreakdown('anthropic/claude-fable-5.2', tokens)).to.deep.equal(expected);
+    });
+
     it('should register Claude Fable 5.1 through Anthropic by default', () => {
         const model = ModelMix.new().fable51();
 

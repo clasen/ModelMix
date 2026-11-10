@@ -160,13 +160,14 @@ describe('Unified effort scale', () => {
             }
         });
 
-        it('maps Muse Wonder from minimal to max reasoning', () => {
-            const key = 'meta/muse-wonder';
-            expect(mapEffort('openai', 0, key)).to.deep.equal({ reasoning_effort: 'minimal' });
-            expect(mapEffort('openai', 40, key)).to.deep.equal({ reasoning_effort: 'medium' });
-            expect(mapEffort('openai', 80, key)).to.deep.equal({ reasoning_effort: 'xhigh' });
-            expect(mapEffort('openai', 100, key)).to.deep.equal({ reasoning_effort: 'max' });
-            expect(mapEffort('openai', -1, key)).to.equal(null);
+        it('maps Muse Wonder and Muse Ember from minimal to max reasoning', () => {
+            for (const key of ['meta/muse-wonder', 'meta/muse-ember']) {
+                expect(mapEffort('openai', 0, key)).to.deep.equal({ reasoning_effort: 'minimal' });
+                expect(mapEffort('openai', 40, key)).to.deep.equal({ reasoning_effort: 'medium' });
+                expect(mapEffort('openai', 80, key)).to.deep.equal({ reasoning_effort: 'xhigh' });
+                expect(mapEffort('openai', 100, key)).to.deep.equal({ reasoning_effort: 'max' });
+                expect(mapEffort('openai', -1, key)).to.equal(null);
+            }
         });
 
         it('maps Muse Glimmer 30B to provider-supported reasoning levels', () => {
@@ -246,6 +247,15 @@ describe('Unified effort scale', () => {
                 thinking: { type: 'adaptive', display: 'summarized' },
                 output_config: { effort: 'high' }
             });
+        });
+
+        it('maps OpenRouter Claude Fable 5.2 to Anthropic effort levels', () => {
+            const key = 'anthropic/claude-fable-5.2';
+            expect(mapEffort('openai', 0, key)).to.deep.equal({ reasoning_effort: 'low' });
+            expect(mapEffort('openai', 20, key)).to.deep.equal({ reasoning_effort: 'medium' });
+            expect(mapEffort('openai', 60, key)).to.deep.equal({ reasoning_effort: 'xhigh' });
+            expect(mapEffort('openai', 80, key)).to.deep.equal({ reasoning_effort: 'max' });
+            expect(mapEffort('openai', -1, key)).to.equal(null);
         });
 
         it('maps OpenRouter Claude Fable 5.1 to Anthropic effort levels', () => {
@@ -328,6 +338,21 @@ describe('Unified effort scale', () => {
                 thinkingConfig: { thinkingLevel: 'high' }
             });
             expect(mapEffort('google', -1, 'gemini-4-argon')).to.equal(null);
+        });
+
+        it('clamps Gemini 4 Carbon to low, medium, and high with dynamic adaptive thinking', () => {
+            expect(mapEffort('google', 0, 'gemini-4-carbon')).to.deep.equal({
+                thinkingConfig: { thinkingLevel: 'low' }
+            });
+            expect(mapEffort('google', 50, 'gemini-4-carbon')).to.deep.equal({
+                thinkingConfig: { thinkingLevel: 'medium' }
+            });
+            expect(mapEffort('google', 100, 'gemini-4-carbon')).to.deep.equal({
+                thinkingConfig: { thinkingLevel: 'high' }
+            });
+            expect(mapEffort('google', -1, 'gemini-4-carbon')).to.deep.equal({
+                thinkingConfig: { thinkingBudget: -1 }
+            });
         });
 
         it('clamps Gemini levels for models with fewer steps', () => {

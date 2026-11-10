@@ -28,6 +28,14 @@ const argon = await mmix.new().chain('gemini4argon@high')
 
 console.log(argon);
 
+// Using Gemini 4 Carbon with high thinking effort
+console.log("\n" + '--------| chain(\'gemini4carbon@high\') |--------');
+const carbon = await mmix.new().chain('gemini4carbon@high')
+    .addText('In one sentence, why do cats knock things off tables?')
+    .message();
+
+console.log(carbon);
+
 // Using Gemini 3.7 Flash with custom config
 console.log("\n" + '--------| gemini37flash() with JSON response |--------');
 const pro = mmix.new().gemini37flash();

@@ -85,7 +85,14 @@ describe('Muse Model Registration Tests', () => {
         })).to.equal(22.1);
     });
 
+    it('prices Muse Ember with cached input', () => {
+        expect(ModelMix.calculateCost('meta/muse-ember', {
+            input: 1_000_000, cached: 500_000, output: 1_000_000
+        })).to.equal(0.552);
+    });
+
     for (const [shortcut, key] of [
+        ['museEmber10', 'meta/muse-ember'],
         ['museWonder10', 'meta/muse-wonder'],
         ['museSpark12', 'meta/muse-spark-1.2'],
         ['museSpark12c', 'meta/muse-spark-1.2-contributor'],

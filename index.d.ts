@@ -469,6 +469,7 @@ export declare class ModelMix {
   gptRealtimeMini(args?: ModelAttachArgs): this;
 
   // Anthropic
+  fable52(args?: ModelAttachArgs): this;
   fable51(args?: ModelAttachArgs): this;
   fable50(args?: ModelAttachArgs): this;
   fable5(args?: ModelAttachArgs): this;
@@ -486,6 +487,7 @@ export declare class ModelMix {
   haiku45(args?: ModelAttachArgs): this;
 
   // Google
+  gemini4carbon(args?: ModelAttachArgs): this;
   gemini4argon(args?: ModelAttachArgs): this;
   gemini38flash(args?: ModelAttachArgs): this;
   gemini37flash(args?: ModelAttachArgs): this;
@@ -505,6 +507,7 @@ export declare class ModelMix {
 
   // Multi-provider
   museGlimmer30b(args?: ModelAttachArgs): this;
+  museEmber10(args?: ModelAttachArgs): this;
   museWonder10(args?: ModelAttachArgs): this;
   museSpark12(args?: ModelAttachArgs): this;
   museSpark12c(args?: ModelAttachArgs): this;

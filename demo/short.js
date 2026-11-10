@@ -9,7 +9,7 @@ const setup = {
 };
 
 const mmix = await ModelMix.new(setup)
-    .fable51({ mix: { openrouter: true } }) // (main + provider fallback) Anthropic/OpenRouter Claude Fable 5.1
+    .fable52({ mix: { openrouter: true } }) // (main + provider fallback) Anthropic/OpenRouter Claude Fable 5.2
     .sonnet55() // (fallback 2) Anthropic claude-sonnet-5-5
     .gpt6luna({ mix: { openrouter: true } }) // (fallback 3 + provider fallback) OpenAI/OpenRouter gpt-6-luna
     .gemini38flash() // (fallback 4) Google gemini-3.8-flash
@@ -32,6 +32,8 @@ const mmix = await ModelMix.new(setup)
     .deepseekPro() // (fallback 21) OpenRouter deepseek/deepseek-v4-pro-0813
     .museWonder10() // (fallback 22) OpenRouter meta/muse-wonder
     .kimiK31Pro({ mix: { openrouter: true } }) // (fallback 23 + provider fallback) Moonshot/OpenRouter Kimi K3.1 Pro
+    .museEmber10() // (fallback 24) OpenRouter meta/muse-ember
+    .gemini4carbon() // (fallback 25) Google gemini-4-carbon
     .addText("What's your name?");
 
 console.log(await mmix.message());

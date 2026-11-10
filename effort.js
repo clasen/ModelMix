@@ -50,10 +50,12 @@ const OPENAI_MODEL_LEVELS = {
     'gpt-5.6-sol': ['none', 'low', 'medium', 'high', 'xhigh', 'max'],
     'gpt-5.6-terra': ['none', 'low', 'medium', 'high', 'xhigh', 'max'],
     'gpt-5.6-luna': ['none', 'low', 'medium', 'high', 'xhigh', 'max'],
+    'anthropic/claude-fable-5.2': ['low', 'medium', 'high', 'xhigh', 'max'],
     'anthropic/claude-fable-5.1': ['low', 'medium', 'high', 'xhigh', 'max'],
     'meta/muse-glimmer-30b': ['low', 'medium', 'high'],
     'accounts/fireworks/models/muse-glimmer-30b': ['low', 'medium', 'high', 'xhigh'],
     'meta-models/Muse-Glimmer-30B': ['low', 'medium', 'high', 'xhigh'],
+    'meta/muse-ember': ['minimal', 'low', 'medium', 'high', 'xhigh', 'max'],
     'meta/muse-wonder': ['minimal', 'low', 'medium', 'high', 'xhigh', 'max'],
     'meta/muse-spark-1.2': ['minimal', 'low', 'medium', 'high', 'xhigh'],
     'meta/muse-spark-1.3-contributor': ['minimal', 'low', 'medium', 'high', 'xhigh'],
@@ -109,6 +111,7 @@ const MINIMAX_BANDS = [
 
 /** Exact model → supported Gemini thinkingLevel values */
 const GEMINI_MODEL_LEVELS = {
+    'gemini-4-carbon': ['low', 'medium', 'high'],
     'gemini-4-argon': ['low', 'medium', 'high'],
     'gemini-3.8-flash': ['low', 'medium', 'high'],
     'gemini-3.7-flash': ['low', 'medium', 'high'],
@@ -396,7 +399,7 @@ function mapEffort(providerFamily, effort, modelKey) {
         const supported = supportedOpenAILevels(modelKey);
         const desired = modelKey === 'z-ai/glm-5.3' || modelKey === 'z-ai/glm-5.3-flash'
             ? levelFromBands(normalized, GLM53_BANDS)
-            : modelKey === 'anthropic/claude-fable-5.1' || modelKey === 'MiniMax-M3.1-Flash-Preview'
+            : ['anthropic/claude-fable-5.2', 'anthropic/claude-fable-5.1', 'MiniMax-M3.1-Flash-Preview'].includes(modelKey)
                 ? levelFromBands(normalized, ANTHROPIC_BANDS)
                 : normalized === 100 && supported.includes('max')
                     ? 'max'

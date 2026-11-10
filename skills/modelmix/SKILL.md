@@ -170,7 +170,7 @@ ModelMix.new({ config: { effort: 80 } })
 | MiniMax M3 | off | adaptive | adaptive | adaptive | adaptive | adaptive |
 | MiniMax M3.1 Flash | `low` | `medium` | `high` | `xhigh` | `max` | — |
 
-\* GPT-6 Astra and GPT-6.1 Sol map 0–39 / 40–59 / 60–79 / 80–99 / 100 to `low` / `medium` / `high` / `xhigh` / `max`; neither supports `none`. GPT-6.1 Terra, GPT-6 Sol, GPT-6 Luna, and GPT-5.6 map `100` to `max` and keep `xhigh` for 80–99, with OpenAI's `none` band at 0–19. Qwen 3.8 27B and Flash map 0–39 / 40–79 / 80–100 to `low` / `medium` / `xhigh`; Qwen 3.8 Flash is the managed production version based on Flash-Next. GLM 5.3 and GLM 5.3 Flash require reasoning and map those bands to `low` / `high` / `max`. Gemini bands: 0–24 / 25–49 / 50–74 / 75–100. Gemini 4 Argon, 3.8 Flash, and 3.7 Flash support only `low` / `medium` / `high`, so the first two bands clamp to `low`; `-1` keeps their native `medium` default. Kimi K3 and K3.1 Pro map 0–59 to `low`, 60–99 to `high`, and 100 to `max`. Muse Wonder maps 0–19 to `minimal` and 100 to `max`. DeepSeek `↑` = thinking on; `off` = thinking disabled. MiniMax `off`/`adaptive` = `thinking.disabled` / `thinking.type=adaptive`; MiniMax M3.1 Flash Preview always reasons and maps to `reasoning_effort`. Gemini 2.5 maps 0–100 to `thinkingBudget`. Anthropic: adaptive + `output_config.effort` on Claude 5 / Fable / Opus 4.6+ / Sonnet 4.6+ / Haiku 5.5; Sonnet 4.5 / Haiku 4.5 use `thinking.type=enabled` + `budget_tokens`. Grok 4.6 maps 0–39 / 40–59 / 60–79 / 80–100 to `low` / `medium` / `high` / `xhigh`; without effort it uses native `high`. `-1` = adaptive/dynamic when available, else no-op. Levels clamp per model. Former `*think()` methods are removed — use `.effort(n).<model>()`. Kimi: `kimiK26()`.
+\* GPT-6 Astra and GPT-6.1 Sol map 0–39 / 40–59 / 60–79 / 80–99 / 100 to `low` / `medium` / `high` / `xhigh` / `max`; neither supports `none`. GPT-6.1 Terra, GPT-6 Sol, GPT-6 Luna, and GPT-5.6 map `100` to `max` and keep `xhigh` for 80–99, with OpenAI's `none` band at 0–19. Qwen 3.8 27B and Flash map 0–39 / 40–79 / 80–100 to `low` / `medium` / `xhigh`; Qwen 3.8 Flash is the managed production version based on Flash-Next. GLM 5.3 and GLM 5.3 Flash require reasoning and map those bands to `low` / `high` / `max`. Gemini bands: 0–24 / 25–49 / 50–74 / 75–100. Gemini 4 Carbon, 4 Argon, 3.8 Flash, and 3.7 Flash support only `low` / `medium` / `high`, so the first two bands clamp to `low`; `-1` keeps the native `medium` default of Argon, 3.8 Flash, and 3.7 Flash and sends dynamic `thinkingBudget: -1` to Carbon. Kimi K3 and K3.1 Pro map 0–59 to `low`, 60–99 to `high`, and 100 to `max`. Muse Wonder and Muse Ember map 0–19 to `minimal` and 100 to `max`. DeepSeek `↑` = thinking on; `off` = thinking disabled. MiniMax `off`/`adaptive` = `thinking.disabled` / `thinking.type=adaptive`; MiniMax M3.1 Flash Preview always reasons and maps to `reasoning_effort`. Gemini 2.5 maps 0–100 to `thinkingBudget`. Anthropic: adaptive + `output_config.effort` on Claude 5 / Fable / Opus 4.6+ / Sonnet 4.6+ / Haiku 5.5; Sonnet 4.5 / Haiku 4.5 use `thinking.type=enabled` + `budget_tokens`. Grok 4.6 maps 0–39 / 40–59 / 60–79 / 80–100 to `low` / `medium` / `high` / `xhigh`; without effort it uses native `high`. `-1` = adaptive/dynamic when available, else no-op. Levels clamp per model. Former `*think()` methods are removed — use `.effort(n).<model>()`. Kimi: `kimiK26()`.
 
 ## Available Model Shorthands
 
@@ -183,7 +183,7 @@ Use `ModerationMix.new().openai()` with `.raw()` to classify text and images thr
 Every textual GPT-5 and GPT-6 shortcut registers only the official OpenAI model by default. Pass `mix: { openrouter: true }` to `ModelMix.new()` or to an individual shortcut to append its `openai/*` OpenRouter route as a fallback. Both API keys are required when that fallback is enabled. Realtime shortcuts remain official-only.
 
 ### Anthropic
-`fable51()` `fable50()` `opus55()` `opus50()` `opus48()` `opus47()` `opus46()` `sonnet55()` `sonnet5()` `sonnet45()` `haiku55()` `haiku45()`
+`fable52()` `fable51()` `fable50()` `opus55()` `opus50()` `opus48()` `opus47()` `opus46()` `sonnet55()` `sonnet5()` `sonnet45()` `haiku55()` `haiku45()`
 
 Use `.effort(n)` (or `config.effort`) to enable Anthropic thinking — e.g. `.effort(100).opus55()`. `fable5()` and `opus5()` remain available as compatibility aliases.
 
@@ -191,10 +191,10 @@ Use `.effort(n)` (or `config.effort`) to enable Anthropic thinking — e.g. `.ef
 
 `haiku55()` registers `claude-haiku-5-5` through Anthropic and supports `.chain('haiku55@high')`. `haiku45()` remains Haiku 4.5. Haiku 5.5 uses adaptive thinking by default (native effort `medium`); `budget_tokens`, sampling params, and assistant prefill are rejected (sampling params are stripped automatically). Prompts over 100K tokens are billed at 5x the base rate.
 
-`fable51()` registers `claude-fable-5-1` through Anthropic by default. Pass `mix: { openrouter: true }` to append `anthropic/claude-fable-5.1` as its fallback.
+`fable52()` registers `claude-fable-5-2` through Anthropic by default. Pass `mix: { openrouter: true }` to append `anthropic/claude-fable-5.2` as its fallback. `fable51()` registers `claude-fable-5-1` through Anthropic by default. Pass `mix: { openrouter: true }` to append `anthropic/claude-fable-5.1` as its fallback.
 
 ### Google
-`gemini4argon()` `gemini38flash()` `gemini37flash()` `gemini36flash()` `gemini35flash()` `gemini35flashLite()` `gemini31flashLite()`
+`gemini4carbon()` `gemini4argon()` `gemini38flash()` `gemini37flash()` `gemini36flash()` `gemini35flash()` `gemini35flashLite()` `gemini31flashLite()`
 
 ### Grok
 `grok47()` `grok46()` `grok43()`
@@ -229,7 +229,7 @@ Use `.effort(n)` (or `config.effort`) to enable Anthropic thinking — e.g. `.ef
 ### OpenRouter
 `deepseekPro()` uses `deepseek/deepseek-v4-pro-0813` through OpenRouter. Requires `OPENROUTER_API_KEY`; supports the DeepSeek effort mapping and `chain('deepseekPro@100')`. Base cost estimates per 1M tokens: $0.5808 input, $0.05808 cached input, $1.7424 output. Actual rates may change, including provider and time-based pricing.
 
-`museGlimmer30b()` `museWonder10()` `museSpark12()` `museSpark12c()` `museSpark13()` `museSpark13c()` `qwen35397b()` `qwen36plus()` `qwen37plus()` `qwen3827b()` `qwen38flash()` `hermes470b()` `hermes4405b()` `qwen38max()` `kimiK27Code()` `kimiK3()` `kimiK31Pro()` `minimaxM27()` `minimaxM3()` `GLM45()` `GLM52()` `GLM53()` `GLM53Flash()`
+`museGlimmer30b()` `museEmber10()` `museWonder10()` `museSpark12()` `museSpark12c()` `museSpark13()` `museSpark13c()` `qwen35397b()` `qwen36plus()` `qwen37plus()` `qwen3827b()` `qwen38flash()` `hermes470b()` `hermes4405b()` `qwen38max()` `kimiK27Code()` `kimiK3()` `kimiK31Pro()` `minimaxM27()` `minimaxM3()` `GLM45()` `GLM52()` `GLM53()` `GLM53Flash()`
 
 Muse Spark: the `c` suffix selects Contributor, where prompts and outputs may be used to improve Meta products. Without `c`, the standard tier is selected. Use `museSpark12c()` for the former `museSpark12()` Contributor behavior.
 

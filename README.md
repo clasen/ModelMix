@@ -184,6 +184,7 @@ ModelMix provides convenient shorthand methods for quickly accessing different A
 | `gpt52()` | OpenAI | gpt-5.2 | [\$1.75][1] | [\$14.00][1] |
 | `gpt5mini()` | OpenAI | gpt-5-mini | [\$0.25][1] | [\$2.00][1] |
 | `gpt5nano()` | OpenAI | gpt-5-nano | [\$0.05][1] | [\$0.40][1] |
+| `fable52()` | Anthropic | claude-fable-5-2 | [\$8.00][2] | [\$40.00][2] |
 | `fable51()` | Anthropic | claude-fable-5-1 | [\$10.00][2] | [\$50.00][2] |
 | `fable5()` | Anthropic | claude-fable-5 | [\$10.00][2] | [\$50.00][2] |
 | `opus55()` | Anthropic | claude-opus-5-5 | [\$4.00][2] | [\$20.00][2] |
@@ -195,6 +196,7 @@ ModelMix provides convenient shorthand methods for quickly accessing different A
 | `sonnet5()` | Anthropic | claude-sonnet-5 | [\$3.00][2] | [\$15.00][2] |
 | `haiku55()` | Anthropic | claude-haiku-5-5 | [\$0.10][2] | [\$0.50][2] |
 | `haiku45()` | Anthropic | claude-haiku-4-5-20251001 | [\$1.00][2] | [\$5.00][2] |
+| `gemini4carbon()` | Google | gemini-4-carbon | [\$2.00][3] | [\$10.00][3] |
 | `gemini4argon()` | Google | gemini-4-argon | [\$2.00][3] | [\$10.00][3] |
 | `gemini38flash()` | Google | gemini-3.8-flash | [\$0.75][3] | [\$3.75][3] |
 | `gemini37flash()` | Google | gemini-3.7-flash | [\$0.75][3] | [\$3.75][3] |
@@ -206,6 +208,7 @@ ModelMix provides convenient shorthand methods for quickly accessing different A
 | `grok46()` | Grok | grok-4.6 | [\$2.00][6] | [\$6.00][6] |
 | `grok43()` | Grok | grok-4.3 | [\$1.25][6] | [\$2.50][6] |
 | `museGlimmer30b()` | Fireworks | models/muse-glimmer-30b | [\$0.35][17] | [\$1.50][17] |
+| `museEmber10()` | OpenRouter | meta/muse-ember | [\$0.10][32] | [\$0.50][32] |
 | `museWonder10()` | OpenRouter | meta/muse-wonder | [\$4.00][31] | [\$20.00][31] |
 | `museSpark12()` | OpenRouter | meta/muse-spark-1.2 | [\$1.25][25] | [\$4.25][25] |
 | `museSpark12c()` | OpenRouter | meta/muse-spark-1.2-contributor | [\$0.10][22] | [\$0.20][22] |
@@ -243,15 +246,21 @@ Gemini 3.8 Flash, 3.7 Flash, and 3.6 Flash use Google's introductory standard pr
 
 `gemini4argon()` uses Google's `gemini-4-argon` (1M context). Its listed prices are Google's introductory rates through November 30, 2026 ($0.10 cached input per 1M tokens); from December 1, 2026 they double to $4.00 / $20.00. Gemini 4 Argon accepts only `low`, `medium` (native default), and `high` thinking levels and rejects `thinkingBudget`.
 
+`gemini4carbon()` uses Google's `gemini-4-carbon` (1M context), Google's frontier Gemini 4 model for coding, agentic, and complex reasoning work. It shares Argon's introductory pricing through November 30, 2026 ($0.10 cached input per 1M tokens), doubling to $4.00 / $20.00 from December 1, 2026. Gemini 4 Carbon accepts `low`, `medium`, and `high` thinking levels; unlike Argon it accepts dynamic `thinkingBudget: -1`, which `effort(-1)` sends.
+
 `kimiK31Pro()` uses Moonshot's native `kimi-k3.1-pro` (1M context) and requires `MOONSHOT_API_KEY`; pass `mix: { openrouter: true }` to append `moonshotai/kimi-k3.1-pro` as its fallback. `kimiK31ProHighspeed()` selects `kimi-k3.1-pro-highspeed`, which Moonshot serves only on its own API at roughly two to three times the speed. Both always reason, accept `reasoning_effort` `low` / `high` / `max` (native default `max`), and fix their sampling parameters, so ModelMix strips `temperature`, `top_p`, `n`, and the penalties on the Moonshot route. Cached input costs $0.20 per 1M tokens.
 
 `museWonder10()` uses Meta's Muse Wonder 1.0 through OpenRouter (`meta/muse-wonder`) and requires `OPENROUTER_API_KEY`. It always reasons and accepts `minimal` through `max`; cached input costs $0.20 per 1M tokens. Muse Wonder Full is not available through the API.
+
+`museEmber10()` uses Meta's Muse Ember 1.0 through OpenRouter (`meta/muse-ember`) and requires `OPENROUTER_API_KEY`. It is Meta's smallest and most efficient Muse model (1M context), always reasons, and accepts `minimal` through `max`; cached input costs $0.004 per 1M tokens.
 
 `museGlimmer30b()` uses Fireworks by default. OpenRouter, NVIDIA NIM, and Together are available through `mix.openrouter`, `mix.nvidia`, and `mix.together`.
 
 `sonnet55()` uses Anthropic's `claude-sonnet-5-5` and supports unified effort, including `.chain('sonnet55@high')`. Existing `sonnet5()` / `sonnet50()` still select Sonnet 5. Sonnet 5.5 uses adaptive thinking by default; to disable up-front thinking, pass `options: { thinking: { type: 'between_tools' }, output_config: { effort: 'high' } }` (only `low`, `medium`, and `high` are supported in this mode). Forced tool choices (`any` / `tool`) are not supported. See the [Sonnet 5.5 documentation](https://platform.claude.com/docs/en/models/sonnet-5-5/overview).
 
 `haiku55()` uses Anthropic's `claude-haiku-5-5` (1M context, 128K output) and supports unified effort, including `.chain('haiku55@high')`. `haiku45()` still selects Haiku 4.5. Haiku 5.5 uses adaptive thinking by default with a native `medium` effort, rejects `budget_tokens`, sampling parameters (`temperature` / `top_p` / `top_k` are stripped automatically), and assistant prefill, and has no server-side refusal fallback. The listed prices apply to prompts up to 100K tokens; longer prompts are billed at $0.50 / $2.50, and `calculateCostBreakdown()` applies that rate automatically.
+
+`fable52()` uses the official Anthropic API by default (`claude-fable-5-2`, 1M context, 128K output). Pass `mix: { openrouter: true }` to append [`anthropic/claude-fable-5.2`][33] as its fallback. Thinking is always on; effort accepts `low` through `max`. Cached input costs $0.20 per 1M tokens, and cache writes cost $10.00 (5 minutes) or $16.00 (1 hour).
 
 `fable51()` uses the official Anthropic API by default (`claude-fable-5-1`). Pass `mix: { openrouter: true }` to append [`anthropic/claude-fable-5.1`][21] as its fallback.
 
@@ -292,6 +301,8 @@ OpenRouter fallbacks are disabled globally by default and are appended only with
 [29]: https://api-docs.deepseek.com/quick_start/pricing/ "DeepSeek API Pricing"
 [30]: https://platform.kimi.ai/docs/guide/kimi-k3-1-pro-quickstart "Kimi K3.1 Pro"
 [31]: https://openrouter.ai/meta/muse-wonder "Muse Wonder on OpenRouter"
+[32]: https://openrouter.ai/meta/muse-ember "Muse Ember on OpenRouter"
+[33]: https://openrouter.ai/anthropic/claude-fable-5.2 "Claude Fable 5.2 on OpenRouter"
 
 `deepseekPro()` uses the pinned OpenRouter model `deepseek/deepseek-v4-pro-0813` and requires `OPENROUTER_API_KEY`. Use `chain('deepseekPro@100')` for maximum reasoning effort. Cost estimates use the listed base rates and $0.05808/M cached input tokens; actual rates may change, including provider and time-based pricing.
 
@@ -343,7 +354,7 @@ ModelMix.new().effort(-1).minimaxM3().addText('...').message();
 
 ### Provider-specific behavior
 
-- **Gemini:** Gemini 3+ uses bands 0–24 / 25–49 / 50–74 / 75–100. Gemini 4 Argon, 3.8 Flash, and 3.7 Flash clamp these bands to `low` / `low` / `medium` / `high`; `-1` leaves their native `medium` default unchanged. Gemini 2.5 maps 0–100 to `thinkingBudget`.
+- **Gemini:** Gemini 3+ uses bands 0–24 / 25–49 / 50–74 / 75–100. Gemini 4 Carbon, 4 Argon, 3.8 Flash, and 3.7 Flash clamp these bands to `low` / `low` / `medium` / `high`; `-1` leaves the native `medium` default of Argon, 3.8 Flash, and 3.7 Flash unchanged and sends dynamic `thinkingBudget: -1` to Carbon. Gemini 2.5 maps 0–100 to `thinkingBudget`.
 - **GPT-6 Astra:** 0–39 maps to `low`, 40–59 to `medium`, 60–79 to `high`, 80–99 to `xhigh`, and 100 to `max`. [Model details](https://developers.openai.com/api/docs/models/gpt-6-astra). Cache reads cost $1.00 and cache writes $12.50 per 1M tokens; requests over 272K input tokens apply 2× input/cache and 1.5× output rates.
 - **GPT-6.1 Sol:** uses the same bands as Astra because it does not support `none`: 0–39 maps to `low`, 40–59 to `medium`, 60–79 to `high`, 80–99 to `xhigh`, and 100 to `max`. [Model details](https://developers.openai.com/api/docs/models/gpt-6.1-sol). Cache reads cost $0.10 and cache writes $2.50 per 1M tokens; requests over 272K input tokens apply 2× input/cache and 1.5× output rates.
 - **GPT-6.1 Terra:** 0–19 maps to `none`, 20–39 to `low`, 40–59 to `medium`, 60–79 to `high`, 80–99 to `xhigh`, and 100 to `max`. [Model details](https://developers.openai.com/api/docs/models/gpt-6.1-terra). Cache reads cost $0.05 and cache writes $1.25 per 1M tokens; requests over 272K input tokens apply 2× input/cache and 1.5× output rates.
@@ -351,7 +362,7 @@ ModelMix.new().effort(-1).minimaxM3().addText('...').message();
 - **GPT-5.6:** `100` maps to `max`; 80–99 remains `xhigh`.
 - **Qwen 3.8 27B and Flash:** 0–39 / 40–79 / 80–100 map to `low` / `medium` / `xhigh`; `-1` leaves the native `xhigh` default unchanged. Qwen 3.8 Flash is the managed production version based on the open-weight Flash-Next architecture.
 - **Kimi K3 and K3.1 Pro:** reasoning is mandatory; 0–59 maps to `low`, 60–99 to `high`, and 100 to `max`; `-1` leaves the native `max` default unchanged.
-- **Muse Wonder:** 0–19 maps to `minimal`, then OpenAI's `low` / `medium` / `high` / `xhigh` bands, and 100 to `max`.
+- **Muse Wonder and Muse Ember:** 0–19 maps to `minimal`, then OpenAI's `low` / `medium` / `high` / `xhigh` bands, and 100 to `max`.
 - **GLM 5.3 and GLM 5.3 Flash:** reasoning is mandatory; 0–39 / 40–79 / 80–100 map to `low` / `high` / `max`; `-1` leaves the native `max` default unchanged.
 - **DeepSeek:** `↑` means thinking is enabled; `off` means it is disabled.
 - **MiniMax:** `off` maps to `thinking.disabled`; `adaptive` maps to `thinking.type=adaptive`. MiniMax M3.1 Flash Preview always reasons and uses `reasoning_effort` instead; `-1` leaves its native default unchanged.
