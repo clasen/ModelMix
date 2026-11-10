@@ -1099,6 +1099,37 @@ JSON parsing accepts a Markdown code block or a lone closing triple-backtick del
 
 Run `node demo/benchmark.js` for a complete model comparison. It allows up to 32,768 output tokens per call, prints intermediate progress, a final ranking and error details, then saves each response as Markdown together with the full JSON report under `demo/results/`.
 
+### Dataset plugin
+
+The included dataset plugin appends every successful execution to a JSONL file in the chat fine-tuning format:
+
+```javascript
+import { ModelMix } from 'modelmix';
+import { dataset } from 'modelmix/plugins/dataset/index.js';
+
+const model = ModelMix.new({ config: { system: 'Extract the city as JSON.' } })
+    .gpt6luna()
+    .use(dataset({ file: './train.jsonl' }));
+
+await model.addText('I live in Rosario.').json({ city: '' });
+```
+
+```json
+{"messages":[{"role":"system","content":"Extract the city as JSON. ..."},{"role":"user","content":"I live in Rosario."},{"role":"assistant","content":"{\"city\":\"Rosario\"}"}]}
+```
+
+Each line holds the rendered system prompt (including any JSON-mode instructions), the conversation history sent to the model, and the model's raw text response. Consecutive text parts with the same role are joined with a blank line, and thinking parts in earlier assistant turns are omitted. Failed executions write nothing. The file path resolves from `process.cwd()`.
+
+Pass `think: true` to record the model's reasoning, when the provider returns it, in a separate `reasoning_content` field of the final assistant message:
+
+```json
+{"role":"assistant","reasoning_content":"The user names a city...","content":"{\"city\":\"Rosario\"}"}
+```
+
+Providers that return no reasoning text, or only a signature, produce the message without `reasoning_content`.
+
+The plugin records text-only conversations: images, audio, or tool messages in the history are rejected before the provider is called. When a model uses tools during an execution, only the initial request and the final answer are recorded, without the intermediate tool rounds. Child instances created with `new()` or `context.invoke()` inherit the plugin by default; use the `plugins` policy to exclude `'dataset'`.
+
 ### Recursive Language Model plugin
 
 The separately publishable `@modelmix/rlm` workspace package keeps document parsing, planner prompts, and `isolated-vm` out of the core `modelmix` dependency tree. It requires Node.js 22 or newer.

@@ -147,6 +147,17 @@ Plugin tools use `context.request.tools.push({ tool, callback })`. They coexist 
 
 With plugin tools, native `options.tools` entries are combined with registered and plugin tools. OpenAI Responses supports this tool loop, including reasoning returned with function calls.
 
+### Recording training data
+
+The dataset plugin appends each successful execution as a `{"messages":[system, ...history, assistant]}` line to a JSONL file:
+
+```javascript
+import { dataset } from 'modelmix/plugins/dataset/index.js';
+const model = ModelMix.new().gpt6luna().use(dataset({ file: './train.jsonl' }));
+```
+
+The assistant content is the raw model text (a JSON string in JSON mode). With `dataset({ file, think: true })`, available reasoning is stored in the final assistant message's `reasoning_content` field. Only text conversations are accepted; non-text or tool messages in the history throw before the provider call. Intermediate tool rounds within one execution are not recorded.
+
 ### Unified effort
 
 Provider-agnostic reasoning intensity. **Not** an `options` field — use `config.effort` or `.effort(n)`.
