@@ -1,6 +1,6 @@
 {
   "name": "modelmix",
-  "version": "5.6.0",
+  "version": "5.7.0",
   "description": "🧬 Reliable interface with automatic fallback for AI LLMs.",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
