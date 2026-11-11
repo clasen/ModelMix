@@ -1132,7 +1132,7 @@ The plugin records text-only conversations: images, audio, or tool messages in t
 
 ### Recursive Language Model plugin
 
-The separately publishable `@modelmix/rlm` workspace package keeps document parsing, planner prompts, and `isolated-vm` out of the core `modelmix` dependency tree. It requires Node.js 22 or newer.
+The separately publishable `@modelmix/rlm` workspace package keeps document parsing, planner prompts, and the QuickJS (WebAssembly) sandbox out of the core `modelmix` dependency tree. It requires Node.js 22 or newer, or Bun.
 
 ```javascript
 const { ModelMix } = require('modelmix');

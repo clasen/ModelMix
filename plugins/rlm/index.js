@@ -5,7 +5,7 @@ const {
 } = require('./lib/planner-prompt');
 const { rlm } = require('./lib/plugin');
 const { RlmLimitError } = require('./lib/budget');
-const { createIsolatedVmSandbox } = require('./lib/isolated-vm-sandbox');
+const { createQuickJsSandbox } = require('./lib/quickjs-sandbox');
 const {
     parseMarkdownDocument,
     reconstructMarkdownDocument
@@ -14,7 +14,7 @@ const { createWorkerCatalog } = require('./lib/worker-catalog');
 
 module.exports = {
     RlmLimitError,
-    createIsolatedVmSandbox,
+    createQuickJsSandbox,
     createWorkerCatalog,
     describeVariables,
     createPlannerInvocation,

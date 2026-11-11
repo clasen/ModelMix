@@ -19,6 +19,7 @@ ModelMix is a CommonJS Node.js library for LLM providers, fallback chains, rate 
 - `pnpm install` installs locked root dependencies.
 - `pnpm test` runs the complete Mocha suite with shared setup.
 - `pnpm run test:offline` runs the main mocked regressions without intentional live-provider coverage.
+- `pnpm run test:bun` runs the same offline regressions on the Bun runtime.
 - `pnpm run test:templates`, `pnpm run test:fallback`, and `pnpm run test:watch` support focused development.
 - `pnpm run test:live` and `pnpm run test:live.mcp` require real credentials, may incur costs, and must be reported separately.
 

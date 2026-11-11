@@ -1,16 +1,16 @@
 const { expect } = require('chai');
 const {
     RlmLimitError,
-    createIsolatedVmSandbox
+    createQuickJsSandbox
 } = require('..');
 
 function limits(sandboxMemoryBytes = 16 * 1024 * 1024) {
     return { sandboxMemoryBytes };
 }
 
-describe('RLM isolated-vm sandbox', () => {
+describe('RLM QuickJS sandbox', () => {
     it('exposes only copied variables and the validated query callback', async () => {
-        const sandbox = createIsolatedVmSandbox();
+        const sandbox = createQuickJsSandbox();
         const calls = [];
         const value = await sandbox.execute({
             code: `(async () => ({
@@ -54,7 +54,7 @@ describe('RLM isolated-vm sandbox', () => {
     it('terminates programs that exceed their wall-time limit', async () => {
         let failure;
         try {
-            await createIsolatedVmSandbox().execute({
+            await createQuickJsSandbox().execute({
                 code: '(async () => { while (true) {} })()',
                 variables: {},
                 query: async () => '',
@@ -69,10 +69,10 @@ describe('RLM isolated-vm sandbox', () => {
         expect(failure.limit).to.equal('maxWallTimeMs');
     });
 
-    it('disposes an in-flight isolate and preserves the abort reason', async () => {
+    it('terminates an in-flight program and preserves the abort reason', async () => {
         const controller = new AbortController();
         const reason = new Error('stop sandbox');
-        const execution = createIsolatedVmSandbox().execute({
+        const execution = createQuickJsSandbox().execute({
             code: '(async () => { while (true) {} })()',
             variables: {},
             query: async () => '',
@@ -92,28 +92,31 @@ describe('RLM isolated-vm sandbox', () => {
         expect(failure).to.equal(reason);
     });
 
-    it('rejects memory limits below the isolated-vm minimum', async () => {
-        let failure;
-        try {
-            await createIsolatedVmSandbox().execute({
-                code: '(async () => "ok")()',
-                variables: {},
-                query: async () => '',
-                limits: limits(1024 * 1024),
-                timeoutMs: 1000
-            });
-        } catch (error) {
-            failure = error;
-        }
+    it('surfaces query failures inside the sandbox', async () => {
+        const value = await createQuickJsSandbox().execute({
+            code: `(async () => {
+                try {
+                    await query({ worker: 'fast', system: 'Classify.', message: 'Ada' });
+                    return 'resolved';
+                } catch (error) {
+                    return error.message;
+                }
+            })()`,
+            variables: {},
+            query: async () => {
+                throw new Error('worker unavailable');
+            },
+            limits: limits(),
+            timeoutMs: 1000
+        });
 
-        expect(failure).to.be.instanceOf(TypeError);
-        expect(failure.message).to.include('at least 8388608');
+        expect(value).to.equal('worker unavailable');
     });
 
-    it('terminates programs that exceed the configured isolate heap', async () => {
+    it('terminates programs that exceed the configured sandbox memory', async () => {
         let failure;
         try {
-            await createIsolatedVmSandbox().execute({
+            await createQuickJsSandbox().execute({
                 code: `(() => {
                     const values = [];
                     while (true) {

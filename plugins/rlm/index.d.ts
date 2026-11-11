@@ -164,7 +164,7 @@ export interface RlmSandbox {
   }): Promise<unknown>;
 }
 
-export declare function createIsolatedVmSandbox(): RlmSandbox;
+export declare function createQuickJsSandbox(): RlmSandbox;
 
 export interface RlmDocumentInput {
   format: 'markdown';

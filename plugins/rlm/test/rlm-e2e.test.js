@@ -228,7 +228,7 @@ describe('RLM mocked end-to-end execution', () => {
         expect(failure.message).to.include('Unknown RLM worker "missing"');
     });
 
-    it('translates a Markdown book through semantic chapters and paragraphs in isolated-vm', async () => {
+    it('translates a Markdown book through semantic chapters and paragraphs in the QuickJS sandbox', async () => {
         const markdown = [
             '# First chapter',
             '',

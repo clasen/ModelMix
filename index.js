@@ -1,8 +1,6 @@
 const fs = require('fs');
 const { randomUUID } = require('crypto');
 const ejs = require('ejs');
-const fileType = require('file-type');
-const detectFileTypeFromBuffer = fileType.fileTypeFromBuffer || fileType.fromBuffer;
 const log = require('lemonlog')('ModelMix');
 const Bottleneck = require('bottleneck');
 const path = require('path');
@@ -562,10 +560,8 @@ class ModelMix {
 
                     // Detect mimeType if not provided
                     if (!mimeType) {
-                        if (typeof detectFileTypeFromBuffer !== 'function') {
-                            throw new Error('file-type module does not expose a buffer detector');
-                        }
-                        const detectedType = await detectFileTypeFromBuffer(buffer);
+                        const { fileTypeFromBuffer } = await import('file-type');
+                        const detectedType = await fileTypeFromBuffer(buffer);
                         if (!detectedType || !detectedType.mime.startsWith('image/')) {
                             throw new Error(`Invalid image - unable to detect valid image format`);
                         }

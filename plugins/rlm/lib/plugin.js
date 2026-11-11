@@ -1,5 +1,5 @@
 const { RlmLimitError, validateRuntimeLimits } = require('./budget');
-const { createIsolatedVmSandbox } = require('./isolated-vm-sandbox');
+const { createQuickJsSandbox } = require('./quickjs-sandbox');
 const { parseMarkdownDocument } = require('./markdown');
 const { createPlannerInvocation } = require('./planner-prompt');
 const {
@@ -127,7 +127,7 @@ function rlm({ maxDepth, variables = {}, documents, workers, limits, sandbox } =
     const catalog = createWorkerCatalog(workers);
     const validatedLimits = validateRuntimeLimits(limits);
     const sandboxAdapter = validateSandbox(
-        sandbox === undefined ? createIsolatedVmSandbox() : sandbox
+        sandbox === undefined ? createQuickJsSandbox() : sandbox
     );
     const configuredVariables = createExternalVariables(variables, validatedDocuments);
 

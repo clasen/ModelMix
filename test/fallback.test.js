@@ -2,12 +2,12 @@ const { expect } = require('chai');
 const sinon = require('sinon');
 const nock = require('nock');
 const { EventEmitter } = require('events');
-const Module = require('module');
 const {
     MixCustom,
     MixGoogle,
     MixOpenAI,
     MixOpenAIResponses,
+    MixOpenAIWebSocket,
     MixOpenRouter,
     ModelMix
 } = require('../index.js');
@@ -889,31 +889,9 @@ describe('Provider Fallback Chain Tests', () => {
                 send() {}
             }
 
-            // Reload the provider modules so they pick up the stubbed ws module.
-            const providerPaths = [
-                require.resolve('../lib/providers.js'),
-                require.resolve('../lib/providers/openai.js')
-            ];
-            const cachedProviders = providerPaths.map(modulePath => require.cache[modulePath]);
-            const originalLoad = Module._load;
-            let RealtimeProvider;
-            try {
-                for (const modulePath of providerPaths) delete require.cache[modulePath];
-                Module._load = function (request, parent, isMain) {
-                    if (request === 'ws') return ClosingWebSocket;
-                    return originalLoad.call(this, request, parent, isMain);
-                };
-                ({ MixOpenAIWebSocket: RealtimeProvider } = require('../lib/providers.js'));
-            } finally {
-                Module._load = originalLoad;
-                providerPaths.forEach((modulePath, index) => {
-                    delete require.cache[modulePath];
-                    if (cachedProviders[index]) require.cache[modulePath] = cachedProviders[index];
-                });
-            }
-
             const apiKey = 'secret-realtime-key';
-            const provider = new RealtimeProvider({ config: { apiKey } });
+            const provider = new MixOpenAIWebSocket({ config: { apiKey } });
+            provider._createWebSocket = () => new ClosingWebSocket();
             let error;
             try {
                 await provider.create({
