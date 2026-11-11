@@ -1879,7 +1879,6 @@ export interface ModelMix {
     hermes470b(args?: ModelAttachArgs): this;
     hermes4405b(args?: ModelAttachArgs): this;
     hermes3(args?: ModelAttachArgs): this;
-    kimiK26(args?: ModelAttachArgs): this;
     kimiK27Code(args?: ModelAttachArgs): this;
     kimiK3(args?: ModelAttachArgs): this;
     kimiK31Pro(args?: ModelAttachArgs): this;

@@ -11,7 +11,7 @@ const ai = ModelMix.new({
     },
     mix: { openrouter: false } // Exclude OpenRouter (free tier often rate-limited)
 })
-    .kimiK26({ mix: { fireworks: true, together: true } });
+    .kimiK27Code({ mix: { fireworks: true, together: true } });
 
 console.log('Making 6 requests with round robin enabled...\n');
 

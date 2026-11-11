@@ -149,7 +149,7 @@ console.log(ETH.price);
 **This example chains two multi-provider shortcuts. Each one registers its default provider and accepts additional providers through `mix`; if one model fails, ModelMix automatically falls back to the next model in the chain.**
 ```javascript
 ModelMix.new()
-  .kimiK26()
+  .kimiK27Code()
   .GLM52()
   .addText('What is the capital of France?');
 ```
@@ -240,7 +240,6 @@ ModelMix provides convenient shorthand methods for quickly accessing different A
 | `kimiK31ProHighspeed()` | Moonshot | kimi-k3.1-pro-highspeed | [\$4.00][30] | [\$20.00][30] |
 | `kimiK3()` | Moonshot | kimi-k3 | [\$3.00][11] | [\$15.00][11] |
 | `kimiK27Code()` | Together | Kimi-K2.7-Code | [\$0.95][7] | [\$4.00][7] |
-| `kimiK26()` | Fireworks | models/kimi-k2p6 | [\$0.95][10] | [\$4.00][10] |
 
 Gemini 3.8 Flash, 3.7 Flash, and 3.6 Flash use Google's introductory standard pricing through December 31, 2026; standard rates double on January 1, 2027.
 
@@ -314,7 +313,7 @@ Muse Spark methods ending in `c` select Contributor: prompts and outputs may be 
 
 Each method accepts optional `options`, `config`, and (for multi-provider methods) `mix` parameters to customize behavior.  
 
-Provider routing flags resolve in this order: the shortcut's defaults, then flags set on `ModelMix.new({ mix })`. A `mix` passed to the shortcut itself replaces the shortcut's defaults, so `kimiK26({ mix: { openrouter: true } })` uses only OpenRouter while `ModelMix.new({ mix: { openrouter: true } }).kimiK26()` keeps Fireworks and appends OpenRouter. `fable51()` keeps its official Anthropic route unless `mix.anthropic` is `false`.
+Provider routing flags resolve in this order: the shortcut's defaults, then flags set on `ModelMix.new({ mix })`. A `mix` passed to the shortcut itself replaces the shortcut's defaults, so `kimiK27Code({ mix: { openrouter: true } })` uses only OpenRouter while `ModelMix.new({ mix: { openrouter: true } }).kimiK27Code()` keeps Together and appends OpenRouter. `fable51()` keeps its official Anthropic route unless `mix.anthropic` is `false`.
 
 Attaching a model checks that every selected provider has its API key (`config.apiKey` or the provider's environment variable). A missing key fails at build time, before any request: `.chain()` and multi-provider shortcuts throw one error with `code: 'MISSING_API_KEY'` and `missingKeys: [{ provider, env, model }]` listing every missing key, and attach nothing.
 
@@ -375,7 +374,7 @@ ModelMix.new().effort(-1).minimaxM3().addText('...').message();
 
 The former `*think()` methods were removed. Use `.effort(n).<model>()` with `0`–`100` or `-1` instead.
 
-- **Kimi:** use `kimiK26()`.
+- **Kimi:** use `kimiK3()`.
 
 ## 🔄 Templates
 

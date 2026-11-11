@@ -170,14 +170,6 @@ export const MODEL_SHORTCUTS: Record<string, ModelShortcutSpec> = {
         }
     },
 
-    kimiK26: {
-        defaultMix: { fireworks: true },
-        routes: {
-            fireworks: 'accounts/fireworks/models/kimi-k2p6',
-            openrouter: 'moonshotai/kimi-k2.6',
-            together: 'moonshotai/Kimi-K2.6'
-        }
-    },
     kimiK27Code: {
         defaultMix: { together: true },
         routes: {

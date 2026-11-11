@@ -180,20 +180,6 @@ describe('Live Integration Tests', function () {
 
     describe('Additional Model Tests', function () {
 
-        it('should work with Kimi K2.6 model', async function () {
-            const model = ModelMix.new(setup).kimiK26({
-                options: { max_tokens: 128 }
-            });
-
-            model.addText('Say "Kimik26 test successful" and nothing else.');
-
-            const response = await model.message();
-            console.log(`Kimi K2.6 response: ${response}`);
-
-            expect(response).to.be.a('string');
-            expect(response.toLowerCase()).to.include('kimik26 test successful');
-        });
-
         const grokSeriesTests = [
             { name: 'Grok 4.6', factory: (m) => m.grok46(), token: 'grok46' }
         ];

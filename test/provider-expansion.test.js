@@ -16,7 +16,7 @@ describe('Provider expansion regressions', () => {
         process.env.MINIMAX_API_KEY = 'test-minimax-key';
 
         try {
-            const kimi = ModelMix.new().kimiK26();
+            const kimi = ModelMix.new().kimiK27Code();
             const minimax = ModelMix.new().minimaxM27();
 
             expect(kimi.models.some(({ provider }) => provider instanceof MixOpenRouter)).to.equal(false);

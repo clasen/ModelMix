@@ -8,7 +8,6 @@ const {
     MixOpenAI,
     MixOpenRouter,
     MixFireworks,
-    MixTogether,
     MixKimi,
     MixAnthropic,
     MixGoogle,
@@ -59,8 +58,8 @@ describe('Model registry', () => {
 
     describe('mix resolution', () => {
         it('lets ModelMix.new({ mix }) override shortcut defaults', () => {
-            const model = ModelMix.new({ mix: { fireworks: false, openrouter: true } }).kimiK26();
-            expect(keys(model)).to.deep.equal(['moonshotai/kimi-k2.6']);
+            const model = ModelMix.new({ mix: { together: false, openrouter: true } }).kimiK27Code();
+            expect(keys(model)).to.deep.equal(['moonshotai/kimi-k2.7-code']);
             expect(model.models[0].provider).to.be.instanceOf(MixOpenRouter);
         });
 
@@ -71,16 +70,16 @@ describe('Model registry', () => {
         });
 
         it('keeps instance flags on models derived with new()', () => {
-            const model = ModelMix.new({ mix: { fireworks: false, together: true } }).new().kimiK26();
-            expect(keys(model)).to.deep.equal(['moonshotai/Kimi-K2.6']);
-            expect(model.models[0].provider).to.be.instanceOf(MixTogether);
+            const model = ModelMix.new({ mix: { together: false, fireworks: true } }).new().kimiK27Code();
+            expect(keys(model)).to.deep.equal(['accounts/fireworks/models/kimi-k2p7-code']);
+            expect(model.models[0].provider).to.be.instanceOf(MixFireworks);
         });
 
         it('treats a call-level mix as the exact route selection', () => {
-            expect(keys(ModelMix.new().kimiK26({ mix: { openrouter: true } })))
-                .to.deep.equal(['moonshotai/kimi-k2.6']);
-            expect(keys(ModelMix.new().kimiK26({ mix: { fireworks: true, together: true } })))
-                .to.deep.equal(['accounts/fireworks/models/kimi-k2p6', 'moonshotai/Kimi-K2.6']);
+            expect(keys(ModelMix.new().kimiK27Code({ mix: { openrouter: true } })))
+                .to.deep.equal(['moonshotai/kimi-k2.7-code']);
+            expect(keys(ModelMix.new().kimiK27Code({ mix: { fireworks: true, together: true } })))
+                .to.deep.equal(['moonshotai/Kimi-K2.7-Code', 'accounts/fireworks/models/kimi-k2p7-code']);
         });
 
         it('keeps the official Anthropic route for Fable 5.1 unless disabled', () => {
@@ -133,7 +132,7 @@ describe('API key checks', () => {
             const model = ModelMix.new().gpt5nano();
             let error;
             try {
-                model.chain('kimiK26', 'GLM52', 'sonnet55');
+                model.chain('deepseekV4Pro', 'GLM52', 'sonnet55');
             } catch (caught) {
                 error = caught;
             }
@@ -153,16 +152,16 @@ describe('API key checks', () => {
     });
 
     it('checks every route a multi-provider shortcut selects', () => {
-        withoutEnv(['TOGETHER_API_KEY'], () => {
+        withoutEnv(['FIREWORKS_API_KEY'], () => {
             const model = ModelMix.new();
-            expect(() => model.kimiK26({ mix: { fireworks: true, together: true } })).to.throw(/TOGETHER_API_KEY/);
+            expect(() => model.kimiK27Code({ mix: { fireworks: true, together: true } })).to.throw(/FIREWORKS_API_KEY/);
             expect(model.models).to.have.length(0);
         });
     });
 
     it('accepts config.apiKey instead of the environment variable', () => {
         withoutEnv(['FIREWORKS_API_KEY'], () => {
-            const model = ModelMix.new().kimiK26({ config: { apiKey: 'fw-inline-key' } });
+            const model = ModelMix.new().deepseekV4Pro({ config: { apiKey: 'fw-inline-key' } });
             expect(model.models[0].provider.config.apiKey).to.equal('fw-inline-key');
         });
     });
@@ -172,7 +171,7 @@ describe('API key checks', () => {
         nock.disableNetConnect();
         try {
             const error = await provider.create({
-                options: { model: 'accounts/fireworks/models/kimi-k2p6', messages: [] },
+                options: { model: 'accounts/fireworks/models/kimi-k2p7-code', messages: [] },
                 config: {}
             }).then(() => null, caught => caught);
             expect(error.code).to.equal('MISSING_API_KEY');

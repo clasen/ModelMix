@@ -181,7 +181,7 @@ ModelMix.new({ config: { effort: 80 } })
 | MiniMax M3 | off | adaptive | adaptive | adaptive | adaptive | adaptive |
 | MiniMax M3.1 Flash | `low` | `medium` | `high` | `xhigh` | `max` | — |
 
-\* GPT-6 Astra and GPT-6.1 Sol map 0–39 / 40–59 / 60–79 / 80–99 / 100 to `low` / `medium` / `high` / `xhigh` / `max`; neither supports `none`. GPT-6.1 Terra, GPT-6 Sol, GPT-6 Luna, and GPT-5.6 map `100` to `max` and keep `xhigh` for 80–99, with OpenAI's `none` band at 0–19. Qwen 3.8 27B and Flash map 0–39 / 40–79 / 80–100 to `low` / `medium` / `xhigh`; Qwen 3.8 Flash is the managed production version based on Flash-Next. GLM 5.3 and GLM 5.3 Flash require reasoning and map those bands to `low` / `high` / `max`. Gemini bands: 0–24 / 25–49 / 50–74 / 75–100. Gemini 4 Carbon, 4 Argon, 3.8 Flash, and 3.7 Flash support only `low` / `medium` / `high`, so the first two bands clamp to `low`; `-1` keeps the native `medium` default of Argon, 3.8 Flash, and 3.7 Flash and sends dynamic `thinkingBudget: -1` to Carbon. Kimi K3 and K3.1 Pro map 0–59 to `low`, 60–99 to `high`, and 100 to `max`. Muse Wonder and Muse Ember map 0–19 to `minimal` and 100 to `max`. DeepSeek `↑` = thinking on; `off` = thinking disabled. MiniMax `off`/`adaptive` = `thinking.disabled` / `thinking.type=adaptive`; MiniMax M3.1 Flash Preview always reasons and maps to `reasoning_effort`. Gemini 2.5 maps 0–100 to `thinkingBudget`. Anthropic: adaptive + `output_config.effort` on Claude 5 / Fable / Opus 4.6+ / Sonnet 4.6+ / Haiku 5.5; Sonnet 4.5 / Haiku 4.5 use `thinking.type=enabled` + `budget_tokens`. Grok 4.6 maps 0–39 / 40–59 / 60–79 / 80–100 to `low` / `medium` / `high` / `xhigh`; without effort it uses native `high`. `-1` = adaptive/dynamic when available, else no-op. Levels clamp per model. Former `*think()` methods are removed — use `.effort(n).<model>()`. Kimi: `kimiK26()`.
+\* GPT-6 Astra and GPT-6.1 Sol map 0–39 / 40–59 / 60–79 / 80–99 / 100 to `low` / `medium` / `high` / `xhigh` / `max`; neither supports `none`. GPT-6.1 Terra, GPT-6 Sol, GPT-6 Luna, and GPT-5.6 map `100` to `max` and keep `xhigh` for 80–99, with OpenAI's `none` band at 0–19. Qwen 3.8 27B and Flash map 0–39 / 40–79 / 80–100 to `low` / `medium` / `xhigh`; Qwen 3.8 Flash is the managed production version based on Flash-Next. GLM 5.3 and GLM 5.3 Flash require reasoning and map those bands to `low` / `high` / `max`. Gemini bands: 0–24 / 25–49 / 50–74 / 75–100. Gemini 4 Carbon, 4 Argon, 3.8 Flash, and 3.7 Flash support only `low` / `medium` / `high`, so the first two bands clamp to `low`; `-1` keeps the native `medium` default of Argon, 3.8 Flash, and 3.7 Flash and sends dynamic `thinkingBudget: -1` to Carbon. Kimi K3 and K3.1 Pro map 0–59 to `low`, 60–99 to `high`, and 100 to `max`. Muse Wonder and Muse Ember map 0–19 to `minimal` and 100 to `max`. DeepSeek `↑` = thinking on; `off` = thinking disabled. MiniMax `off`/`adaptive` = `thinking.disabled` / `thinking.type=adaptive`; MiniMax M3.1 Flash Preview always reasons and maps to `reasoning_effort`. Gemini 2.5 maps 0–100 to `thinkingBudget`. Anthropic: adaptive + `output_config.effort` on Claude 5 / Fable / Opus 4.6+ / Sonnet 4.6+ / Haiku 5.5; Sonnet 4.5 / Haiku 4.5 use `thinking.type=enabled` + `budget_tokens`. Grok 4.6 maps 0–39 / 40–59 / 60–79 / 80–100 to `low` / `medium` / `high` / `xhigh`; without effort it uses native `high`. `-1` = adaptive/dynamic when available, else no-op. Levels clamp per model. Former `*think()` methods are removed — use `.effort(n).<model>()`. Kimi: `kimiK3()`.
 
 ## Available Model Shorthands
 
@@ -214,7 +214,7 @@ Use `.effort(n)` (or `config.effort`) to enable Anthropic thinking — e.g. `.ef
 `sonar()` `sonarPro()`
 
 ### Together
-`museGlimmer30b()` `qwen36plus()` `qwen37plus()` `GLM52()` `kimiK26()` `kimiK27Code()` `kimiK3()` `minimaxM27()` `minimaxM3()`
+`museGlimmer30b()` `qwen36plus()` `qwen37plus()` `GLM52()` `kimiK27Code()` `kimiK3()` `minimaxM27()` `minimaxM3()`
 
 ### NVIDIA
 `museGlimmer30b()` `minimaxM27()`
@@ -232,7 +232,7 @@ Use `.effort(n)` (or `config.effort`) to enable Anthropic thinking — e.g. `.ef
 `deepseekV41Flash({ mix: { deepseek: true, openrouter: false } })` uses the native API at `https://api.deepseek.com/chat/completions` with model `deepseek-flash` (currently V4.1 Flash). Requires `DEEPSEEK_API_KEY`; `MixDeepSeek` supports explicit `.attach()` calls. Unified effort and native cache usage are supported, and assistant reasoning is preserved for tool continuations. Cost estimates use peak rates per 1M tokens: $0.30 input, $0.006 cached input, $1.20 output; off-peak charges are half. Optional routes: `mix: { fireworks: true }` selects `accounts/fireworks/models/deepseek-v4p1-flash` with `FIREWORKS_API_KEY`, and `mix: { openrouter: true }` selects `deepseek/deepseek-v4.1-flash` (text and image input) with `OPENROUTER_API_KEY`; enabling all three routes orders them DeepSeek → Fireworks → OpenRouter.
 
 ### Fireworks
-`museGlimmer30b()` `qwen36plus()` (private/on-demand only) `qwen37plus()` `qwen38max()` `deepseekV4Flash()` `deepseekV4Pro()` `kimiK26()` `kimiK27Code()` `kimiK3()` `minimaxM27()` `minimaxM3()` `GLM52()`
+`museGlimmer30b()` `qwen36plus()` (private/on-demand only) `qwen37plus()` `qwen38max()` `deepseekV4Flash()` `deepseekV4Pro()` `kimiK27Code()` `kimiK3()` `minimaxM27()` `minimaxM3()` `GLM52()`
 
 ### Cerebras
 `GLM46()`
@@ -245,7 +245,7 @@ Use `.effort(n)` (or `config.effort`) to enable Anthropic thinking — e.g. `.ef
 Muse Spark: the `c` suffix selects Contributor, where prompts and outputs may be used to improve Meta products. Without `c`, the standard tier is selected. Use `museSpark12c()` for the former `museSpark12()` Contributor behavior.
 
 ### Multi-provider (auto-fallback across free/paid tiers)
-`hermes3()` `kimiK26()`
+`hermes3()` `kimiK27Code()`
 
 ### Local
 `lmstudio()` — for LM Studio local models
@@ -630,7 +630,7 @@ For full debug output, also set: `DEBUG=ModelMix* node script.js`
 
 ```javascript
 const model = ModelMix.new()
-    .kimiK26()
+    .kimiK27Code()
     .GLM52()
     .addText("What is the capital of France?");
 console.log(await model.message());
@@ -645,14 +645,14 @@ Some model shorthands register the same model across multiple providers for maxi
 ```javascript
 const model = ModelMix.new({
     mix: {
-        fireworks: true,     // kimiK26() default: true
-        openrouter: false,   // default: false
-        together: false      // default: false
+        together: true,      // kimiK27Code() default: true
+        fireworks: false,    // default: false
+        openrouter: false    // default: false
     }
-}).kimiK26();
+}).kimiK27Code();
 ```
 
-Flags set on `ModelMix.new({ mix })` override a shortcut's defaults. A `mix` passed to the shortcut itself replaces those defaults and selects only the routes it enables, e.g. `kimiK26({ mix: { openrouter: true } })` uses only OpenRouter.
+Flags set on `ModelMix.new({ mix })` override a shortcut's defaults. A `mix` passed to the shortcut itself replaces those defaults and selects only the routes it enables, e.g. `kimiK27Code({ mix: { openrouter: true } })` uses only OpenRouter.
 
 ## Agent Usage Rules
 

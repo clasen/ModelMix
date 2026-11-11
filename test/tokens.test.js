@@ -800,25 +800,6 @@ describe('Token Usage Tracking', () => {
         }
     });
 
-    it('should register Kimi K2.6 through the current OpenRouter model ID', function () {
-        const originalOpenRouterApiKey = process.env.OPENROUTER_API_KEY;
-        process.env.OPENROUTER_API_KEY = 'test-openrouter-key';
-
-        try {
-            const model = ModelMix.new().kimiK26({
-                mix: { fireworks: false, together: false, openrouter: true }
-            });
-
-            expect(model.models.map(({ key }) => key)).to.deep.equal([
-                'moonshotai/kimi-k2.6'
-            ]);
-            expect(model.models[0].provider).to.be.instanceOf(MixOpenRouter);
-        } finally {
-            if (originalOpenRouterApiKey === undefined) delete process.env.OPENROUTER_API_KEY;
-            else process.env.OPENROUTER_API_KEY = originalOpenRouterApiKey;
-        }
-    });
-
     it('should use api-key header for MiMo provider', function () {
         const originalMimoApiKey = process.env.MIMO_API_KEY;
         process.env.MIMO_API_KEY = 'test-mimo-key';
