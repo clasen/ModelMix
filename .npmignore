@@ -135,3 +135,4 @@ demo/jailbreak.js
 /demo/lab
 /demo/results
 /.pnpm-store/
+/plugins/rlm/

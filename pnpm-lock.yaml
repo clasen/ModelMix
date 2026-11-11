@@ -238,6 +238,10 @@ importers:
       quickjs-emscripten-core:
         specifier: 0.32.0
         version: 0.32.0
+    devDependencies:
+      modelmix:
+        specifier: workspace:*
+        version: link:../..
 
 packages:
 
