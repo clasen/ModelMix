@@ -1,4 +1,4 @@
-import { ModelMix } from '../index.js';
+import { ModelMix } from '../dist/index.js';
 try { process.loadEnvFile(); } catch {}
 
 await ModelMix.new().gpt6luna()

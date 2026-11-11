@@ -8,7 +8,7 @@ const {
     MixNVIDIA,
     MixOpenRouter,
     MixTogether
-} = require('../index.js');
+} = require('../dist/index.js');
 
 describe('Provider expansion regressions', () => {
     it('should keep OpenRouter fallbacks disabled by default', () => {

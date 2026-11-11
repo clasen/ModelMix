@@ -10,7 +10,7 @@ const {
     MixOpenAIWebSocket,
     MixOpenRouter,
     ModelMix
-} = require('../index.js');
+} = require('../dist/index.js');
 
 describe('Provider Fallback Chain Tests', () => {
 

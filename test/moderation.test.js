@@ -1,6 +1,6 @@
 const { expect } = require('chai');
 const nock = require('nock');
-const { ModerationMix, MixModeration, MixOpenAIModeration } = require('../index.js');
+const { ModerationMix, MixModeration, MixOpenAIModeration } = require('../dist/index.js');
 
 describe('OpenAI moderation', () => {
     const moderationResult = {

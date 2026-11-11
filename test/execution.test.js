@@ -1,5 +1,5 @@
 const { expect } = require('chai');
-const { ModelMix, MixCustom } = require('../index.js');
+const { ModelMix, MixCustom } = require('../dist/index.js');
 
 const TOOL = {
     name: 'ping',
@@ -159,7 +159,7 @@ describe('Execution pipeline', () => {
         class DelayedStream extends MixCustom {
             async create({ options }) {
                 const text = options.messages.at(-1).content[0].text;
-                const onStream = require('../lib/stream-context').currentStreamCallback();
+                const onStream = require('../dist/lib/stream-context').currentStreamCallback();
                 for (const delta of text.split('')) {
                     await new Promise(resolve => setTimeout(resolve, 1));
                     onStream?.({ delta, message: '', response: {} });

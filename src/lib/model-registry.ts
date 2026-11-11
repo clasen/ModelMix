@@ -1,4 +1,4 @@
-const {
+import {
     MixOpenAI,
     MixOpenAIResponses,
     MixOpenAIWebSocket,
@@ -15,10 +15,24 @@ const {
     MixFireworks,
     MixNVIDIA,
     MixGoogle
-} = require('./providers');
+} from './providers';
+import type { AttachedModel, ModelAttachArgs, ModelMixConfig, ModelMixMixFlags, ModelMixOptions } from '../types';
+
+type ProviderConstructor = new (args: { options?: ModelMixOptions; config?: ModelMixConfig }) => AttachedModel['provider'];
+type MixRoute = 'anthropic' | 'openrouter' | 'fireworks' | 'together' | 'nvidia' | 'lambda' | 'moonshot' | 'minimax' | 'mimo' | 'deepseek';
+type MixFlags = Partial<Record<MixRoute, boolean>>;
+
+export interface ModelShortcutSpec {
+    provider?: ProviderConstructor;
+    key?: string;
+    routes?: Partial<Record<MixRoute, string>>;
+    defaultMix?: MixFlags;
+    baseMix?: MixFlags;
+    alias?: string;
+}
 
 /** Provider behind each `mix` flag. */
-const MIX_ROUTE_PROVIDERS = {
+const MIX_ROUTE_PROVIDERS: Record<MixRoute, ProviderConstructor> = {
     anthropic: MixAnthropic,
     openrouter: MixOpenRouter,
     fireworks: MixFireworks,
@@ -43,7 +57,7 @@ const MIX_ROUTE_PROVIDERS = {
  * - `baseMix`: flags that apply even when a call-level `mix` is passed.
  * - `alias`: another shortcut with the same behavior.
  */
-const MODEL_SHORTCUTS = {
+export const MODEL_SHORTCUTS: Record<string, ModelShortcutSpec> = {
     gpt5mini: { provider: MixOpenAI, key: 'gpt-5-mini', routes: { openrouter: 'openai/gpt-5-mini' } },
     gpt5nano: { provider: MixOpenAI, key: 'gpt-5-nano', routes: { openrouter: 'openai/gpt-5-nano' } },
     gpt52: { provider: MixOpenAIResponses, key: 'gpt-5.2', routes: { openrouter: 'openai/gpt-5.2' } },
@@ -268,19 +282,19 @@ for (const [name, spec] of Object.entries(MODEL_SHORTCUTS)) {
         throw new Error(`Model shortcut "${name}" aliases unknown shortcut "${spec.alias}".`);
     }
     for (const flag of Object.keys(spec.routes || {})) {
-        if (!MIX_ROUTE_PROVIDERS[flag]) {
+        if (!MIX_ROUTE_PROVIDERS[flag as MixRoute]) {
             throw new Error(`Model shortcut "${name}" uses unknown mix route "${flag}".`);
         }
     }
 }
 
-function getModelShortcut(name) {
+function getModelShortcut(name: string): ModelShortcutSpec | null {
     if (!Object.prototype.hasOwnProperty.call(MODEL_SHORTCUTS, name)) return null;
     const spec = MODEL_SHORTCUTS[name];
     return spec.alias === undefined ? spec : MODEL_SHORTCUTS[spec.alias];
 }
 
-function listModelShortcuts() {
+export function listModelShortcuts(): string[] {
     return Object.keys(MODEL_SHORTCUTS);
 }
 
@@ -288,20 +302,20 @@ function listModelShortcuts() {
  * Build the { key, provider } entries a shortcut attaches, without attaching them.
  * `instanceMix` holds only the flags the caller set on ModelMix.new({ mix }).
  */
-function resolveModelShortcut(name, { options = {}, config = {}, mix } = {}, instanceMix = {}) {
+export function resolveModelShortcut(name: string, { options = {}, config = {}, mix }: ModelAttachArgs = {}, instanceMix: ModelMixMixFlags = {}): AttachedModel[] {
     const spec = getModelShortcut(name);
     if (!spec) {
         throw new Error(`Unknown model shortcut "${name}".`);
     }
 
-    const flags = mix === undefined
+    const flags: ModelMixMixFlags = mix === undefined
         ? { ...spec.baseMix, ...spec.defaultMix, ...instanceMix }
         : { ...spec.baseMix, ...instanceMix, ...mix };
-    const models = [];
+    const models: AttachedModel[] = [];
     if (spec.provider) {
-        models.push({ key: spec.key, provider: new spec.provider({ options, config }) });
+        models.push({ key: spec.key as string, provider: new spec.provider({ options, config }) });
     }
-    for (const [flag, key] of Object.entries(spec.routes || {})) {
+    for (const [flag, key] of Object.entries(spec.routes || {}) as Array<[MixRoute, string]>) {
         if (flags[flag]) {
             models.push({ key, provider: new MIX_ROUTE_PROVIDERS[flag]({ options, config }) });
         }
@@ -309,8 +323,3 @@ function resolveModelShortcut(name, { options = {}, config = {}, mix } = {}, ins
     return models;
 }
 
-module.exports = {
-    MODEL_SHORTCUTS,
-    listModelShortcuts,
-    resolveModelShortcut
-};

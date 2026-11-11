@@ -1,5 +1,5 @@
 import { expect } from 'chai';
-import { ModelMix, MixAnthropic, MixCustom, MixGoogle, MixGrok, MixMiMo, MixOpenAI, MixOpenAIResponses, MixOpenRouter } from '../index.js';
+import { ModelMix, MixAnthropic, MixCustom, MixGoogle, MixGrok, MixMiMo, MixOpenAI, MixOpenAIResponses, MixOpenRouter } from '../dist/index.js';
 import { createRequire } from 'module';
 
 const require = createRequire(import.meta.url);

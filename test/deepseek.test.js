@@ -1,6 +1,6 @@
 const { expect } = require('chai');
 const nock = require('nock');
-const { ModelMix, MixDeepSeek, MixFireworks, MixOpenRouter } = require('../index.js');
+const { ModelMix, MixDeepSeek, MixFireworks, MixOpenRouter } = require('../dist/index.js');
 
 describe('DeepSeek Model Registration Tests', () => {
     it('registers V4 Pro 0813 through OpenRouter and preserves caller settings', () => {

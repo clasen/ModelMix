@@ -1,7 +1,7 @@
 const { expect } = require('chai');
 const path = require('path');
 const nock = require('nock');
-const { MixCustom, MixOpenAIResponses, MixAnthropic, MixGoogle, ModelMix } = require('../index.js');
+const { MixCustom, MixOpenAIResponses, MixAnthropic, MixGoogle, ModelMix } = require('../dist/index.js');
 const { skills } = require('../plugins/skills');
 
 function createProvider(handler = async () => ({ message: 'provider', toolCalls: [] })) {

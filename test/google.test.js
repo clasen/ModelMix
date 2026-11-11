@@ -1,6 +1,6 @@
 const { expect } = require('chai');
 const sinon = require('sinon');
-const { MixGoogle, ModelMix } = require('../index');
+const { MixGoogle, ModelMix } = require('../dist/index');
 
 describe('Google message and JSON contracts', () => {
     afterEach(() => sinon.restore());

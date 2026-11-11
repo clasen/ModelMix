@@ -1,6 +1,6 @@
 const { expect } = require('chai');
 
-const api = require('../index.js');
+const api = require('../dist/index.js');
 
 describe('public module boundary', () => {
     it('preserves the CommonJS export surface', () => {
@@ -40,7 +40,7 @@ describe('public module boundary', () => {
         expect(Object.getPrototypeOf(api.MixOpenAIResponses.prototype)).to.equal(api.MixOpenAI.prototype);
         expect(Object.getPrototypeOf(api.MixOpenAIModeration.prototype)).to.equal(api.MixModeration.prototype);
         expect(Object.getPrototypeOf(api.ModerationMix.prototype)).to.equal(api.ModelMix.prototype);
-        expect(require('../index.js').MixCustom).to.equal(api.MixCustom);
+        expect(require('../dist/index.js').MixCustom).to.equal(api.MixCustom);
     });
 
     it('keeps root exports usable by model shortcuts', () => {
@@ -93,6 +93,6 @@ describe('public module boundary', () => {
     }
 
     it('keeps the mutable pricing catalog private', () => {
-        expect(require('../lib/token-usage')).to.not.have.property('MODEL_PRICING');
+        expect(require('../dist/lib/token-usage')).to.not.have.property('MODEL_PRICING');
     });
 });

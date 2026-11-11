@@ -1,6 +1,6 @@
 const { expect } = require('chai');
 const nock = require('nock');
-const { ModelMix, MixAnthropic, MixOpenRouter } = require('../index.js');
+const { ModelMix, MixAnthropic, MixOpenRouter } = require('../dist/index.js');
 
 describe('Anthropic Model Registration Tests', () => {
     it('should register Claude Fable 5.2 through Anthropic with an optional OpenRouter route', () => {
@@ -142,7 +142,7 @@ describe('Anthropic Model Registration Tests', () => {
 
     it('should apply max effort thinking via .effort(100).fable50()', () => {
         const model = ModelMix.new().effort(100).fable50();
-        const { applyUnifiedEffort } = require('../effort.js');
+        const { applyUnifiedEffort } = require('../dist/effort.js');
 
         expect(model.config.effort).to.equal(100);
         const options = { model: 'claude-fable-5' };
@@ -207,7 +207,7 @@ describe('Anthropic Model Registration Tests', () => {
 
     it('should apply max effort thinking via .effort(100).opus50()', () => {
         const model = ModelMix.new().effort(100).opus50();
-        const { applyUnifiedEffort } = require('../effort.js');
+        const { applyUnifiedEffort } = require('../dist/effort.js');
 
         expect(model.config.effort).to.equal(100);
         const options = { model: 'claude-opus-5' };
@@ -218,7 +218,7 @@ describe('Anthropic Model Registration Tests', () => {
 
     it('should apply max effort thinking via .effort(100).opus55()', () => {
         const model = ModelMix.new().effort(100).opus55();
-        const { applyUnifiedEffort } = require('../effort.js');
+        const { applyUnifiedEffort } = require('../dist/effort.js');
 
         expect(model.config.effort).to.equal(100);
         const options = { model: 'claude-opus-5-5' };
@@ -425,7 +425,7 @@ describe('Anthropic Model Registration Tests', () => {
 
     it('should apply adaptive thinking via .effort(100).opus48()', () => {
         const model = ModelMix.new().effort(100).opus48();
-        const { applyUnifiedEffort } = require('../effort.js');
+        const { applyUnifiedEffort } = require('../dist/effort.js');
 
         const options = { model: 'claude-opus-4-8' };
         applyUnifiedEffort(options, model.config, 'anthropic', 'claude-opus-4-8');
@@ -461,7 +461,7 @@ describe('Anthropic Model Registration Tests', () => {
         });
 
         it('should use adaptive thinking with output_config.effort', () => {
-            const { applyUnifiedEffort } = require('../effort.js');
+            const { applyUnifiedEffort } = require('../dist/effort.js');
             const options = { model: 'claude-haiku-5-5' };
 
             applyUnifiedEffort(options, { effort: 100 }, 'anthropic', 'claude-haiku-5-5');
@@ -638,7 +638,7 @@ describe('Anthropic Model Registration Tests', () => {
 
     it('should apply adaptive thinking via .effort(100).sonnet50()', () => {
         const model = ModelMix.new().effort(100).sonnet50();
-        const { applyUnifiedEffort } = require('../effort.js');
+        const { applyUnifiedEffort } = require('../dist/effort.js');
 
         const options = { model: 'claude-sonnet-5' };
         applyUnifiedEffort(options, model.config, 'anthropic', 'claude-sonnet-5');

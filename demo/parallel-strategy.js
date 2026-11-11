@@ -23,7 +23,7 @@
  * This is GENERIC - works with any data structure, not hardcoded for specific use cases.
  */
 
-import { ModelMix } from '../index.js';
+import { ModelMix } from '../dist/index.js';
 try { process.loadEnvFile(); } catch {}
 
 console.log('🧬 ModelMix - RLM (Recursive Language Models) Demo');

@@ -1,6 +1,11 @@
-const { assertProviderApiKeys } = require('./provider-api-key');
+import { assertProviderApiKeys, type ApiKeyProvider } from './provider-api-key';
 
-function assertAbortSignal(signal) {
+interface ExecutionProvider extends ApiKeyProvider {
+    config?: { apiKey?: unknown };
+    options?: unknown;
+}
+
+export function assertAbortSignal(signal: unknown): asserts signal is AbortSignal | undefined {
     if (signal === undefined) return;
     if (!(signal instanceof AbortSignal)) {
         throw new TypeError('signal must be an AbortSignal.');
@@ -8,17 +13,20 @@ function assertAbortSignal(signal) {
     signal.throwIfAborted();
 }
 
-function assertNoStoredSignal(value, label) {
+export function assertNoStoredSignal(value: unknown, label: string): void {
     if (value && Object.prototype.hasOwnProperty.call(value, 'signal')) {
         throw new TypeError(`${label}.signal is not supported; pass the AbortSignal to the execution method.`);
     }
 }
 
-function throwIfAborted(signal) {
+export function throwIfAborted(signal: AbortSignal | null | undefined): void {
     if (signal) signal.throwIfAborted();
 }
 
-function validateProviderExecution(provider, { config, options, signal }) {
+export function validateProviderExecution(
+    provider: ExecutionProvider,
+    { config, options, signal }: { config?: unknown; options?: { model?: string } | null; signal?: unknown }
+): void {
     assertAbortSignal(signal);
     assertNoStoredSignal(provider.config, 'provider.config');
     assertNoStoredSignal(provider.options, 'provider.options');
@@ -28,11 +36,11 @@ function validateProviderExecution(provider, { config, options, signal }) {
     assertProviderApiKeys([{ key: options?.model, provider }]);
 }
 
-function raceWithSignal(promise, signal) {
+export function raceWithSignal<T>(promise: Promise<T>, signal: AbortSignal | null | undefined): Promise<T> {
     if (!signal) return promise;
     throwIfAborted(signal);
-    let onAbort;
-    const aborted = new Promise((_, reject) => {
+    let onAbort: () => void = () => {};
+    const aborted = new Promise<never>((_, reject) => {
         onAbort = () => reject(signal.reason);
         signal.addEventListener('abort', onAbort, { once: true });
     });
@@ -41,21 +49,12 @@ function raceWithSignal(promise, signal) {
     });
 }
 
-function sleepWithSignal(ms, signal) {
+export function sleepWithSignal(ms: number, signal: AbortSignal | null | undefined): Promise<void> {
     if (!signal) return new Promise(resolve => setTimeout(resolve, ms));
     throwIfAborted(signal);
-    let timeout;
-    const sleep = new Promise(resolve => {
+    let timeout: NodeJS.Timeout | undefined;
+    const sleep = new Promise<void>(resolve => {
         timeout = setTimeout(resolve, ms);
     });
     return raceWithSignal(sleep, signal).finally(() => clearTimeout(timeout));
 }
-
-module.exports = {
-    assertAbortSignal,
-    assertNoStoredSignal,
-    raceWithSignal,
-    sleepWithSignal,
-    throwIfAborted,
-    validateProviderExecution
-};

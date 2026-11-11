@@ -15,8 +15,8 @@ const {
     MixPerplexity,
     MixLMStudio,
     resolveProviderFamily
-} = require('../index.js');
-const { listModelShortcuts, MODEL_SHORTCUTS } = require('../lib/model-registry');
+} = require('../dist/index.js');
+const { listModelShortcuts, MODEL_SHORTCUTS } = require('../dist/lib/model-registry');
 
 function keys(model) {
     return model.models.map(({ key }) => key);
@@ -37,7 +37,7 @@ function withoutEnv(names, fn) {
 
 describe('Model registry', () => {
     it('declares every registered shortcut in index.d.ts', () => {
-        const declarations = fs.readFileSync(path.join(__dirname, '..', 'index.d.ts'), 'utf8');
+        const declarations = fs.readFileSync(path.join(__dirname, '..', 'dist', 'index.d.ts'), 'utf8');
         for (const shortcut of listModelShortcuts()) {
             expect(declarations, shortcut).to.match(new RegExp(`\\n\\s+${shortcut}\\(`));
         }

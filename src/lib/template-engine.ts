@@ -1,6 +1,40 @@
-const { isPlainObject } = require('./object-utils');
+import { isPlainObject } from './object-utils';
 
-function validateTemplateData(value) {
+export interface TemplateLocation {
+    filename?: string | null;
+    label?: string;
+}
+
+interface ChoiceBlock {
+    lineNumber: number;
+    optionCount: number;
+    weighted: boolean | null;
+}
+
+type RenderOption = () => unknown;
+
+interface DefineOption {
+    (render: RenderOption): void;
+    (weight: number, render: RenderOption): void;
+}
+
+export interface TemplateHelpers {
+    choice(defineOptions: (option: DefineOption) => void): unknown;
+}
+
+export interface RenderedMessage {
+    rendered: string;
+    template: object;
+}
+
+export interface TemplateRenderContext {
+    helpers: Readonly<TemplateHelpers>;
+    renderedTemplateData: Map<object, string>;
+    renderedMessages: Map<{ text?: unknown }, RenderedMessage>;
+    renderedSystems: Map<string, string>;
+}
+
+export function validateTemplateData(value: unknown): void {
     if (!isPlainObject(value)) {
         throw new TypeError('Template data must be a plain non-null object.');
     }
@@ -9,7 +43,7 @@ function validateTemplateData(value) {
     }
 }
 
-function validateTemplateDataKey(key) {
+export function validateTemplateDataKey(key: unknown): asserts key is string {
     if (typeof key !== 'string' || key.length === 0) {
         throw new TypeError('Template data key must be a non-empty string.');
     }
@@ -18,13 +52,13 @@ function validateTemplateDataKey(key) {
     }
 }
 
-function templateLocation({ filename, label }, lineNumber) {
+function templateLocation({ filename, label }: TemplateLocation, lineNumber: number): string {
     return `${filename || label} at line ${lineNumber}`;
 }
 
-function preprocessChoiceDirectives(source, { filename = null, label = 'template' } = {}) {
+export function preprocessChoiceDirectives(source: string, { filename = null, label = 'template' }: TemplateLocation = {}): string {
     const parts = source.split(/(\r\n|\n|\r)/);
-    const blocks = [];
+    const blocks: ChoiceBlock[] = [];
 
     for (let index = 0; index < parts.length; index += 2) {
         const line = parts[index];
@@ -106,17 +140,17 @@ function preprocessChoiceDirectives(source, { filename = null, label = 'template
     return parts.join('');
 }
 
-function createTemplateRenderContext(random = Math.random) {
-    const choice = defineOptions => {
+export function createTemplateRenderContext(random: () => number = Math.random): TemplateRenderContext {
+    const choice = (defineOptions: (option: DefineOption) => void): unknown => {
         if (typeof defineOptions !== 'function') {
             throw new TypeError('$mix.choice expects an option definition callback.');
         }
 
-        const options = [];
-        let weighted = null;
-        const option = (weightOrRender, renderOption) => {
+        const options: Array<{ weight: number; render: RenderOption }> = [];
+        let weighted: boolean | null = null;
+        const option = ((weightOrRender: number | RenderOption, renderOption?: RenderOption) => {
             const hasWeight = renderOption !== undefined;
-            const weight = hasWeight ? weightOrRender : 1;
+            const weight = hasWeight ? weightOrRender as number : 1;
             const render = hasWeight ? renderOption : weightOrRender;
 
             if (weighted !== null && weighted !== hasWeight) {
@@ -131,7 +165,7 @@ function createTemplateRenderContext(random = Math.random) {
 
             weighted = hasWeight;
             options.push({ weight, render });
-        };
+        }) as DefineOption;
 
         defineOptions(option);
         if (options.length === 0) {
@@ -158,11 +192,3 @@ function createTemplateRenderContext(random = Math.random) {
         renderedSystems: new Map()
     };
 }
-
-module.exports = {
-    validateTemplateData,
-    validateTemplateDataKey,
-    preprocessChoiceDirectives,
-    createTemplateRenderContext
-};
-

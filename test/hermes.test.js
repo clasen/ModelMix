@@ -1,5 +1,5 @@
 const { expect } = require('chai');
-const { ModelMix, MixOpenRouter } = require('../index.js');
+const { ModelMix, MixOpenRouter } = require('../dist/index.js');
 
 describe('Hermes Model Registration Tests', () => {
     it('should register Hermes 4 70B through OpenRouter', () => {

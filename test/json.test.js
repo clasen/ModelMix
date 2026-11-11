@@ -1,8 +1,8 @@
 const { expect } = require('chai');
 const sinon = require('sinon');
 const nock = require('nock');
-const { ModelMix } = require('../index.js');
-const generateJsonSchema = require('../schema.js');
+const { ModelMix } = require('../dist/index.js');
+const generateJsonSchema = require('../dist/schema.js');
 
 
 describe('JSON Schema and Structured Output Tests', () => {

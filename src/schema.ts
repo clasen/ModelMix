@@ -1,12 +1,27 @@
+import type { SchemaDescription, SchemaFieldDescriptor } from './types';
+
+interface JsonSchema {
+    type?: string | string[];
+    format?: string;
+    description?: string;
+    enum?: unknown[];
+    default?: unknown;
+    items?: JsonSchema;
+    properties?: Record<string, JsonSchema>;
+    required?: string[];
+}
+
+type DescriptionMap = Record<string, SchemaDescription | undefined>;
+
 const META_KEYS = new Set(['description', 'required', 'enum', 'default', 'nullable']);
 
-function isDescriptor(value) {
+function isDescriptor(value: unknown): value is SchemaFieldDescriptor {
     if (!value || typeof value !== 'object' || Array.isArray(value)) return false;
     const keys = Object.keys(value);
     return keys.length > 0 && keys.every(k => META_KEYS.has(k));
 }
 
-function makeNullable(fieldSchema) {
+function makeNullable(fieldSchema: JsonSchema): JsonSchema {
     if (!fieldSchema.type) return fieldSchema;
     if (Array.isArray(fieldSchema.type)) {
         if (!fieldSchema.type.includes('null')) fieldSchema.type.push('null');
@@ -16,23 +31,23 @@ function makeNullable(fieldSchema) {
     return fieldSchema;
 }
 
-function getNestedDescriptions(desc) {
+function getNestedDescriptions(desc: SchemaDescription | undefined): DescriptionMap {
     if (!desc) return {};
     if (typeof desc === 'string') return {};
-    if (Array.isArray(desc)) return desc[0] || {};
+    if (Array.isArray(desc)) return (desc[0] || {}) as DescriptionMap;
     if (isDescriptor(desc)) return {};
-    return desc;
+    return desc as DescriptionMap;
 }
 
-function generateJsonSchema(example, descriptions = {}) {
-    function detectType(key, value) {
+function generateJsonSchema(example: unknown, descriptions: DescriptionMap = {}): JsonSchema {
+    function detectType(key: string, value: unknown): JsonSchema {
         if (value === null) return { type: 'null' };
         if (typeof value === 'boolean') return { type: 'boolean' };
         if (typeof value === 'number') {
             return Number.isInteger(value) ? { type: 'integer' } : { type: 'number' };
         }
         if (typeof value === 'string') {
-            const schema = { type: 'string' };
+            const schema: JsonSchema = { type: 'string' };
             if (/^\S+@\S+\.\S+$/.test(value)) {
                 schema.format = 'email';
             } else if (/^\d{4}-\d{2}-\d{2}$/.test(value)) {
@@ -83,14 +98,15 @@ function generateJsonSchema(example, descriptions = {}) {
         };
     }
 
-    const schema = {
+    const schema: JsonSchema & { properties: Record<string, JsonSchema>; required: string[] } = {
         type: 'object',
         properties: {},
         required: []
     };
 
-    for (const key in example) {
-        const fieldSchema = detectType(key, example[key]);
+    const record = example as Record<string, unknown>;
+    for (const key in record) {
+        const fieldSchema = detectType(key, record[key]);
         const desc = descriptions[key];
         let isRequired = true;
 
@@ -121,4 +137,4 @@ function generateJsonSchema(example, descriptions = {}) {
     return schema;
 }
 
-module.exports = generateJsonSchema;
+export = generateJsonSchema;

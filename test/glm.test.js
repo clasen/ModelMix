@@ -1,5 +1,5 @@
 const { expect } = require('chai');
-const { ModelMix, MixFireworks, MixOpenRouter, MixTogether } = require('../index.js');
+const { ModelMix, MixFireworks, MixOpenRouter, MixTogether } = require('../dist/index.js');
 
 describe('GLM Model Registration Tests', () => {
     it('should register only Together GLM 5.2 by default', () => {

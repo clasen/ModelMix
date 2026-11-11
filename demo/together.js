@@ -1,4 +1,4 @@
-import { ModelMix, MixTogether } from '../index.js';
+import { ModelMix, MixTogether } from '../dist/index.js';
 try { process.loadEnvFile(); } catch {}
 
 const setup = { config: { system: "You are ALF from Melmac." } };

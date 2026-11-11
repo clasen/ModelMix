@@ -11,7 +11,7 @@ const {
     OPENAI_BANDS,
     ANTHROPIC_BANDS,
     GEMINI_BANDS,
-} = require('../effort.js');
+} = require('../dist/effort.js');
 const {
     ModelMix,
     MixOpenAI,
@@ -19,7 +19,7 @@ const {
     MixAnthropic,
     MixGoogle,
     MixPerplexity,
-} = require('../index.js');
+} = require('../dist/index.js');
 
 describe('Unified effort scale', () => {
     describe('normalizeEffort', () => {

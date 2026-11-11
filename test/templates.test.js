@@ -4,7 +4,7 @@ const nock = require('nock');
 const fs = require('fs');
 const os = require('os');
 const path = require('path');
-const { ModelMix } = require('../index.js');
+const { ModelMix } = require('../dist/index.js');
 
 describe('EJS Template and File Operations Tests', () => {
     const fixturesPath = path.join(__dirname, 'fixtures');

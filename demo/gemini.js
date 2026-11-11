@@ -1,4 +1,4 @@
-import { ModelMix, MixGoogle } from '../index.js';
+import { ModelMix, MixGoogle } from '../dist/index.js';
 try { process.loadEnvFile(); } catch { }
 
 const mmix = new ModelMix({

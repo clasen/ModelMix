@@ -1,5 +1,5 @@
 const { expect } = require('chai');
-const { MixCustom } = require('../index.js');
+const { MixCustom } = require('../dist/index.js');
 
 describe('Native multipart support', () => {
     let originalFetch;

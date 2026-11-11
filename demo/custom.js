@@ -1,4 +1,4 @@
-import { ModelMix, MixCustom } from '../index.js';
+import { ModelMix, MixCustom } from '../dist/index.js';
 try { process.loadEnvFile(); } catch {}
 
 const mmix = new ModelMix({

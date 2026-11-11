@@ -6,12 +6,25 @@
  * Mapped to provider-native fields only when native effort controls are absent.
  */
 
-const OPENAI_LEVELS = ['none', 'low', 'medium', 'high', 'xhigh'];
-const OPENAI_LEVEL_LADDER = ['none', 'minimal', 'low', 'medium', 'high', 'xhigh', 'max'];
-const ANTHROPIC_LEVELS = ['low', 'medium', 'high', 'xhigh', 'max'];
-const GEMINI_LEVELS = ['minimal', 'low', 'medium', 'high'];
+import type { ModelMixConfig, ModelMixOptions, ProviderFamily } from './types';
 
-const OPENAI_BANDS = [
+type Band = readonly [number, number, string];
+
+export interface EffortPatch {
+    reasoning_effort?: string;
+    thinking?: { type: string; budget_tokens?: number; display?: string };
+    output_config?: { effort: string };
+    thinkingConfig?: { thinkingBudget?: number; thinkingLevel?: string };
+}
+
+type EffortOptions = Record<string, any>;
+
+export const OPENAI_LEVELS = ['none', 'low', 'medium', 'high', 'xhigh'];
+const OPENAI_LEVEL_LADDER = ['none', 'minimal', 'low', 'medium', 'high', 'xhigh', 'max'];
+export const ANTHROPIC_LEVELS = ['low', 'medium', 'high', 'xhigh', 'max'];
+export const GEMINI_LEVELS = ['minimal', 'low', 'medium', 'high'];
+
+export const OPENAI_BANDS: Band[] = [
     [0, 19, 'none'],
     [20, 39, 'low'],
     [40, 59, 'medium'],
@@ -19,7 +32,7 @@ const OPENAI_BANDS = [
     [80, 100, 'xhigh'],
 ];
 
-const ANTHROPIC_BANDS = [
+export const ANTHROPIC_BANDS: Band[] = [
     [0, 19, 'low'],
     [20, 39, 'medium'],
     [40, 59, 'high'],
@@ -27,21 +40,21 @@ const ANTHROPIC_BANDS = [
     [80, 100, 'max'],
 ];
 
-const GEMINI_BANDS = [
+export const GEMINI_BANDS: Band[] = [
     [0, 24, 'minimal'],
     [25, 49, 'low'],
     [50, 74, 'medium'],
     [75, 100, 'high'],
 ];
 
-const GLM53_BANDS = [
+const GLM53_BANDS: Band[] = [
     [0, 39, 'low'],
     [40, 79, 'high'],
     [80, 100, 'max'],
 ];
 
 /** Exact model → supported OpenAI reasoning_effort values */
-const OPENAI_MODEL_LEVELS = {
+const OPENAI_MODEL_LEVELS: Record<string, string[]> = {
     'gpt-6-astra': ['low', 'medium', 'high', 'xhigh', 'max'],
     'gpt-6.1-sol': ['low', 'medium', 'high', 'xhigh', 'max'],
     'gpt-6.1-terra': ['none', 'low', 'medium', 'high', 'xhigh', 'max'],
@@ -92,8 +105,8 @@ const OPENAI_MODEL_LEVELS = {
  * Official mapping: low/high/max; xhigh remaps per model (flash→high, pro→max).
  * @see https://api-docs.deepseek.com/guides/thinking_mode
  */
-const DEEPSEEK_LEVELS = ['none', 'low', 'high', 'max'];
-const DEEPSEEK_BANDS = [
+export const DEEPSEEK_LEVELS = ['none', 'low', 'high', 'max'];
+export const DEEPSEEK_BANDS: Band[] = [
     [0, 19, 'none'],
     [20, 39, 'low'],
     [40, 79, 'high'],
@@ -104,13 +117,13 @@ const DEEPSEEK_BANDS = [
  * MiniMax M3 (OpenAI-compatible): thinking.type disabled | adaptive.
  * @see https://platform.minimax.io/docs/api-reference/text-openai-api
  */
-const MINIMAX_BANDS = [
+const MINIMAX_BANDS: Band[] = [
     [0, 19, 'disabled'],
     [20, 100, 'adaptive'],
 ];
 
 /** Exact model → supported Gemini thinkingLevel values */
-const GEMINI_MODEL_LEVELS = {
+const GEMINI_MODEL_LEVELS: Record<string, string[]> = {
     'gemini-4-carbon': ['low', 'medium', 'high'],
     'gemini-4-argon': ['low', 'medium', 'high'],
     'gemini-3.8-flash': ['low', 'medium', 'high'],
@@ -122,18 +135,18 @@ const GEMINI_MODEL_LEVELS = {
     'gemini-2.5-flash-lite': ['low', 'medium', 'high'],
 };
 
-const GEMINI_25_BUDGET_MAX = {
+const GEMINI_25_BUDGET_MAX: Record<string, number> = {
     'gemini-2.5-pro': 32768,
     'gemini-2.5-flash': 24576,
     'gemini-2.5-flash-lite': 24576,
 };
 
 /** Logical alias key `grok-4.20-0309` — resolved to reasoning / non-reasoning at request time. */
-const GROK420_ALIAS = 'grok-4.20-0309';
-const GROK420_REASONING = 'grok-4.20-0309-reasoning';
-const GROK420_NON_REASONING = 'grok-4.20-0309-non-reasoning';
+export const GROK420_ALIAS = 'grok-4.20-0309';
+export const GROK420_REASONING = 'grok-4.20-0309-reasoning';
+export const GROK420_NON_REASONING = 'grok-4.20-0309-non-reasoning';
 
-function isGrok420Alias(modelKey) {
+export function isGrok420Alias(modelKey: unknown): boolean {
     return modelKey === GROK420_ALIAS;
 }
 
@@ -142,7 +155,7 @@ function isGrok420Alias(modelKey) {
  * - no effort / OpenAI band `none` (0–19) / native `none` → non-reasoning
  * - effort -1 or 20–100 / native non-none reasoning_effort → reasoning
  */
-function resolveGrok420ModelKey(modelKey, effort, options = {}) {
+export function resolveGrok420ModelKey(modelKey: string, effort: unknown, options: EffortOptions = {}): string {
     if (!isGrok420Alias(modelKey)) return modelKey;
 
     const native = options.reasoning_effort;
@@ -161,7 +174,7 @@ function resolveGrok420ModelKey(modelKey, effort, options = {}) {
     return level === 'none' ? GROK420_NON_REASONING : GROK420_REASONING;
 }
 
-function normalizeEffort(value) {
+export function normalizeEffort(value: unknown): number {
     if (typeof value !== 'number' || !Number.isFinite(value) || !Number.isInteger(value)) {
         throw new Error(`Invalid effort: expected integer -1 or 0..100, got ${JSON.stringify(value)}`);
     }
@@ -172,14 +185,14 @@ function normalizeEffort(value) {
     return value;
 }
 
-function levelFromBands(effort, bands) {
+export function levelFromBands(effort: number, bands: readonly Band[]): string {
     for (const [lo, hi, level] of bands) {
         if (effort >= lo && effort <= hi) return level;
     }
     return bands[bands.length - 1][2];
 }
 
-function pickNearestLevel(desired, ladder, supported) {
+export function pickNearestLevel(desired: string, ladder: readonly string[], supported: readonly string[]): string {
     if (supported.includes(desired)) return desired;
     const desiredIdx = ladder.indexOf(desired);
     if (desiredIdx === -1) return supported[Math.floor(supported.length / 2)];
@@ -198,52 +211,52 @@ function pickNearestLevel(desired, ladder, supported) {
     return best;
 }
 
-function supportedOpenAILevels(modelKey) {
+function supportedOpenAILevels(modelKey: unknown): string[] {
     const canonicalModelKey = typeof modelKey === 'string' && modelKey.startsWith('openai/')
         ? modelKey.slice('openai/'.length)
         : modelKey;
-    if (canonicalModelKey && OPENAI_MODEL_LEVELS[canonicalModelKey]) {
+    if (typeof canonicalModelKey === 'string' && canonicalModelKey && OPENAI_MODEL_LEVELS[canonicalModelKey]) {
         return OPENAI_MODEL_LEVELS[canonicalModelKey];
     }
     return OPENAI_LEVELS;
 }
 
-function supportedGeminiLevels(modelKey) {
-    if (modelKey && GEMINI_MODEL_LEVELS[modelKey]) {
+function supportedGeminiLevels(modelKey: unknown): string[] {
+    if (typeof modelKey === 'string' && modelKey && GEMINI_MODEL_LEVELS[modelKey]) {
         return GEMINI_MODEL_LEVELS[modelKey];
     }
     return GEMINI_LEVELS;
 }
 
-function isGemini25(modelKey) {
+function isGemini25(modelKey: unknown): boolean {
     return typeof modelKey === 'string' && modelKey.includes('2.5');
 }
 
-function isDeepSeekV4(modelKey) {
+export function isDeepSeekV4(modelKey: unknown): boolean {
     if (typeof modelKey !== 'string') return false;
     const key = modelKey.toLowerCase();
     return key === 'deepseek-flash' || key === '~deepseek/deepseek-pro-latest'
         || key.includes('deepseek-v4') || key.includes('deepseek_v4');
 }
 
-function isMiniMax(modelKey) {
+export function isMiniMax(modelKey: unknown): boolean {
     return typeof modelKey === 'string' && modelKey.toLowerCase().includes('minimax');
 }
 
 /** MiniMax models controlled by thinking.type; M3.1 Flash Preview uses reasoning_effort instead. */
-function usesMiniMaxThinking(modelKey) {
-    return isMiniMax(modelKey) && !OPENAI_MODEL_LEVELS[modelKey];
+function usesMiniMaxThinking(modelKey: unknown): boolean {
+    return isMiniMax(modelKey) && !OPENAI_MODEL_LEVELS[modelKey as string];
 }
 
 /** Max budget_tokens when mapping unified effort onto manual Anthropic thinking. */
-const ANTHROPIC_MANUAL_BUDGET_MAX = 16384;
+export const ANTHROPIC_MANUAL_BUDGET_MAX = 16384;
 
 /**
  * Models that use adaptive thinking + output_config.effort (Claude 5 / Fable /
  * Opus 4.6+ / Sonnet 4.6+ / Haiku 5+). Older ones (Sonnet 4.5, Haiku 4.5, Opus 4.5) use
  * thinking.type=enabled + budget_tokens.
  */
-function usesAnthropicAdaptiveThinking(modelKey) {
+export function usesAnthropicAdaptiveThinking(modelKey: unknown): boolean {
     const id = String(modelKey || '').toLowerCase();
     if (!id) return true;
     if (!id.includes('claude')) return true;
@@ -271,11 +284,11 @@ function usesAnthropicAdaptiveThinking(modelKey) {
     return true;
 }
 
-function mapAnthropicManualBudget(normalized) {
+function mapAnthropicManualBudget(normalized: number): number {
     return Math.max(1024, Math.round((normalized / 100) * ANTHROPIC_MANUAL_BUDGET_MAX));
 }
 
-function mapAnthropicEffort(normalized, modelKey) {
+function mapAnthropicEffort(normalized: number, modelKey: unknown): EffortPatch {
     if (!usesAnthropicAdaptiveThinking(modelKey)) {
         return {
             thinking: {
@@ -293,7 +306,7 @@ function mapAnthropicEffort(normalized, modelKey) {
     };
 }
 
-function mapDeepSeekEffort(normalized) {
+function mapDeepSeekEffort(normalized: number): EffortPatch | null {
     // DeepSeek V4 has no adaptive mode (only enabled/disabled + low|high|max)
     if (normalized === -1) return null;
     const level = levelFromBands(normalized, DEEPSEEK_BANDS);
@@ -306,7 +319,7 @@ function mapDeepSeekEffort(normalized) {
     };
 }
 
-function mapMiniMaxEffort(normalized) {
+function mapMiniMaxEffort(normalized: number): EffortPatch {
     if (normalized === -1) {
         return { thinking: { type: 'adaptive' } };
     }
@@ -318,13 +331,13 @@ function mapMiniMaxEffort(normalized) {
  * Explicit adaptive mapping when the provider/model exposes it.
  * Returns null when adaptive is not a settable native control.
  */
-function mapAdaptiveEffort(providerFamily, modelKey) {
+export function mapAdaptiveEffort(providerFamily: ProviderFamily | null | undefined, modelKey: unknown): EffortPatch | null {
     if (providerFamily === 'anthropic') {
         return { thinking: { type: 'adaptive' } };
     }
     if (providerFamily === 'google') {
         // These models reject thinkingBudget; omitting thinking keeps their native default
-        if (['gemini-4-argon', 'gemini-3.8-flash', 'gemini-3.7-flash'].includes(modelKey)) return null;
+        if (['gemini-4-argon', 'gemini-3.8-flash', 'gemini-3.7-flash'].includes(modelKey as string)) return null;
         // Gemini dynamic thinking: thinkingBudget -1 (2.5 official; accepted on 3.x as dynamic)
         return { thinkingConfig: { thinkingBudget: -1 } };
     }
@@ -335,8 +348,8 @@ function mapAdaptiveEffort(providerFamily, modelKey) {
     return null;
 }
 
-function gemini25BudgetMax(modelKey) {
-    if (modelKey && GEMINI_25_BUDGET_MAX[modelKey] != null) {
+function gemini25BudgetMax(modelKey: unknown): number {
+    if (typeof modelKey === 'string' && modelKey && GEMINI_25_BUDGET_MAX[modelKey] != null) {
         return GEMINI_25_BUDGET_MAX[modelKey];
     }
     return 24576;
@@ -346,11 +359,11 @@ function gemini25BudgetMax(modelKey) {
  * Provider classes declare their effort mapping family with `static family`.
  * @returns {'openai'|'anthropic'|'google'|null}
  */
-function resolveProviderFamily(providerInstance) {
-    return providerInstance?.constructor?.family ?? null;
+export function resolveProviderFamily(providerInstance: object | null | undefined): ProviderFamily | null {
+    return (providerInstance?.constructor as { family?: ProviderFamily | null } | undefined)?.family ?? null;
 }
 
-function hasNativeEffort(family, options = {}, modelKey) {
+export function hasNativeEffort(family: ProviderFamily | null | undefined, options: EffortOptions = {}, modelKey?: unknown): boolean {
     if (family === 'openai') {
         if (options.reasoning_effort != null && options.reasoning_effort !== '') return true;
         // DeepSeek / MiniMax use thinking.type as the on/off (or adaptive) control
@@ -376,7 +389,7 @@ function hasNativeEffort(family, options = {}, modelKey) {
  *
  * @returns {object|null}
  */
-function mapEffort(providerFamily, effort, modelKey) {
+export function mapEffort(providerFamily: ProviderFamily | null | undefined, effort: unknown, modelKey?: unknown): EffortPatch | null {
     const normalized = normalizeEffort(effort);
 
     if (!providerFamily) return null;
@@ -399,7 +412,7 @@ function mapEffort(providerFamily, effort, modelKey) {
         const supported = supportedOpenAILevels(modelKey);
         const desired = modelKey === 'z-ai/glm-5.3' || modelKey === 'z-ai/glm-5.3-flash'
             ? levelFromBands(normalized, GLM53_BANDS)
-            : ['anthropic/claude-fable-5.2', 'anthropic/claude-fable-5.1', 'MiniMax-M3.1-Flash-Preview'].includes(modelKey)
+            : ['anthropic/claude-fable-5.2', 'anthropic/claude-fable-5.1', 'MiniMax-M3.1-Flash-Preview'].includes(modelKey as string)
                 ? levelFromBands(normalized, ANTHROPIC_BANDS)
                 : normalized === 100 && supported.includes('max')
                     ? 'max'
@@ -430,7 +443,12 @@ function mapEffort(providerFamily, effort, modelKey) {
  * Apply config.effort onto options when native controls are absent.
  * Mutates and returns options. Never writes ModelMix `effort` into the HTTP body.
  */
-function applyUnifiedEffort(options, config, providerFamily, modelKey) {
+export function applyUnifiedEffort(
+    options: ModelMixOptions,
+    config: ModelMixConfig | null | undefined,
+    providerFamily: ProviderFamily | null | undefined,
+    modelKey?: string
+): ModelMixOptions {
     if (!config || config.effort === undefined || config.effort === null) {
         return options;
     }
@@ -445,18 +463,18 @@ function applyUnifiedEffort(options, config, providerFamily, modelKey) {
     }
     if (patch.output_config) {
         options.output_config = {
-            ...(options.output_config || {}),
+            ...((options.output_config as object | undefined) || {}),
             ...patch.output_config
         };
     }
     if (patch.thinking) {
         options.thinking = {
-            ...(options.thinking || {}),
+            ...((options.thinking as object | undefined) || {}),
             ...patch.thinking
         };
         // Adaptive thinking rejects budget_tokens; drop it if we switched mode.
         if (patch.thinking.type === 'adaptive') {
-            delete options.thinking.budget_tokens;
+            delete (options.thinking as Record<string, unknown>).budget_tokens;
         }
         // DeepSeek non-thinking: do not send reasoning_effort
         if (patch.thinking.type === 'disabled') {
@@ -465,7 +483,7 @@ function applyUnifiedEffort(options, config, providerFamily, modelKey) {
     }
     if (patch.thinkingConfig) {
         options.thinkingConfig = {
-            ...(options.thinkingConfig || {}),
+            ...((options.thinkingConfig as object | undefined) || {}),
             ...patch.thinkingConfig
         };
     }
@@ -473,7 +491,7 @@ function applyUnifiedEffort(options, config, providerFamily, modelKey) {
     return options;
 }
 
-function resolveNamedEffort(providerFamily, name, modelKey) {
+export function resolveNamedEffort(providerFamily: ProviderFamily | null | undefined, name: unknown, modelKey?: unknown): number {
     if (name === 'adaptive' && mapAdaptiveEffort(providerFamily, modelKey)) {
         return -1;
     }
@@ -488,31 +506,3 @@ function resolveNamedEffort(providerFamily, name, modelKey) {
     throw new Error(`Invalid effort ${JSON.stringify(name)} for model "${modelKey}": no exact named level is available; use a supported name or numeric effort.`);
 }
 
-module.exports = {
-    normalizeEffort,
-    resolveNamedEffort,
-    mapEffort,
-    mapAdaptiveEffort,
-    applyUnifiedEffort,
-    hasNativeEffort,
-    resolveProviderFamily,
-    resolveGrok420ModelKey,
-    isGrok420Alias,
-    isDeepSeekV4,
-    isMiniMax,
-    usesAnthropicAdaptiveThinking,
-    levelFromBands,
-    pickNearestLevel,
-    OPENAI_BANDS,
-    ANTHROPIC_BANDS,
-    GEMINI_BANDS,
-    DEEPSEEK_BANDS,
-    OPENAI_LEVELS,
-    ANTHROPIC_LEVELS,
-    GEMINI_LEVELS,
-    DEEPSEEK_LEVELS,
-    ANTHROPIC_MANUAL_BUDGET_MAX,
-    GROK420_ALIAS,
-    GROK420_REASONING,
-    GROK420_NON_REASONING,
-};

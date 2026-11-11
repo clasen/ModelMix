@@ -1,4 +1,4 @@
-import { ModelMix, MixGroq } from '../index.js';
+import { ModelMix, MixGroq } from '../dist/index.js';
 try { process.loadEnvFile(); } catch {}
 
 const env = process.env;

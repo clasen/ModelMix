@@ -1,6 +1,23 @@
-const { inspect } = require('util');
+import { inspect } from 'util';
+import type { ChatMessage, ModelMixResult, TextContentPart } from '../types';
 
-function formatJSON(obj) {
+interface DebugConfig {
+    debug: number;
+    roundRobin?: boolean;
+    effort?: unknown;
+    system?: string;
+}
+
+export interface ProviderAttemptLog {
+    attempt: number;
+    originalIndex: number;
+    provider: object;
+    currentConfig: DebugConfig;
+    resolvedModelKey: string;
+    preparedMessages: ChatMessage[];
+}
+
+export function formatJSON(obj: unknown): string {
     return inspect(obj, {
         depth: null,
         colors: true,
@@ -10,7 +27,7 @@ function formatJSON(obj) {
     });
 }
 
-function formatMessage(message) {
+export function formatMessage<T>(message: T): T | string {
     if (typeof message !== 'string') return message;
 
     try {
@@ -20,18 +37,18 @@ function formatMessage(message) {
     }
 }
 
-function truncate(str, maxLen = 1000) {
+export function truncate<T>(str: T, maxLen: number = 1000): T | string {
     if (!str || typeof str !== 'string') return str;
     return str.length > maxLen ? str.substring(0, maxLen) + '...' : str;
 }
 
-function formatInputSummary(messages, system, debug = 2) {
+export function formatInputSummary(messages: ChatMessage[], system: string | undefined, debug: number = 2): string {
     const lastMessage = messages[messages.length - 1];
     let inputText = '';
 
     if (lastMessage && Array.isArray(lastMessage.content)) {
         const textContent = lastMessage.content.find(c => c.type === 'text');
-        if (textContent) inputText = textContent.text;
+        if (textContent) inputText = (textContent as TextContentPart).text;
     } else if (lastMessage && typeof lastMessage.content === 'string') {
         inputText = lastMessage.content;
     }
@@ -44,8 +61,8 @@ function formatInputSummary(messages, system, debug = 2) {
     return `| SYSTEM\n${systemStr}\n| INPUT ${msgCount}\n${inputStr}`;
 }
 
-function formatOutputSummary(result, debug) {
-    const parts = [];
+export function formatOutputSummary(result: ModelMixResult, debug: number): string {
+    const parts: string[] = [];
     const noTruncate = debug >= 3;
     if (result.message) {
         // Try to parse as JSON for better formatting
@@ -71,7 +88,7 @@ function formatOutputSummary(result, debug) {
     return parts.join('\n');
 }
 
-function logProviderAttempt({ attempt, originalIndex, provider, currentConfig, resolvedModelKey, preparedMessages }) {
+export function logProviderAttempt({ attempt, originalIndex, provider, currentConfig, resolvedModelKey, preparedMessages }: ProviderAttemptLog): void {
     if (currentConfig.debug < 1) return;
 
     const isPrimary = attempt === 0;
@@ -90,7 +107,7 @@ function logProviderAttempt({ attempt, originalIndex, provider, currentConfig, r
     }
 }
 
-function logProviderSuccess(result, currentConfig) {
+export function logProviderSuccess(result: ModelMixResult, currentConfig: DebugConfig): void {
     if (currentConfig.debug === 1) console.log('✓ Success');
 
     if (currentConfig.debug >= 2) {
@@ -120,13 +137,3 @@ function logProviderSuccess(result, currentConfig) {
 
     if (currentConfig.debug >= 1) console.log('');
 }
-
-module.exports = {
-    formatJSON,
-    formatMessage,
-    truncate,
-    formatInputSummary,
-    formatOutputSummary,
-    logProviderAttempt,
-    logProviderSuccess
-};

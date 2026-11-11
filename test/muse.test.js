@@ -6,7 +6,7 @@ const {
     MixNVIDIA,
     MixOpenRouter,
     MixTogether
-} = require('../index.js');
+} = require('../dist/index.js');
 
 describe('Muse Model Registration Tests', () => {
     it('sends Muse Spark 1.3 requests through chain() with supported effort and options', async () => {

@@ -1,10 +1,31 @@
-const { Readable } = require('stream');
+import { Readable } from 'stream';
+import type { ReadableStream as WebReadableStream } from 'stream/web';
 
-function headersToObject(headers) {
+export interface HttpRequestOptions {
+    method?: string;
+    headers?: Record<string, string>;
+    body?: BodyInit | null;
+    signal?: AbortSignal;
+}
+
+export interface HttpResponse<T> {
+    data: T;
+    status: number;
+    headers: Record<string, string>;
+}
+
+export interface HttpError extends Error {
+    isHttpError: true;
+    statusCode: number;
+    details: unknown;
+    response: { status: number; data: unknown };
+}
+
+function headersToObject(headers: Headers): Record<string, string> {
     return Object.fromEntries(headers.entries());
 }
 
-function sanitizeUrl(url) {
+function sanitizeUrl(url: string): string {
     try {
         const parsed = new URL(url);
         parsed.username = '';
@@ -17,7 +38,7 @@ function sanitizeUrl(url) {
     }
 }
 
-async function parseResponseBody(response) {
+async function parseResponseBody(response: Response): Promise<unknown> {
     try {
         return await response.json();
     } catch {
@@ -29,15 +50,15 @@ async function parseResponseBody(response) {
     }
 }
 
-async function parseJsonBody(response) {
+async function parseJsonBody(response: Response): Promise<any> {
     const text = await response.text();
     if (!text) return null;
     return JSON.parse(text);
 }
 
-async function buildHttpError(url, response) {
+async function buildHttpError(url: string, response: Response): Promise<HttpError> {
     const details = await parseResponseBody(response);
-    const error = new Error(`Request to ${sanitizeUrl(url)} failed with status code ${response.status}`);
+    const error = new Error(`Request to ${sanitizeUrl(url)} failed with status code ${response.status}`) as HttpError;
     error.isHttpError = true;
     error.statusCode = response.status;
     error.details = details;
@@ -45,7 +66,10 @@ async function buildHttpError(url, response) {
     return error;
 }
 
-async function fetchJsonResponse(url, { method = 'POST', headers = {}, body, signal } = {}) {
+export async function fetchJsonResponse(
+    url: string,
+    { method = 'POST', headers = {}, body, signal }: HttpRequestOptions = {}
+): Promise<HttpResponse<any>> {
     const response = await fetch(url, { method, headers, body, signal });
     if (!response.ok) {
         throw await buildHttpError(url, response);
@@ -58,7 +82,10 @@ async function fetchJsonResponse(url, { method = 'POST', headers = {}, body, sig
     };
 }
 
-async function fetchBinaryResponse(url, { method = 'GET', headers = {}, body, signal } = {}) {
+export async function fetchBinaryResponse(
+    url: string,
+    { method = 'GET', headers = {}, body, signal }: HttpRequestOptions = {}
+): Promise<HttpResponse<Buffer>> {
     const response = await fetch(url, { method, headers, body, signal });
     if (!response.ok) {
         throw await buildHttpError(url, response);
@@ -71,7 +98,10 @@ async function fetchBinaryResponse(url, { method = 'GET', headers = {}, body, si
     };
 }
 
-async function fetchStreamResponse(url, { method = 'POST', headers = {}, body, signal } = {}) {
+export async function fetchStreamResponse(
+    url: string,
+    { method = 'POST', headers = {}, body, signal }: HttpRequestOptions = {}
+): Promise<HttpResponse<Readable>> {
     const response = await fetch(url, { method, headers, body, signal });
     if (!response.ok) {
         throw await buildHttpError(url, response);
@@ -80,14 +110,8 @@ async function fetchStreamResponse(url, { method = 'POST', headers = {}, body, s
         throw new Error(`Request to ${sanitizeUrl(url)} did not return a readable stream`);
     }
     return {
-        data: Readable.fromWeb(response.body),
+        data: Readable.fromWeb(response.body as WebReadableStream),
         status: response.status,
         headers: headersToObject(response.headers)
     };
 }
-
-module.exports = {
-    fetchJsonResponse,
-    fetchBinaryResponse,
-    fetchStreamResponse
-};

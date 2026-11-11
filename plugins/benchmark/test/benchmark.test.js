@@ -2,7 +2,7 @@ const { expect } = require('chai');
 const sinon = require('sinon');
 
 const { MixOpenAI, MixOpenAIResponses, ModelMix } = require('../../..');
-const { applyUnifiedEffort, resolveProviderFamily } = require('../../../effort');
+const { applyUnifiedEffort, resolveProviderFamily } = require('../../../dist/effort');
 const { benchmark } = require('..');
 
 const criteria = {

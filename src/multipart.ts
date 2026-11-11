@@ -1,8 +1,27 @@
-const fs = require('fs');
-const path = require('path');
+import fs from 'fs';
+import path from 'path';
 
-function stripContentTypeHeader(headers = {}) {
-    const sanitizedHeaders = {};
+export interface MultipartFile {
+    name: string;
+    data?: string | Buffer | ArrayBuffer | ArrayBufferView;
+    filename?: string;
+    path?: string;
+    contentType?: string;
+}
+
+export interface MultipartInput {
+    fields?: Record<string, unknown>;
+    files?: MultipartFile[];
+}
+
+export interface RequestBodyAndHeaders<T> {
+    options: T;
+    body: FormData | string;
+    headers: Record<string, string>;
+}
+
+export function stripContentTypeHeader(headers: Record<string, string> = {}): Record<string, string> {
+    const sanitizedHeaders: Record<string, string> = {};
     for (const [name, value] of Object.entries(headers)) {
         if (name.toLowerCase() !== 'content-type') {
             sanitizedHeaders[name] = value;
@@ -11,7 +30,7 @@ function stripContentTypeHeader(headers = {}) {
     return sanitizedHeaders;
 }
 
-function createMultipartFormData({ fields = {}, files = [] } = {}) {
+export function createMultipartFormData({ fields = {}, files = [] }: MultipartInput = {}): FormData {
     if (typeof FormData !== 'function' || typeof Blob !== 'function') {
         throw new Error('Native FormData/Blob are not available in this Node.js runtime');
     }
@@ -29,7 +48,7 @@ function createMultipartFormData({ fields = {}, files = [] } = {}) {
             throw new Error('Each multipart file must include a "name" property');
         }
 
-        let data = file.data;
+        let data: unknown = file.data;
         let filename = file.filename;
 
         if (file.path) {
@@ -50,7 +69,7 @@ function createMultipartFormData({ fields = {}, files = [] } = {}) {
             throw new Error(`Invalid multipart file data for "${file.name}" - expected Buffer, ArrayBuffer, typed array, string, or file path`);
         }
 
-        const blob = new Blob([data], {
+        const blob = new Blob([data as Uint8Array<ArrayBuffer>], {
             type: file.contentType || 'application/octet-stream'
         });
 
@@ -60,23 +79,26 @@ function createMultipartFormData({ fields = {}, files = [] } = {}) {
     return formData;
 }
 
-function buildRequestBodyAndHeaders(options, headers) {
+export function buildRequestBodyAndHeaders<T extends Record<string, any>>(
+    options: T,
+    headers: Record<string, string>
+): RequestBodyAndHeaders<T> {
     if (options?.body instanceof FormData) {
-        const requestOptions = { ...options };
+        const requestOptions: Record<string, any> = { ...options };
         delete requestOptions.body;
         return {
-            options: requestOptions,
+            options: requestOptions as T,
             body: options.body,
             headers: stripContentTypeHeader(headers)
         };
     }
 
     if (options?.multipart) {
-        const requestOptions = { ...options };
-        const multipartConfig = requestOptions.multipart || {};
+        const requestOptions: Record<string, any> = { ...options };
+        const multipartConfig: MultipartInput = requestOptions.multipart || {};
         delete requestOptions.multipart;
 
-        const serializedFields = {};
+        const serializedFields: Record<string, unknown> = {};
         for (const [key, value] of Object.entries(requestOptions)) {
             if (value === undefined) continue;
             serializedFields[key] = value;
@@ -91,7 +113,7 @@ function buildRequestBodyAndHeaders(options, headers) {
         });
 
         return {
-            options: requestOptions,
+            options: requestOptions as T,
             body,
             headers: stripContentTypeHeader(headers)
         };
@@ -103,9 +125,3 @@ function buildRequestBodyAndHeaders(options, headers) {
         headers
     };
 }
-
-module.exports = {
-    stripContentTypeHeader,
-    createMultipartFormData,
-    buildRequestBodyAndHeaders
-};

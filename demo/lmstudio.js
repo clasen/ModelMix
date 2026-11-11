@@ -1,4 +1,4 @@
-import { ModelMix, MixLMStudio } from '../index.js';
+import { ModelMix, MixLMStudio } from '../dist/index.js';
 
 const mmix = new ModelMix({
     options: {

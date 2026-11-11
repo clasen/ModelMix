@@ -1,5 +1,5 @@
 const { expect } = require('chai');
-const { MixCustom, ModelMix } = require('../../../index.js');
+const { MixCustom, ModelMix } = require('../../../dist/index.js');
 const { RlmLimitError, rlm } = require('..');
 
 function createProvider(handler) {

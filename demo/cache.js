@@ -1,4 +1,4 @@
-import { ModelMix } from '../index.js';
+import { ModelMix } from '../dist/index.js';
 try { process.loadEnvFile(); } catch {}
 
 console.log("\n" + '--------| gpt54() prompt cache |--------');

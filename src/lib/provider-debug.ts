@@ -1,11 +1,11 @@
-function configForDebug(config) {
-    const safeConfig = { ...config };
+export function configForDebug<T extends object>(config: T): Omit<T, 'apiKey' | 'debug'> {
+    const safeConfig: Record<string, unknown> = { ...(config as Record<string, unknown>) };
     delete safeConfig.apiKey;
     delete safeConfig.debug;
-    return safeConfig;
+    return safeConfig as Omit<T, 'apiKey' | 'debug'>;
 }
 
-function redactSecret(value, secret, seen = new WeakSet()) {
+export function redactSecret(value: unknown, secret: string | null | undefined, seen: WeakSet<object> = new WeakSet()): unknown {
     if (!secret) return value;
     if (typeof value === 'string') return value.split(secret).join('[REDACTED]');
     if (!value || typeof value !== 'object') return value;
@@ -19,5 +19,3 @@ function redactSecret(value, secret, seen = new WeakSet()) {
         Object.entries(value).map(([key, item]) => [key, redactSecret(item, secret, seen)])
     );
 }
-
-module.exports = { configForDebug, redactSecret };

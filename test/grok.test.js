@@ -1,13 +1,13 @@
 const { expect } = require('chai');
 const nock = require('nock');
-const { ModelMix, MixGrok } = require('../index.js');
+const { ModelMix, MixGrok } = require('../dist/index.js');
 const {
     mapEffort,
     resolveGrok420ModelKey,
     GROK420_ALIAS,
     GROK420_REASONING,
     GROK420_NON_REASONING
-} = require('../effort.js');
+} = require('../dist/effort.js');
 
 describe('Grok Model Registration Tests', () => {
     const grokModels = [

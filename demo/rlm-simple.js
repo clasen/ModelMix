@@ -1,4 +1,4 @@
-import { ModelMix } from '../index.js';
+import { ModelMix } from '../dist/index.js';
 import ivm from 'isolated-vm';
 try { process.loadEnvFile(); } catch {}
 

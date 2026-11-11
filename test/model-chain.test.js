@@ -1,8 +1,8 @@
 const { expect } = require('chai');
 
-const { ModelMix } = require('../index.js');
-const { listChainModelShortcuts } = require('../lib/model-chain');
-const { applyUnifiedEffort, resolveProviderFamily } = require('../effort');
+const { ModelMix } = require('../dist/index.js');
+const { listChainModelShortcuts } = require('../dist/lib/model-chain');
+const { applyUnifiedEffort, resolveProviderFamily } = require('../dist/effort');
 
 describe('model chain catalog', () => {
     it('contains only implemented ModelMix shortcuts', () => {

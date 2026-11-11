@@ -1,5 +1,5 @@
 const { expect } = require('chai');
-const { ModelMix, MixFireworks, MixOpenRouter, MixTogether } = require('../index.js');
+const { ModelMix, MixFireworks, MixOpenRouter, MixTogether } = require('../dist/index.js');
 
 describe('Qwen Model Registration Tests', () => {
     it('should register OpenRouter Qwen 3.6 Plus by default', () => {

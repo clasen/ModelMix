@@ -2,8 +2,8 @@
   "name": "modelmix",
   "version": "5.6.0",
   "description": "🧬 Reliable interface with automatic fallback for AI LLMs.",
-  "main": "index.js",
-  "types": "index.d.ts",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/clasen/ModelMix.git"
@@ -61,29 +61,35 @@
     "ws": "^8.21.1"
   },
   "devDependencies": {
+    "@types/ejs": "^3.1.5",
+    "@types/node": "^26.6.6",
+    "@types/ws": "^8.18.2",
     "chai": "^5.3.3",
     "mocha": "^11.7.6",
     "nock": "^14.0.16",
-    "sinon": "^21.1.2"
+    "sinon": "^21.1.2",
+    "typescript": "^7.0.2"
   },
   "scripts": {
-    "test": "mocha test/**/*.js --timeout 10000 --require test/setup.js",
-    "test:watch": "mocha test/**/*.js --watch --timeout 10000 --require test/setup.js",
-    "test:json": "mocha test/json.test.js --timeout 10000 --require test/setup.js",
-    "test:fallback": "mocha test/fallback.test.js --timeout 10000 --require test/setup.js",
-    "test:templates": "mocha test/templates.test.js --timeout 10000 --require test/setup.js",
-    "test:images": "mocha test/images.test.js --timeout 10000 --require test/setup.js",
-    "test:bottleneck": "mocha test/bottleneck.test.js --timeout 10000 --require test/setup.js",
-    "test:live": "mocha test/live.test.js --timeout 10000 --require test/setup.js",
-    "test:live.mcp": "mocha test/live.mcp.js --timeout 60000 --require test/setup.js",
-    "test:tokens": "mocha test/tokens.test.js --timeout 10000 --require test/setup.js",
-    "test:plugins": "mocha test/plugins.test.js --timeout 10000 --require test/setup.js",
-    "test:skills": "mocha plugins/skills/test/**/*.test.js --timeout 10000 --require test/setup.js",
-    "test:benchmark": "mocha plugins/benchmark/test/**/*.test.js --timeout 10000 --require test/setup.js",
-    "test:rlm": "mocha plugins/rlm/test/**/*.test.js --timeout 10000 --require test/setup.js",
-    "test:dataset": "mocha plugins/dataset/test/**/*.test.js --timeout 10000 --require test/setup.js",
+    "build": "tsc",
+    "test": "tsc && mocha test/**/*.js --timeout 10000 --require test/setup.js",
+    "test:watch": "tsc && mocha test/**/*.js --watch --timeout 10000 --require test/setup.js",
+    "test:json": "tsc && mocha test/json.test.js --timeout 10000 --require test/setup.js",
+    "test:fallback": "tsc && mocha test/fallback.test.js --timeout 10000 --require test/setup.js",
+    "test:templates": "tsc && mocha test/templates.test.js --timeout 10000 --require test/setup.js",
+    "test:images": "tsc && mocha test/images.test.js --timeout 10000 --require test/setup.js",
+    "test:bottleneck": "tsc && mocha test/bottleneck.test.js --timeout 10000 --require test/setup.js",
+    "test:live": "tsc && mocha test/live.test.js --timeout 10000 --require test/setup.js",
+    "test:live.mcp": "tsc && mocha test/live.mcp.js --timeout 60000 --require test/setup.js",
+    "test:tokens": "tsc && mocha test/tokens.test.js --timeout 10000 --require test/setup.js",
+    "test:plugins": "tsc && mocha test/plugins.test.js --timeout 10000 --require test/setup.js",
+    "test:skills": "tsc && mocha plugins/skills/test/**/*.test.js --timeout 10000 --require test/setup.js",
+    "test:benchmark": "tsc && mocha plugins/benchmark/test/**/*.test.js --timeout 10000 --require test/setup.js",
+    "test:rlm": "tsc && mocha plugins/rlm/test/**/*.test.js --timeout 10000 --require test/setup.js",
+    "test:dataset": "tsc && mocha plugins/dataset/test/**/*.test.js --timeout 10000 --require test/setup.js",
     "test:bun": "bun --bun run test:offline",
-    "test:offline": "mocha test/abort.test.js test/execution.test.js test/model-registry.test.js test/model-chain.test.js test/json.test.js test/fallback.test.js test/templates.test.js test/images.test.js test/bottleneck.test.js test/tokens.test.js test/history.test.js test/anthropic.test.js test/effort.test.js test/grok.test.js test/google.test.js test/moderation.test.js test/plugins.test.js plugins/skills/test/**/*.test.js plugins/benchmark/test/**/*.test.js plugins/rlm/test/**/*.test.js plugins/dataset/test/**/*.test.js --timeout 10000 --require test/setup.js"
+    "test:offline": "tsc && mocha test/abort.test.js test/execution.test.js test/model-registry.test.js test/model-chain.test.js test/json.test.js test/fallback.test.js test/templates.test.js test/images.test.js test/bottleneck.test.js test/tokens.test.js test/history.test.js test/anthropic.test.js test/effort.test.js test/grok.test.js test/google.test.js test/moderation.test.js test/plugins.test.js plugins/skills/test/**/*.test.js plugins/benchmark/test/**/*.test.js plugins/rlm/test/**/*.test.js plugins/dataset/test/**/*.test.js --timeout 10000 --require test/setup.js",
+    "prepublishOnly": "pnpm run build"
   },
   "packageManager": "pnpm@12.4.1"
 }

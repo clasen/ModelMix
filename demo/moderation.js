@@ -1,4 +1,4 @@
-import { ModerationMix } from '../index.js';
+import { ModerationMix } from '../dist/index.js';
 try { process.loadEnvFile(); } catch {}
 
 const username = 'player_name';

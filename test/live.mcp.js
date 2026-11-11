@@ -1,5 +1,5 @@
 const { expect } = require('chai');
-const { ModelMix } = require('../index.js');
+const { ModelMix } = require('../dist/index.js');
 const nock = require('nock');
 
 // Note: This test file makes real API calls and disables nock locally

@@ -1,4 +1,4 @@
-import { ModelMix } from '../index.js';
+import { ModelMix } from '../dist/index.js';
 try { process.loadEnvFile(); } catch {}
 
 const mmix = ModelMix.new({ config: { max_history: 10 } }).gpt6luna();

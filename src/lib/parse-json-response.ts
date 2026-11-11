@@ -1,6 +1,6 @@
-function parseJsonResponse(message) {
+function parseJsonResponse(message: unknown): any {
     try {
-        return JSON.parse(message);
+        return JSON.parse(message as string);
     } catch (error) {
         if (!(error instanceof SyntaxError) || typeof message !== 'string') throw error;
         const text = message.trim();
@@ -11,4 +11,4 @@ function parseJsonResponse(message) {
     }
 }
 
-module.exports = parseJsonResponse;
+export = parseJsonResponse;

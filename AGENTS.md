@@ -2,32 +2,34 @@
 
 ## Project Overview
 
-ModelMix is a CommonJS Node.js library for LLM providers, fallback chains, rate limiting, templates, multimodal requests, and MCP tools. Node is not pinned; the root uses pnpm 11.18 and requires no compilation.
+ModelMix is a TypeScript Node.js library, published as compiled CommonJS, for LLM providers, fallback chains, rate limiting, templates, multimodal requests, and MCP tools. Node is not pinned; the root uses pnpm, and `tsc` compiles `src/` to `dist/`.
 
 ## Project Structure & Module Organization
 
-- `index.js` owns the public API and the execution pipeline; synchronize public contracts with `index.d.ts`.
-- `lib/providers/` holds the `Mix*` provider classes, which never depend on `ModelMix`. Providers declare `static apiKeyEnv`, `apiKeyName`, and `family`.
-- `lib/model-registry.js` is the single source for model shortcuts, their provider routes, and `mix` defaults; `index.js` generates the fluent methods and `chain()` validates against it.
-- Root helper modules isolate effort mapping, schemas, HTTP, multipart, and MCP behavior; `lib/` holds the remaining internals (API key checks, debug formatting, templates, token usage).
-- `test/*.test.js` contains Mocha suites; fixtures and setup live under `test/`.
+- `src/index.ts` owns the public API and the execution pipeline; `src/types.ts` holds the public types. Declarations are generated into `dist/`.
+- `src/lib/providers/` holds the `Mix*` provider classes, which never depend on `ModelMix`. Providers declare `static apiKeyEnv`, `apiKeyName`, and `family`.
+- `src/lib/model-registry.ts` is the single source for model shortcuts, their provider routes, and `mix` defaults; `src/index.ts` generates the fluent methods and `chain()` validates against it.
+- Helper modules in `src/` isolate effort mapping, schemas, HTTP, multipart, and MCP behavior; `src/lib/` holds the remaining internals (API key checks, debug formatting, templates, token usage).
+- `test/*.test.js` contains Mocha suites that run against `dist/`; fixtures and setup live under `test/`. Plugins under `plugins/` are still JavaScript.
+- `dist/` is generated and ignored by git; `.npmignore` keeps it in the published package.
 - `demo/` holds examples and a separate npm manifest; `skills/modelmix/` contains the published skill.
 - `node_modules/` is generated and ignored. Update `pnpm-lock.yaml` only through pnpm.
 
 ## Build, Test, and Development Commands
 
 - `pnpm install` installs locked root dependencies.
+- `pnpm run build` compiles `src/` with `tsc`; every test script builds first.
 - `pnpm test` runs the complete Mocha suite with shared setup.
 - `pnpm run test:offline` runs the main mocked regressions without intentional live-provider coverage.
 - `pnpm run test:bun` runs the same offline regressions on the Bun runtime.
 - `pnpm run test:templates`, `pnpm run test:fallback`, and `pnpm run test:watch` support focused development.
 - `pnpm run test:live` and `pnpm run test:live.mcp` require real credentials, may incur costs, and must be reported separately.
 
-No build, lint, formatter, or standalone typecheck command is configured. Do not add tooling or dependencies without approval.
+No lint or formatter is configured; `pnpm run build` is the typecheck. Do not add tooling or dependencies without approval.
 
 ## Coding Style & Naming Conventions
 
-Use four-space indentation, semicolons, single quotes, CommonJS `require`, `camelCase`, and `PascalCase` classes. Keep provider behavior in `Mix*` classes. Public shortcut changes must update implementation, declarations, tests, docs, demos, and the skill together. Add aliases only with approval.
+Use strict TypeScript with ES `import`/`export`, four-space indentation, semicolons, single quotes, `camelCase`, and `PascalCase` classes. Avoid enums, namespaces, and parameter properties; prefer `unknown` over `any` at boundaries. Keep provider behavior in `Mix*` classes. Public shortcut changes must update implementation, declarations, tests, docs, demos, and the skill together. Add aliases only with approval.
 
 ## Testing Guidelines
 

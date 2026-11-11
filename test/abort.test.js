@@ -3,17 +3,14 @@ const { EventEmitter } = require('events');
 const sinon = require('sinon');
 const {
     MixCustom,
-    MixModeration,
-    MixOpenAI,
+    MixOpenAIWebSocket,
     ModelMix
-} = require('../index.js');
-const createOpenAIProviders = require('../lib/providers/openai');
-const { rejectsAnthropicSamplingParams } = require('../lib/providers/anthropic');
+} = require('../dist/index.js');
 const {
     fetchBinaryResponse,
     fetchJsonResponse,
     fetchStreamResponse
-} = require('../http-client');
+} = require('../dist/http-client');
 
 function deferred() {
     let resolve;
@@ -482,36 +479,23 @@ describe('AbortSignal execution contract', () => {
                 this.emit('close');
             }
         }
-        const wsPath = require.resolve('ws');
-        const originalWebSocket = require.cache[wsPath].exports;
-        require.cache[wsPath].exports = FakeWebSocket;
-        try {
-            const { MixOpenAIWebSocket } = createOpenAIProviders({
-                ModelMix,
-                MixCustom,
-                MixOpenAI,
-                MixModeration,
-                rejectsAnthropicSamplingParams
-            });
-            const provider = new MixOpenAIWebSocket({
-                config: {
-                    apiKey: 'test-key',
-                    realtimeUrl: 'ws://example.test',
-                    websocketTimeoutMs: 2000
-                }
-            });
-            const model = ModelMix.new({ config: { bottleneck: { maxConcurrent: 1, minTime: 0 } } })
-                .attach('realtime-test', provider)
-                .addText('test');
-            const controller = new AbortController();
-            const reason = new Error('close realtime');
-            const execution = model.raw(controller.signal);
-            const socket = await created.promise;
-            controller.abort(reason);
-            expect(await rejection(execution)).to.equal(reason);
-            expect(socket.terminated).to.equal(true);
-        } finally {
-            require.cache[wsPath].exports = originalWebSocket;
-        }
+        const provider = new MixOpenAIWebSocket({
+            config: {
+                apiKey: 'test-key',
+                realtimeUrl: 'ws://example.test',
+                websocketTimeoutMs: 2000
+            }
+        });
+        provider._createWebSocket = () => new FakeWebSocket();
+        const model = ModelMix.new({ config: { bottleneck: { maxConcurrent: 1, minTime: 0 } } })
+            .attach('realtime-test', provider)
+            .addText('test');
+        const controller = new AbortController();
+        const reason = new Error('close realtime');
+        const execution = model.raw(controller.signal);
+        const socket = await created.promise;
+        controller.abort(reason);
+        expect(await rejection(execution)).to.equal(reason);
+        expect(socket.terminated).to.equal(true);
     });
 });

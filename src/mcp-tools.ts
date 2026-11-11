@@ -1,12 +1,28 @@
-const log = require('lemonlog')('ModelMix:MCP-Tools');
+import lemonlog from 'lemonlog';
+import type { ToolCallback, ToolDefinition, ToolWithCallback } from './types';
 
-class MCPToolsManager {
+const log = lemonlog('ModelMix:MCP-Tools');
+
+export interface RegisteredTool {
+    name: string;
+    description: string;
+    inputSchema: Record<string, unknown>;
+}
+
+export interface ToolExecutionResult {
+    content: Array<{ type: 'text'; text: string }>;
+}
+
+export class MCPToolsManager {
+    tools: Map<string, RegisteredTool>;
+    callbacks: Map<string, ToolCallback>;
+
     constructor() {
         this.tools = new Map();
         this.callbacks = new Map();
     }
 
-    registerTool(toolDefinition, callback) {
+    registerTool(toolDefinition: ToolDefinition, callback: ToolCallback): void {
         const { name, description, inputSchema } = toolDefinition;
         
         if (!name || !description || !inputSchema) {
@@ -30,13 +46,13 @@ class MCPToolsManager {
         log.debug(`Tool registered: ${name}`);
     }
 
-    registerTools(toolsWithCallbacks) {
+    registerTools(toolsWithCallbacks: ToolWithCallback[]): void {
         for (const { tool, callback } of toolsWithCallbacks) {
             this.registerTool(tool, callback);
         }
     }
 
-    async executeTool(name, args, signal) {
+    async executeTool(name: string, args: Record<string, unknown>, signal?: AbortSignal): Promise<ToolExecutionResult> {
         const callback = this.callbacks.get(name);
         if (!callback) {
             throw new Error(`Tool not found: ${name}`);
@@ -48,7 +64,7 @@ class MCPToolsManager {
             signal?.throwIfAborted();
             // For primitive values (numbers, booleans), convert to string
             // For objects/arrays, stringify them
-            let textResult;
+            let textResult: string;
             if (typeof result === 'string') {
                 textResult = result;
             } else if (typeof result === 'number' || typeof result === 'boolean') {
@@ -69,31 +85,29 @@ class MCPToolsManager {
             return {
                 content: [{ 
                     type: "text", 
-                    text: `Error executing ${name}: ${error.message}`
+                    text: `Error executing ${name}: ${(error as Error).message}`
                 }]
             };
         }
     }
 
-    getToolsForMCP() {
+    getToolsForMCP(): RegisteredTool[] {
         return Array.from(this.tools.values());
     }
 
-    hasTool(name) {
+    hasTool(name: string): boolean {
         return this.tools.has(name);
     }
 
-    removeTool(name) {
+    removeTool(name: string): void {
         this.tools.delete(name);
         this.callbacks.delete(name);
         log.debug(`Tool removed: ${name}`);
     }
 
-    clear() {
+    clear(): void {
         this.tools.clear();
         this.callbacks.clear();
         log.debug('All tools cleared');
     }
 }
-
-module.exports = { MCPToolsManager };

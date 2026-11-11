@@ -1,4 +1,4 @@
-import { ModelMix } from '../index.js';
+import { ModelMix } from '../dist/index.js';
 import benchmarkPlugin from '../plugins/benchmark/index.js';
 import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import path from 'node:path';

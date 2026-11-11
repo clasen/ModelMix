@@ -1,7 +1,7 @@
 const { expect } = require('chai');
 const sinon = require('sinon');
 const nock = require('nock');
-const { ModelMix } = require('../index.js');
+const { ModelMix } = require('../dist/index.js');
 
 describe('Conversation History Tests', () => {
 

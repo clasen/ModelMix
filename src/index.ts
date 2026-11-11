@@ -1,44 +1,44 @@
-const fs = require('fs');
-const { randomUUID } = require('crypto');
-const ejs = require('ejs');
-const log = require('lemonlog')('ModelMix');
-const Bottleneck = require('bottleneck');
-const path = require('path');
-const generateJsonSchema = require('./schema');
-const parseJsonResponse = require('./lib/parse-json-response');
-const { Client } = require("@modelcontextprotocol/sdk/client/index.js");
-const { StdioClientTransport } = require("@modelcontextprotocol/sdk/client/stdio.js");
-const { MCPToolsManager } = require('./mcp-tools');
-const { fetchBinaryResponse } = require('./http-client');
-const {
+import fs from 'fs';
+import { randomUUID } from 'crypto';
+import * as ejs from 'ejs';
+import lemonlog from 'lemonlog';
+import Bottleneck from 'bottleneck';
+import path from 'path';
+import generateJsonSchema from './schema';
+import parseJsonResponse from './lib/parse-json-response';
+import { Client } from '@modelcontextprotocol/sdk/client/index.js';
+import { StdioClientTransport } from '@modelcontextprotocol/sdk/client/stdio.js';
+import { MCPToolsManager } from './mcp-tools';
+import { fetchBinaryResponse } from './http-client';
+import {
     assertAbortSignal,
     assertNoStoredSignal,
     raceWithSignal,
     sleepWithSignal,
     throwIfAborted
-} = require('./lib/abort-signal');
-const { isPlainObject } = require('./lib/object-utils');
-const { normalizeContentCache } = require('./lib/content-cache');
-const tokenUsage = require('./lib/token-usage');
-const debugFormat = require('./lib/debug-format');
-const { hasToolInteraction } = require('./lib/messages');
-const { assertProviderApiKeys } = require('./lib/provider-api-key');
-const { runWithStreamCallback } = require('./lib/stream-context');
-const { listModelShortcuts, resolveModelShortcut } = require('./lib/model-registry');
-const { parseChainModels, resolveChainModel } = require('./lib/model-chain');
-const {
+} from './lib/abort-signal';
+import { isPlainObject } from './lib/object-utils';
+import { normalizeContentCache } from './lib/content-cache';
+import * as tokenUsage from './lib/token-usage';
+import * as debugFormat from './lib/debug-format';
+import { hasToolInteraction } from './lib/messages';
+import { assertProviderApiKeys } from './lib/provider-api-key';
+import { runWithStreamCallback } from './lib/stream-context';
+import { listModelShortcuts, resolveModelShortcut } from './lib/model-registry';
+import { parseChainModels, resolveChainModel } from './lib/model-chain';
+import {
     validateTemplateData,
     validateTemplateDataKey,
     preprocessChoiceDirectives,
     createTemplateRenderContext
-} = require('./lib/template-engine');
-const {
+} from './lib/template-engine';
+import {
     normalizeEffort,
     applyUnifiedEffort,
     resolveProviderFamily,
     resolveGrok420ModelKey
-} = require('./effort');
-const {
+} from './effort';
+import {
     MixCustom,
     MixOpenAI,
     MixModeration,
@@ -62,50 +62,214 @@ const {
     MixFireworks,
     MixNVIDIA,
     MixGoogle
-} = require('./lib/providers');
+} from './lib/providers';
+import type {
+    AttachedModel,
+    BlockOptions,
+    CacheBreakpoint,
+    ChatMessage,
+    ChildInvocation,
+    ContentPart,
+    CreateArgs,
+    EffortValue,
+    ImageContentPart,
+    JsonMethodOptions,
+    ListedTools,
+    MessageRole,
+    ModelAttachArgs,
+    ModelMixConfig,
+    ModelMixMixFlags,
+    ModelMixOptions,
+    ModelMixOutputMode,
+    ModelMixPlugin,
+    ModelMixResult,
+    ModelMixSetup,
+    PluginExecutionContext,
+    PluginExecutionMetadata,
+    PluginInheritancePolicy,
+    RetryConfig,
+    RoleOptions,
+    SchemaDescription,
+    StreamCallback,
+    TextContentPart,
+    TokenCostBreakdown,
+    TokenUsage,
+    ToolCall,
+    ToolCallback,
+    ToolDefinition,
+    ToolWithCallback
+} from './types';
 
+export type * from './types';
+
+const log = lemonlog('ModelMix');
 
 const DEFAULT_RETRYABLE_STATUS_CODES = [408, 425, 429, 500, 502, 503, 504, 529];
 const DEFAULT_MAX_TOOL_ROUNDS = 25;
 const DEFAULT_MIX = { openrouter: false, together: false, lambda: false };
 
-function getErrorStatusCode(error) {
-    return error?.statusCode ?? error?.response?.status ?? error?.response?.statusCode ?? null;
+type TemplateRenderContext = ReturnType<typeof createTemplateRenderContext>;
+type PluginRequest = PluginExecutionContext['request'];
+
+interface TemplateSource {
+    source: unknown;
+    filename: string | null;
 }
 
-function clonePluginValue(value, seen = new WeakMap()) {
+interface TemplateFileAssignment {
+    readonly key: string;
+    readonly filename: string;
+}
+
+interface TemplateRenderOptions {
+    filename?: string | null;
+    label?: string;
+}
+
+interface TokenCounts {
+    input: number;
+    output: number;
+    thinking?: number;
+    total?: number;
+    cached?: number;
+    cacheWrite?: number;
+    cacheWrite5m?: number;
+    cacheWrite1h?: number;
+}
+
+interface ModelMixInternalOptions {
+    limiter?: Bottleneck | null;
+}
+
+interface ExecuteArgs extends CreateArgs {
+    systemSuffix?: string;
+}
+
+interface InternalExecuteArgs extends ExecuteArgs {
+    streamCallback?: StreamCallback | null;
+    executionMetadata?: PluginExecutionMetadata | null;
+}
+
+interface ExecutionState {
+    config: ModelMixConfig;
+    options: ModelMixOptions;
+    signal?: AbortSignal;
+    systemSuffix: string;
+    outputMode: ModelMixOutputMode;
+    streamCallback: StreamCallback | null;
+    templateContext: TemplateRenderContext;
+    executionMetadata: PluginExecutionMetadata | null;
+    pluginRequest: PluginRequest | null;
+}
+
+interface ProviderAttemptInput {
+    currentModel: AttachedModel;
+    preparedMessages: ChatMessage[];
+    config: ModelMixConfig;
+    options: ModelMixOptions;
+    finalConfig: ModelMixConfig;
+    pluginRequest: PluginRequest | null;
+    systemSuffix: string;
+    templateContext: TemplateRenderContext;
+}
+
+interface ProviderAttempt {
+    provider: MixCustom;
+    currentOptions: ModelMixOptions;
+    currentConfig: ModelMixConfig;
+    resolvedModelKey: string;
+}
+
+interface ProviderToolEntry {
+    name?: string;
+    function?: { name?: string };
+    functionDeclarations?: Array<{ name?: string }>;
+}
+
+interface ToolCallResult {
+    name: string;
+    tool_call_id: string;
+    content: string;
+}
+
+interface ToolResponseContent {
+    content: Array<{ text?: string }>;
+}
+
+type ProviderError = Error & {
+    statusCode?: number | null;
+    details?: unknown;
+};
+
+type ToolRoundLimitError = Error & {
+    code?: string;
+    toolCalls?: ToolCall[];
+};
+
+function getErrorStatusCode(error: unknown): number | null {
+    const candidate = error as {
+        statusCode?: number;
+        response?: { status?: number; statusCode?: number };
+    } | null | undefined;
+    return candidate?.statusCode ?? candidate?.response?.status ?? candidate?.response?.statusCode ?? null;
+}
+
+function clonePluginValue<T>(value: T, seen: WeakMap<object, unknown> = new WeakMap()): T {
     if (value === null || typeof value !== 'object') return value;
-    if (Buffer.isBuffer(value)) return Buffer.from(value);
-    if (seen.has(value)) return seen.get(value);
+    if (Buffer.isBuffer(value)) return Buffer.from(value) as T;
+    if (seen.has(value)) return seen.get(value) as T;
 
     if (Array.isArray(value)) {
-        const clone = [];
+        const clone: unknown[] = [];
         seen.set(value, clone);
         for (const item of value) clone.push(clonePluginValue(item, seen));
-        return clone;
+        return clone as T;
     }
 
     if (!isPlainObject(value)) return value;
-    const clone = {};
+    const clone: Record<string, unknown> = {};
     seen.set(value, clone);
     for (const [key, item] of Object.entries(value)) {
         clone[key] = clonePluginValue(item, seen);
     }
-    return clone;
+    return clone as T;
 }
 
-function validatePluginResult(result, pluginName) {
+function validatePluginResult(result: unknown, pluginName: string): ModelMixResult {
     if (!isPlainObject(result)) {
         throw new TypeError(`Plugin "${pluginName}" must return a ModelMixResult object.`);
     }
-    return result;
+    return result as ModelMixResult;
 }
 
+export class ModelMix {
+    models: AttachedModel[];
+    messages: ChatMessage[];
+    tools: Record<string, ToolDefinition[]>;
+    toolClient: Record<string, Client>;
+    mcp: Record<string, Client>;
+    plugins: ModelMixPlugin[];
+    options: ModelMixOptions;
+    config: ModelMixConfig;
+    mix: ModelMixMixFlags;
+    lastRaw: ModelMixResult | null;
+    /** Rate limiter shared with instances derived through new() unless they pass config.bottleneck. */
+    limiter: Bottleneck;
+    /** @internal */
+    mcpToolsManager: MCPToolsManager;
+    /** @internal */
+    templateFileAssignments: Map<string, TemplateFileAssignment>;
+    /** @internal */
+    messageTemplates: WeakMap<object, TemplateSource>;
+    /** @internal */
+    systemTemplate: TemplateSource;
+    /** @internal */
+    _mixOverrides: ModelMixMixFlags;
 
-
-class ModelMix {
-
-    constructor({ options = {}, config = {}, mix = {} } = {}, { limiter = null } = {}) {
+    constructor(
+        { options = {}, config = {}, mix = {} }: ModelMixSetup = {},
+        { limiter = null }: ModelMixInternalOptions = {}
+    ) {
         assertNoStoredSignal(options, 'options');
         assertNoStoredSignal(config, 'config');
         this.models = [];
@@ -166,7 +330,7 @@ class ModelMix {
 
     }
 
-    assign(keyValues) {
+    assign(keyValues: Record<string, unknown>): this {
         validateTemplateData(keyValues);
         for (const key of Object.keys(keyValues)) {
             this.templateFileAssignments.delete(key);
@@ -175,7 +339,7 @@ class ModelMix {
         return this;
     }
 
-    assignKey(key, value) {
+    assignKey(key: string, value: unknown): this {
         validateTemplateDataKey(key);
         return this.assign({ [key]: value });
     }
@@ -185,18 +349,19 @@ class ModelMix {
      * Stored in config.effort; mapped to provider-native fields at request time
      * unless a native effort control is already set (native wins).
      */
-    effort(value) {
+    effort(value: EffortValue): this {
         this.config.effort = normalizeEffort(value);
         return this;
     }
 
-    chain(...modelSpecs) {
+    /** Attach an ordered model chain. `shortcut@effort` accepts -1, 0..100, or an exact supported level such as `gpt6luna@high`. */
+    chain(...modelSpecs: string[]): this {
         const models = parseChainModels(modelSpecs)
             .flatMap(model => resolveChainModel(this, model));
         return this._attachModels(models);
     }
 
-    use(plugin) {
+    use(plugin: ModelMixPlugin): this {
         if (!isPlainObject(plugin)) {
             throw new TypeError('plugin must be a plain object.');
         }
@@ -213,15 +378,16 @@ class ModelMix {
         return this;
     }
 
-    static new({ options = {}, config = {}, mix = {} } = {}) {
+    static new({ options = {}, config = {}, mix = {} }: ModelMixSetup = {}): ModelMix {
         return new ModelMix({ options, config, mix });
     }
 
-    _sharedLimiter(config) {
+    /** @internal */
+    _sharedLimiter(config: ModelMixConfig): Bottleneck | null {
         return Object.prototype.hasOwnProperty.call(config, 'bottleneck') ? null : this.limiter;
     }
 
-    new({ options = {}, config = {}, mix = {} } = {}) {
+    new({ options = {}, config = {}, mix = {} }: ModelMixSetup = {}): ModelMix {
         const hasSystemOverride = Object.prototype.hasOwnProperty.call(config, 'system');
         const instance = new ModelMix({
             options: { ...this.options, ...options },
@@ -240,7 +406,8 @@ class ModelMix {
         return instance;
     }
 
-    _pluginsForPolicy(policy = 'inherit') {
+    /** @internal */
+    _pluginsForPolicy(policy: PluginInheritancePolicy = 'inherit'): ModelMixPlugin[] {
         if (policy === 'inherit') return [...this.plugins];
         if (policy === 'none') return [];
         if (!isPlainObject(policy)) {
@@ -252,11 +419,13 @@ class ModelMix {
         if (hasInclude === hasExclude) {
             throw new TypeError('plugins policy must define exactly one of include or exclude.');
         }
-        const names = hasInclude ? policy.include : policy.exclude;
+        const names: unknown = hasInclude
+            ? (policy as { include: string[] }).include
+            : (policy as { exclude: string[] }).exclude;
         if (!Array.isArray(names) || names.some(name => typeof name !== 'string' || name.length === 0)) {
             throw new TypeError('plugin include/exclude names must be non-empty strings.');
         }
-        const uniqueNames = new Set(names);
+        const uniqueNames = new Set<string>(names);
         const knownNames = new Set(this.plugins.map(plugin => plugin.name));
         for (const name of uniqueNames) {
             if (!knownNames.has(name)) {
@@ -268,7 +437,12 @@ class ModelMix {
             : this.plugins.filter(plugin => !uniqueNames.has(plugin.name));
     }
 
-    async _invokeChild(input, parentExecution, signal) {
+    /** @internal */
+    async _invokeChild(
+        input: ChildInvocation,
+        parentExecution: PluginExecutionMetadata,
+        signal?: AbortSignal
+    ): Promise<ModelMixResult> {
         if (!isPlainObject(input)) {
             throw new TypeError('Child invocation must be a plain object.');
         }
@@ -323,14 +497,15 @@ class ModelMix {
         if (system !== undefined) child.setSystem(system);
         if (systemFile !== undefined) child.setSystemFromFile(systemFile);
         child.messages = clonePluginValue(messages);
-        for (const tool of tools) {
-            if (!isPlainObject(tool) || !isPlainObject(tool.tool) || typeof tool.callback !== 'function') {
+        for (const tool of tools as unknown[]) {
+            const entry = tool as ToolWithCallback;
+            if (!isPlainObject(tool) || !isPlainObject(entry.tool) || typeof entry.callback !== 'function') {
                 throw new TypeError('Child invocation tools must contain { tool, callback }.');
             }
-            child.addTool(tool.tool, tool.callback);
+            child.addTool(entry.tool, entry.callback);
         }
 
-        const execution = {
+        const execution: PluginExecutionMetadata = {
             executionId: randomUUID(),
             parentExecutionId: parentExecution.executionId,
             depth: parentExecution.depth + 1
@@ -343,71 +518,72 @@ class ModelMix {
         return { ...result, execution };
     }
 
-    static formatJSON(obj) {
+    static formatJSON(obj: unknown): string {
         return debugFormat.formatJSON(obj);
     }
 
-    static formatMessage(message) {
+    static formatMessage(message: unknown): unknown {
         return debugFormat.formatMessage(message);
     }
 
     // debug logging helpers
-    static truncate(str, maxLen = 1000) {
+    static truncate(str: string, maxLen = 1000): string {
         return debugFormat.truncate(str, maxLen);
     }
 
-    static normalizeTokenUsage(usage = {}) {
+    static normalizeTokenUsage(usage: Partial<TokenCounts> = {}): TokenUsage {
         return tokenUsage.normalizeTokenUsage(usage);
     }
 
-    static calculateCostBreakdown(modelKey, tokens) {
+    static calculateCostBreakdown(modelKey: string, tokens: TokenCounts): TokenCostBreakdown {
         return tokenUsage.calculateCostBreakdown(modelKey, tokens);
     }
 
-    static calculateCacheMetrics(modelKey, tokens) {
+    static calculateCacheMetrics(modelKey: string, tokens: TokenCounts): Pick<TokenUsage, 'cacheSavings' | 'cacheWritePremium' | 'breakEvenHits'> {
         return tokenUsage.calculateCacheMetrics(modelKey, tokens);
     }
 
-    static calculateCost(modelKey, tokens) {
+    static calculateCost(modelKey: string, tokens: TokenCounts): number | null {
         return tokenUsage.calculateCost(modelKey, tokens);
     }
 
-    static extractCacheTokens(usage = {}) {
+    static extractCacheTokens(usage: Record<string, unknown> = {}): number {
         return tokenUsage.extractCacheTokens(usage);
     }
 
-    static extractCacheWriteTokens(usage = {}) {
+    static extractCacheWriteTokens(usage: Record<string, unknown> = {}): number {
         return tokenUsage.extractCacheWriteTokens(usage);
     }
 
-    static formatInputSummary(messages, system, debug = 2) {
+    static formatInputSummary(messages: ChatMessage[], system: string, debug = 2): string {
         return debugFormat.formatInputSummary(messages, system, debug);
     }
 
-    static formatOutputSummary(result, debug) {
+    static formatOutputSummary(result: ModelMixResult, debug: number): string {
         return debugFormat.formatOutputSummary(result, debug);
     }
 
-    attach(key, provider) {
+    attach(key: string, provider: MixCustom): this {
         return this._attachModels([{ key, provider }]);
     }
 
-    /** Hook for subclasses that accept only some provider types. */
-    _assertAttachable(provider) {
+    /** @internal Hook for subclasses that accept only some provider types. */
+    _assertAttachable(provider: MixCustom): void {
     }
 
     /**
+     * @internal
      * Attach { key, provider } entries atomically: every entry is validated and every
      * required API key is checked before any model is added.
      */
-    _attachModels(models) {
-        const pending = [];
+    _attachModels(models: AttachedModel[]): this {
+        const pending: AttachedModel[] = [];
         for (const { key, provider } of models) {
             assertNoStoredSignal(provider?.options, 'provider.options');
             assertNoStoredSignal(provider?.config, 'provider.config');
             this._assertAttachable(provider);
 
-            const isAttached = model => model.key === key
+            const isAttached = (model: AttachedModel) => model.key === key
                 && model.provider.constructor === provider.constructor;
             if (this.models.some(isAttached) || pending.some(isAttached)) continue;
             pending.push({ key, provider });
@@ -423,11 +599,11 @@ class ModelMix {
         return this;
     }
 
-    lmstudio(model = 'lmstudio', { options = {}, config = {} } = {}) {
+    lmstudio(model = 'lmstudio', { options = {}, config = {} }: ModelAttachArgs = {}): this {
         return this.attach(model, new MixLMStudio({ options, config }));
     }
 
-    addText(text, { role = "user", cache } = {}) {
+    addText(text: string, { role = "user", cache }: RoleOptions = {}): this {
         return this._addText(text, {
             role,
             cache: normalizeContentCache(cache),
@@ -435,8 +611,12 @@ class ModelMix {
         });
     }
 
-    _addText(text, { role = "user", cache, template = null } = {}) {
-        const content = [{
+    /** @internal */
+    _addText(
+        text: string,
+        { role = "user", cache, template = null }: { role?: MessageRole; cache?: CacheBreakpoint; template?: TemplateSource | null } = {}
+    ): this {
+        const content: TextContentPart[] = [{
             type: "text",
             text,
             ...(cache !== undefined && { cache })
@@ -449,7 +629,7 @@ class ModelMix {
         return this;
     }
 
-    addTextFromFile(filePath, { role = "user", cache } = {}) {
+    addTextFromFile(filePath: string, { role = "user", cache }: RoleOptions = {}): this {
         const filename = path.resolve(filePath);
         const content = this.readFile(filename);
         return this._addText(content, {
@@ -459,13 +639,13 @@ class ModelMix {
         });
     }
 
-    setSystem(text) {
+    setSystem(text: string): this {
         this.config.system = text;
         this.systemTemplate = { source: text, filename: null };
         return this;
     }
 
-    setSystemFromFile(filePath) {
+    setSystemFromFile(filePath: string): this {
         const filename = path.resolve(filePath);
         const content = this.readFile(filename);
         this.config.system = content;
@@ -473,7 +653,8 @@ class ModelMix {
         return this;
     }
 
-    _addImageSource(source, { role = "user", cache } = {}) {
+    /** @internal */
+    _addImageSource(source: ImageContentPart['source'], { role = "user", cache }: RoleOptions = {}): this {
         const contentCache = normalizeContentCache(cache);
         this.messages.push({
             role,
@@ -486,11 +667,11 @@ class ModelMix {
         return this;
     }
 
-    addImageFromBuffer(buffer, { role = "user", cache } = {}) {
+    addImageFromBuffer(buffer: Buffer, { role = "user", cache }: RoleOptions = {}): this {
         return this._addImageSource({ type: "buffer", data: buffer }, { role, cache });
     }
 
-    addImage(filePath, { role = "user", cache } = {}) {
+    addImage(filePath: string, { role = "user", cache }: RoleOptions = {}): this {
         const absolutePath = path.resolve(filePath);
 
         if (!fs.existsSync(absolutePath)) {
@@ -500,8 +681,8 @@ class ModelMix {
         return this._addImageSource({ type: "file", data: filePath }, { role, cache });
     }
 
-    addImageFromUrl(url, { role = "user", cache } = {}) {
-        let source;
+    addImageFromUrl(url: string, { role = "user", cache }: RoleOptions = {}): this {
+        let source: ImageContentPart['source'];
         if (url.startsWith('data:')) {
             // Parse data URL: data:image/jpeg;base64,/9j/4AAQ...
             const match = url.match(/^data:([^;]+);base64,(.+)$/);
@@ -524,35 +705,37 @@ class ModelMix {
         return this._addImageSource(source, { role, cache });
     }
 
-    async processImages(signal) {
+    async processImages(signal?: AbortSignal): Promise<void> {
         assertAbortSignal(signal);
-        const preparedContent = [];
+        const preparedContent: Array<{ message: ChatMessage; content: ContentPart[] }> = [];
         for (const message of this.messages) {
             if (!Array.isArray(message.content)) continue;
-            const nextContent = [];
+            const nextContent: ContentPart[] = [];
 
-            for (const content of message.content) {
+            for (const part of message.content) {
+                const content = part as ImageContentPart;
                 if (content.type !== 'image' || content.source.type === 'base64') {
-                    nextContent.push(content);
+                    nextContent.push(part);
                     continue;
                 }
 
                 try {
-                    let buffer, mimeType;
+                    let buffer!: Buffer;
+                    let mimeType: string | undefined;
 
                     switch (content.source.type) {
                         case 'url':
-                            const response = await fetchBinaryResponse(content.source.data, { signal });
+                            const response = await fetchBinaryResponse(content.source.data as string, { signal });
                             buffer = response.data;
                             mimeType = response.headers['content-type'];
                             break;
 
                         case 'file':
-                            buffer = this.readFile(content.source.data, { encoding: null });
+                            buffer = this.readFile(content.source.data as string, { encoding: null });
                             break;
 
                         case 'buffer':
-                            buffer = content.source.data;
+                            buffer = content.source.data as Buffer;
                             break;
                     }
 
@@ -588,61 +771,72 @@ class ModelMix {
         for (const prepared of preparedContent) prepared.message.content = prepared.content;
     }
 
-    async message(signal) {
+    async message(signal?: AbortSignal): Promise<string> {
         let raw = await this.execute({ options: { stream: false }, outputMode: 'message', signal });
-        return raw.message;
+        return raw.message as string;
     }
 
-    async json(schemaExample = null, schemaDescription = {}, { type = 'json_object', addExample = false, addSchema = true, addNote = false } = {}, signal) {
+    async json<T = unknown>(
+        schemaExample: T | T[] | null = null,
+        schemaDescription: SchemaDescription = {},
+        { type = 'json_object', addExample = false, addSchema = true, addNote = false }: JsonMethodOptions = {},
+        signal?: AbortSignal
+    ): Promise<T> {
         assertAbortSignal(signal);
 
+        let example: unknown = schemaExample;
+        let description: SchemaDescription = schemaDescription;
         let isArrayWrap = false;
-        if (Array.isArray(schemaExample)) {
+        if (Array.isArray(example)) {
             isArrayWrap = true;
-            schemaExample = { out: schemaExample };
-            if (Array.isArray(schemaDescription)) {
-                schemaDescription = { out: schemaDescription };
+            example = { out: example };
+            if (Array.isArray(description)) {
+                description = { out: description };
             }
         }
 
-        let options = {
+        let options: ModelMixOptions = {
             response_format: { type },
             stream: false,
         }
 
-        let config = {};
+        let config: ModelMixConfig = {};
         let systemSuffix = '';
 
-        if (schemaExample) {
-            config.schema = generateJsonSchema(schemaExample, schemaDescription);
+        if (example) {
+            config.schema = generateJsonSchema(
+                example,
+                description as Parameters<typeof generateJsonSchema>[1]
+            ) as Record<string, unknown>;
 
             if (addSchema) {
                 systemSuffix += "\n\nOutput JSON Schema: \n```\n" + JSON.stringify(config.schema) + "\n```";
             }
             if (addExample) {
-                systemSuffix += "\n\nOutput JSON Example: \n```\n" + JSON.stringify(schemaExample) + "\n```";
+                systemSuffix += "\n\nOutput JSON Example: \n```\n" + JSON.stringify(example) + "\n```";
             }
             if (addNote) {
                 systemSuffix += "\n\nOutput JSON Escape: double quotes, backslashes, and control characters inside JSON strings.\nEnsure the output contains no comments.";
             }
         }
         const { message } = await this.execute({ options, config, systemSuffix, outputMode: 'json', signal });
-        let parsed;
+        let parsed: unknown;
         try {
-            parsed = parseJsonResponse(message);
+            parsed = parseJsonResponse(message as string);
         } catch (error) {
             if (!(error instanceof SyntaxError)) throw error;
-            parsed = JSON.parse(this._extractBlock(message));
+            parsed = JSON.parse(this._extractBlock(message as string));
         }
-        return isArrayWrap ? parsed.out : parsed;
+        return (isArrayWrap ? (parsed as { out: T }).out : parsed) as T;
     }
 
-    _extractBlock(response) {
+    /** @internal */
+    _extractBlock(response: string): string {
         const block = response.match(/```(?:\w+)?\s*([\s\S]*?)```/);
         return block ? block[1].trim() : response.trim();
     }
 
-    async block({ addSystemExtra = true } = {}, signal) {
+    async block({ addSystemExtra = true }: BlockOptions = {}, signal?: AbortSignal): Promise<string> {
         assertAbortSignal(signal);
         const systemSuffix = addSystemExtra
             ? "\nReturn the result of the task between triple backtick block code tags ```"
@@ -653,23 +847,23 @@ class ModelMix {
             outputMode: 'block',
             signal
         });
-        return this._extractBlock(message);
+        return this._extractBlock(message as string);
     }
 
-    async raw(signal) {
+    async raw(signal?: AbortSignal): Promise<ModelMixResult> {
         return this.execute({ options: { stream: false }, outputMode: 'raw', signal });
     }
 
-    async stream(callback, signal) {
+    async stream(callback: StreamCallback, signal?: AbortSignal): Promise<ModelMixResult> {
         assertAbortSignal(signal);
         return this._execute({ options: { stream: true }, outputMode: 'stream', signal, streamCallback: callback });
     }
 
-    assignKeyFromFile(key, filePath) {
+    assignKeyFromFile(key: string, filePath: string): this {
         validateTemplateDataKey(key);
         this.readFile(filePath);
 
-        const templateData = { ...this.config.templateData };
+        const templateData: Record<string, unknown> = { ...this.config.templateData };
         delete templateData[key];
         this.config.templateData = templateData;
         this.templateFileAssignments.set(key, Object.freeze({
@@ -679,13 +873,15 @@ class ModelMix {
         return this;
     }
 
-    _choiceRandom() {
+    /** @internal */
+    _choiceRandom(): number {
         return Math.random();
     }
 
-    _templateData(renderContext) {
-        const assigned = { ...(this.config.templateData || {}), $mix: renderContext.helpers };
-        const data = { ...assigned };
+    /** @internal */
+    _templateData(renderContext: TemplateRenderContext): Record<string, unknown> {
+        const assigned: Record<string, unknown> = { ...(this.config.templateData || {}), $mix: renderContext.helpers };
+        const data: Record<string, unknown> = { ...assigned };
 
         for (const [key, assignment] of this.templateFileAssignments) {
             data[key] = this._renderAssignedTemplate(assignment, assigned, renderContext);
@@ -694,9 +890,14 @@ class ModelMix {
         return data;
     }
 
-    _renderAssignedTemplate(assignment, data, renderContext) {
+    /** @internal */
+    _renderAssignedTemplate(
+        assignment: TemplateFileAssignment,
+        data: Record<string, unknown>,
+        renderContext: TemplateRenderContext
+    ): string {
         if (renderContext.renderedTemplateData.has(assignment)) {
-            return renderContext.renderedTemplateData.get(assignment);
+            return renderContext.renderedTemplateData.get(assignment) as string;
         }
 
         const rendered = this._renderTemplateWithData(
@@ -711,11 +912,12 @@ class ModelMix {
         return rendered;
     }
 
+    /** @internal */
     _renderTemplate(
-        source,
-        { filename = null, label = 'template' } = {},
-        renderContext = createTemplateRenderContext(() => this._choiceRandom())
-    ) {
+        source: unknown,
+        { filename = null, label = 'template' }: TemplateRenderOptions = {},
+        renderContext: TemplateRenderContext = createTemplateRenderContext(() => this._choiceRandom())
+    ): string {
         return this._renderTemplateWithData(
             source,
             { filename, label },
@@ -723,7 +925,12 @@ class ModelMix {
         );
     }
 
-    _renderTemplateWithData(source, { filename = null, label = 'template' }, data) {
+    /** @internal */
+    _renderTemplateWithData(
+        source: unknown,
+        { filename = null, label = 'template' }: TemplateRenderOptions,
+        data: Record<string, unknown>
+    ): string {
         if (typeof source !== 'string') {
             throw new TypeError(`${label} source must be a string.`);
         }
@@ -731,12 +938,12 @@ class ModelMix {
         try {
             const template = preprocessChoiceDirectives(source, { filename, label });
             return ejs.render(template, data, {
-                ...(filename && { filename }),
+                ...(filename ? { filename } : {}),
                 async: false,
                 cache: false,
                 compileDebug: true,
                 unsafePrototypeLocals: false,
-                includer: (originalPath, resolvedFilename) => {
+                includer: (originalPath: string, resolvedFilename: string): ejs.IncluderResult => {
                     if (!resolvedFilename) {
                         throw new Error(`Could not find the include file "${originalPath}"`);
                     }
@@ -747,23 +954,23 @@ class ModelMix {
                             filename: resolvedFilename,
                             label: 'included template'
                         })
-                    };
+                    } as unknown as ejs.IncluderResult;
                 }
-            });
+            } as ejs.Options & { async: false });
         } catch (error) {
             const location = filename ? ` ${filename}` : '';
-            const renderError = new Error(`Failed to render ${label}${location}: ${error.message}`);
+            const renderError = new Error(`Failed to render ${label}${location}: ${(error as Error).message}`);
             renderError.cause = error;
             throw renderError;
         }
     }
 
-    static hasToolInteraction(message) {
+    static hasToolInteraction(message: ChatMessage | null | undefined): boolean {
         return hasToolInteraction(message);
     }
 
-    groupByRoles(messages) {
-        return messages.reduce((acc, currentMessage, index) => {
+    groupByRoles(messages: ChatMessage[]): ChatMessage[] {
+        return messages.reduce((acc: ChatMessage[], currentMessage, index) => {
             // Don't group tool messages or assistant messages with tool_calls
             // Each tool response must be separate with its own tool_call_id
             const shouldNotGroup = ModelMix.hasToolInteraction(currentMessage);
@@ -771,20 +978,22 @@ class ModelMix {
             if (index === 0 || currentMessage.role !== messages[index - 1].role || shouldNotGroup) {
                 acc.push(currentMessage);
             } else {
-                acc[acc.length - 1].content = acc[acc.length - 1].content.concat(currentMessage.content);
+                acc[acc.length - 1].content = (acc[acc.length - 1].content as ContentPart[])
+                    .concat(currentMessage.content as ContentPart[]);
             }
             return acc;
         }, []);
     }
 
-    _renderMessageSnapshot(messages, renderContext) {
+    /** @internal */
+    _renderMessageSnapshot(messages: ChatMessage[], renderContext: TemplateRenderContext): ChatMessage[] {
         return messages.map(message => ({
             ...message,
             content: Array.isArray(message.content)
-                ? message.content.map(content => {
+                ? (message.content as Array<Record<string, unknown>>).map(content => {
                     if (!content || typeof content !== 'object') return content;
 
-                    const snapshotContent = { ...content };
+                    const snapshotContent: Record<string, unknown> = { ...content };
                     const template = content.type === 'text'
                         ? this.messageTemplates.get(content)
                         : null;
@@ -805,7 +1014,8 @@ class ModelMix {
         }));
     }
 
-    _commitTemplateRenderContext(renderContext) {
+    /** @internal */
+    _commitTemplateRenderContext(renderContext: TemplateRenderContext): void {
         for (const [content, { rendered, template }] of renderContext.renderedMessages) {
             if (this.messageTemplates.get(content) !== template) continue;
             content.text = rendered;
@@ -813,15 +1023,18 @@ class ModelMix {
         }
     }
 
-    async prepareMessages(renderContext = createTemplateRenderContext(() => this._choiceRandom()), signal) {
+    async prepareMessages(
+        renderContext: TemplateRenderContext = createTemplateRenderContext(() => this._choiceRandom()),
+        signal?: AbortSignal
+    ): Promise<ChatMessage[]> {
         await this.processImages(signal);
 
         let messages = this.messages;
 
         // Smart message slicing based on max_history:
         // 0 = no history (stateless), N = keep last N messages, -1 = unlimited
-        if (this.config.max_history > 0) {
-            let sliceStart = Math.max(0, messages.length - this.config.max_history);
+        if (this.config.max_history! > 0) {
+            let sliceStart = Math.max(0, messages.length - this.config.max_history!);
 
             // If we're slicing into the middle of a tool interaction,
             // backtrack to include the full sequence (user → assistant/tool_calls → tool results)
@@ -843,22 +1056,27 @@ class ModelMix {
         return this.groupByRoles(this._renderMessageSnapshot(messages, renderContext));
     }
 
-    readFile(filePath, { encoding = 'utf8' } = {}) {
+    readFile(filePath: string, options?: { encoding?: BufferEncoding }): string;
+    readFile(filePath: string, options: { encoding: null }): Buffer;
+    readFile(filePath: string, options?: { encoding?: BufferEncoding | null }): string | Buffer;
+    readFile(filePath: string, { encoding = 'utf8' }: { encoding?: BufferEncoding | null } = {}): string | Buffer {
         try {
             const absolutePath = path.resolve(filePath);
             return fs.readFileSync(absolutePath, { encoding });
         } catch (error) {
-            if (error.code === 'ENOENT') {
+            const fsError = error as NodeJS.ErrnoException;
+            if (fsError.code === 'ENOENT') {
                 throw new Error(`File not found: ${filePath}`);
-            } else if (error.code === 'EACCES') {
+            } else if (fsError.code === 'EACCES') {
                 throw new Error(`Permission denied: ${filePath}`);
             } else {
-                throw new Error(`Error reading file ${filePath}: ${error.message}`);
+                throw new Error(`Error reading file ${filePath}: ${fsError.message}`);
             }
         }
     }
 
-    _resolveSystemTemplate(config, providerConfig) {
+    /** @internal */
+    _resolveSystemTemplate(config: ModelMixConfig, providerConfig: ModelMixConfig): TemplateSource {
         if (Object.prototype.hasOwnProperty.call(config, 'system')) {
             return { source: config.system, filename: null };
         }
@@ -871,7 +1089,8 @@ class ModelMix {
         return this.systemTemplate;
     }
 
-    _mergeRequestConfig(config = {}) {
+    /** @internal */
+    _mergeRequestConfig(config: ModelMixConfig = {}): ModelMixConfig {
         return {
             ...this.config,
             ...config,
@@ -882,13 +1101,20 @@ class ModelMix {
         };
     }
 
-    _requirePreparedMessages(messages) {
+    /** @internal */
+    _requirePreparedMessages(messages: ChatMessage[]): void {
         if (messages.length === 0) {
             throw new Error("No user messages have been added. Use addText(prompt), addTextFromFile(filePath), addImage(filePath), or addImageFromUrl(url) to add a prompt.");
         }
     }
 
-    _renderSystem(config, providerConfig, systemSuffix, templateContext) {
+    /** @internal */
+    _renderSystem(
+        config: ModelMixConfig,
+        providerConfig: ModelMixConfig,
+        systemSuffix: string,
+        templateContext: TemplateRenderContext
+    ): string {
         const systemTemplate = this._resolveSystemTemplate(config, providerConfig);
         const systemCacheKey = JSON.stringify([systemTemplate.filename, systemTemplate.source]);
         if (!templateContext.renderedSystems.has(systemCacheKey)) {
@@ -903,12 +1129,13 @@ class ModelMix {
         return templateContext.renderedSystems.get(systemCacheKey) + systemSuffix;
     }
 
-    async _executePlugins(execution) {
+    /** @internal */
+    async _executePlugins(execution: ExecutionState): Promise<ModelMixResult> {
         const { config, options, signal, systemSuffix, outputMode, templateContext } = execution;
         const preparedMessages = await this.prepareMessages(templateContext, signal);
         this._requirePreparedMessages(preparedMessages);
 
-        const request = {
+        const request: PluginRequest = {
             system: this._renderSystem(config, {}, systemSuffix, templateContext),
             messages: clonePluginValue(preparedMessages),
             tools: [],
@@ -916,14 +1143,14 @@ class ModelMix {
             config: clonePluginValue(this._mergeRequestConfig(config)),
             outputMode
         };
-        const metadata = execution.executionMetadata || {
+        const metadata: PluginExecutionMetadata = execution.executionMetadata || {
             executionId: randomUUID(),
             parentExecutionId: null,
             depth: 0
         };
         let providerInvoked = false;
 
-        const dispatch = async index => {
+        const dispatch = async (index: number): Promise<ModelMixResult> => {
             if (index === this.plugins.length) {
                 providerInvoked = true;
                 return this._executeProviderChain({
@@ -943,7 +1170,7 @@ class ModelMix {
                 nextCalled = true;
                 return dispatch(index + 1);
             };
-            const context = {
+            const context: PluginExecutionContext = {
                 request,
                 execution: Object.freeze({ ...metadata }),
                 signal,
@@ -966,6 +1193,7 @@ class ModelMix {
         return result;
     }
 
+    /** @internal */
     _createProviderAttempt({
         currentModel,
         preparedMessages,
@@ -975,14 +1203,14 @@ class ModelMix {
         pluginRequest,
         systemSuffix,
         templateContext
-    }) {
+    }: ProviderAttemptInput): ProviderAttempt {
         const provider = currentModel.provider;
         const tools = pluginRequest?.tools.length ? {
             ...this.tools,
             local: [...(this.tools.local || []), ...pluginRequest.tools.map(entry => entry.tool)]
         } : this.tools;
         const toolOptions = provider.getOptionsTools(tools);
-        const currentOptions = {
+        const currentOptions: ModelMixOptions = {
             ...this.options,
             messages: preparedMessages,
             ...provider.options,
@@ -995,9 +1223,13 @@ class ModelMix {
             if (!Array.isArray(currentOptions.tools)) {
                 throw new TypeError('Request options.tools must be an array when using plugin tools.');
             }
-            currentOptions.tools = [...(toolOptions.tools || []), ...currentOptions.tools];
-            const names = new Set();
-            for (const tool of currentOptions.tools) {
+            const mergedTools: ProviderToolEntry[] = [
+                ...((toolOptions.tools as ProviderToolEntry[] | undefined) || []),
+                ...currentOptions.tools
+            ];
+            currentOptions.tools = mergedTools;
+            const names = new Set<string>();
+            for (const tool of mergedTools) {
                 for (const definition of tool.functionDeclarations || [tool.function || tool]) {
                     if (!definition.name) continue;
                     if (names.has(definition.name)) throw new Error(`Duplicate tool name: ${definition.name}`);
@@ -1005,7 +1237,7 @@ class ModelMix {
                 }
             }
         }
-        const currentConfig = pluginRequest
+        const currentConfig: ModelMixConfig = pluginRequest
             ? {
                 ...provider.config,
                 ...pluginRequest.config,
@@ -1047,9 +1279,17 @@ class ModelMix {
         return { provider, currentOptions, currentConfig, resolvedModelKey };
     }
 
-    async _invokeProviderWithRetry(provider, currentOptions, currentConfig, resolvedModelKey, signal, streamCallback) {
+    /** @internal */
+    async _invokeProviderWithRetry(
+        provider: MixCustom,
+        currentOptions: ModelMixOptions,
+        currentConfig: ModelMixConfig,
+        resolvedModelKey: string,
+        signal: AbortSignal | undefined,
+        streamCallback: StreamCallback | null | undefined
+    ): Promise<{ result: ModelMixResult; elapsedMs: number }> {
         const onStream = currentOptions.stream && streamCallback ? streamCallback : undefined;
-        const retryConfig = currentConfig.retry || {};
+        const retryConfig: RetryConfig = currentConfig.retry || {};
         const retries = retryConfig.enabled ? Math.max(0, retryConfig.retries || 0) : 0;
         const baseDelayMs = Math.max(0, retryConfig.baseDelayMs || 0);
         const maxDelayMs = Math.max(baseDelayMs, retryConfig.maxDelayMs || baseDelayMs);
@@ -1074,9 +1314,9 @@ class ModelMix {
             } catch (error) {
                 throwIfAborted(signal);
                 const statusCode = getErrorStatusCode(error);
-                if (attempt >= retries || !retryableStatusCodes.has(statusCode)) throw error;
+                if (attempt >= retries || !retryableStatusCodes.has(statusCode as number)) throw error;
 
-                if (currentConfig.debug >= 1) {
+                if (currentConfig.debug! >= 1) {
                     console.log(`↺ Retrying [${resolvedModelKey}] due to status ${statusCode} (${attempt + 2}/${retries + 1})`);
                 }
                 const delay = Math.min(baseDelayMs * Math.pow(2, attempt), maxDelayMs);
@@ -1086,7 +1326,8 @@ class ModelMix {
         }
     }
 
-    _enrichResultTokens(result, resolvedModelKey, elapsedMs, provider) {
+    /** @internal */
+    _enrichResultTokens(result: ModelMixResult, resolvedModelKey: string, elapsedMs: number, provider: MixCustom): void {
         if (!result.tokens) return;
 
         const normalizedTokens = ModelMix.normalizeTokenUsage(result.tokens);
@@ -1097,15 +1338,22 @@ class ModelMix {
             ...result.tokens,
             ...normalizedTokens,
             ...cacheMetrics,
-            cost: Number.isFinite(reportedCost) && reportedCost >= 0 ? reportedCost : costBreakdown.total,
+            cost: reportedCost !== undefined && Number.isFinite(reportedCost) && reportedCost >= 0
+                ? reportedCost
+                : costBreakdown.total,
             costBreakdown
         };
         const elapsedSec = elapsedMs / 1000;
         result.tokens.speed = elapsedSec > 0 ? Math.round(result.tokens.output / elapsedSec) : 0;
     }
 
-    /** Append the assistant tool call turn and tool results; returns the next plugin request. */
-    async _appendToolResults(result, pluginRequest, signal, pluginTools) {
+    /** @internal Append the assistant tool call turn and tool results; returns the next plugin request. */
+    async _appendToolResults(
+        result: ModelMixResult,
+        pluginRequest: PluginRequest | null,
+        signal: AbortSignal | undefined,
+        pluginTools: MCPToolsManager | null
+    ): Promise<PluginRequest | null> {
         const toolMessages = pluginRequest
             ? clonePluginValue(pluginRequest.messages)
             : clonePluginValue(this.messages);
@@ -1132,7 +1380,7 @@ class ModelMix {
         if (!result.assistantMessage) {
             toolMessages.push({ role: 'assistant', content: null, tool_calls: result.toolCalls });
         }
-        const toolResults = await this.processToolCalls(result.toolCalls, signal, pluginTools);
+        const toolResults = await this.processToolCalls(result.toolCalls!, signal, pluginTools);
         for (const toolResult of toolResults) {
             toolMessages.push({
                 role: 'tool',
@@ -1145,7 +1393,8 @@ class ModelMix {
         return pluginRequest ? { ...pluginRequest, messages: toolMessages } : null;
     }
 
-    _recordProviderResult(result) {
+    /** @internal */
+    _recordProviderResult(result: ModelMixResult): void {
         this.lastRaw = result;
         if (this.config.max_history === 0) {
             this.messages = [];
@@ -1170,11 +1419,18 @@ class ModelMix {
         }
     }
 
-    _logProviderFailure(error, currentModelKey, attempt, modelsToTry) {
+    /** @internal */
+    _logProviderFailure(
+        error: unknown,
+        currentModelKey: string,
+        attempt: number,
+        modelsToTry: Array<{ model: AttachedModel; index: number }>
+    ): void {
+        const failure = error as ProviderError;
         log.warn(`Model ${currentModelKey} failed (Attempt #${attempt + 1}/${modelsToTry.length}).`);
-        if (error.message) log.warn(`Error: ${error.message}`);
-        if (error.statusCode) log.warn(`Status Code: ${error.statusCode}`);
-        if (error.details) log.warn(`Details:\n${ModelMix.formatJSON(error.details)}`);
+        if (failure.message) log.warn(`Error: ${failure.message}`);
+        if (failure.statusCode) log.warn(`Status Code: ${failure.statusCode}`);
+        if (failure.details) log.warn(`Details:\n${ModelMix.formatJSON(failure.details)}`);
 
         if (attempt === modelsToTry.length - 1) {
             console.error(`All ${modelsToTry.length} model(s) failed. Throwing last error from ${currentModelKey}.`);
@@ -1183,7 +1439,8 @@ class ModelMix {
         log.info(`-> Proceeding to next model: ${modelsToTry[attempt + 1].model.key}`);
     }
 
-    _registerPluginTools(pluginRequest) {
+    /** @internal */
+    _registerPluginTools(pluginRequest: PluginRequest): MCPToolsManager {
         if (!Array.isArray(pluginRequest.tools)) {
             throw new TypeError('Plugin request tools must be an array.');
         }
@@ -1202,8 +1459,8 @@ class ModelMix {
         return pluginTools;
     }
 
-    /** Run the fallback chain, then execute requested tools and repeat until the model answers. */
-    async _executeProviderChain(execution) {
+    /** @internal Run the fallback chain, then execute requested tools and repeat until the model answers. */
+    async _executeProviderChain(execution: ExecutionState): Promise<ModelMixResult> {
         if (!this.models || this.models.length === 0) {
             throw new Error('No models specified. Use methods like .gpt5mini(), .sonnet5() first.');
         }
@@ -1212,7 +1469,7 @@ class ModelMix {
         const pluginTools = pluginRequest ? this._registerPluginTools(pluginRequest) : null;
         const finalConfig = pluginRequest ? pluginRequest.config : this._mergeRequestConfig(execution.config);
         const maxToolRounds = finalConfig.max_tool_rounds ?? DEFAULT_MAX_TOOL_ROUNDS;
-        let originalMessages = null;
+        let originalMessages: ChatMessage[] | null = null;
 
         try {
             for (let toolRound = 0; ; toolRound++) {
@@ -1228,7 +1485,7 @@ class ModelMix {
                     return result;
                 }
                 if (maxToolRounds >= 0 && toolRound >= maxToolRounds) {
-                    const error = new Error(`Tool call limit reached: the model requested tools after ${toolRound} round(s) (config.max_tool_rounds = ${maxToolRounds}).`);
+                    const error: ToolRoundLimitError = new Error(`Tool call limit reached: the model requested tools after ${toolRound} round(s) (config.max_tool_rounds = ${maxToolRounds}).`);
                     error.code = 'MAX_TOOL_ROUNDS';
                     error.toolCalls = result.toolCalls;
                     throw error;
@@ -1242,7 +1499,7 @@ class ModelMix {
         }
     }
 
-    /** One request through the fallback chain; returns the first successful provider result. */
+    /** @internal One request through the fallback chain; returns the first successful provider result. */
     async _executeProviderRound({
         config,
         options,
@@ -1251,7 +1508,7 @@ class ModelMix {
         templateContext,
         pluginRequest,
         streamCallback
-    }) {
+    }: ExecutionState): Promise<ModelMixResult> {
         const preparedMessages = pluginRequest
             ? pluginRequest.messages
             : await this.prepareMessages(templateContext, signal);
@@ -1260,10 +1517,10 @@ class ModelMix {
         const finalConfig = pluginRequest ? pluginRequest.config : this._mergeRequestConfig(config);
         const modelsToTry = this.models.map((model, index) => ({ model, index }));
         if (finalConfig.roundRobin && this.models.length > 1) {
-            this.models.push(this.models.shift());
+            this.models.push(this.models.shift()!);
         }
 
-        let lastError = null;
+        let lastError: unknown = null;
         for (let attempt = 0; attempt < modelsToTry.length; attempt++) {
             const { model: currentModel, index: originalIndex } = modelsToTry[attempt];
             const providerAttempt = this._createProviderAttempt({
@@ -1281,7 +1538,7 @@ class ModelMix {
                 originalIndex,
                 preparedMessages,
                 ...providerAttempt
-            });
+            } as debugFormat.ProviderAttemptLog);
 
             try {
                 const { result, elapsedMs } = await this._invokeProviderWithRetry(
@@ -1295,7 +1552,10 @@ class ModelMix {
                 this._enrichResultTokens(result, providerAttempt.resolvedModelKey, elapsedMs, providerAttempt.provider);
 
                 if (!result.toolCalls || result.toolCalls.length === 0) {
-                    debugFormat.logProviderSuccess(result, providerAttempt.currentConfig);
+                    debugFormat.logProviderSuccess(
+                        result,
+                        providerAttempt.currentConfig as Parameters<typeof debugFormat.logProviderSuccess>[1]
+                    );
                 }
                 return result;
             } catch (error) {
@@ -1315,11 +1575,12 @@ class ModelMix {
         signal,
         systemSuffix = '',
         outputMode = 'raw'
-    } = {}) {
+    }: ExecuteArgs = {}): Promise<ModelMixResult> {
         return this._execute({ config, options, signal, systemSuffix, outputMode });
     }
 
     /**
+     * @internal
      * Root of one execution. Per-request state (stream callback, template renders,
      * plugin metadata) travels in the execution object instead of on the instance
      * or on shared providers.
@@ -1332,7 +1593,7 @@ class ModelMix {
         outputMode = 'raw',
         streamCallback = null,
         executionMetadata = null
-    } = {}) {
+    }: InternalExecuteArgs = {}): Promise<ModelMixResult> {
         assertAbortSignal(signal);
         assertNoStoredSignal(this.config, 'config');
         assertNoStoredSignal(this.options, 'options');
@@ -1347,7 +1608,7 @@ class ModelMix {
         }
 
         const templateContext = createTemplateRenderContext(() => this._choiceRandom());
-        const execution = {
+        const execution: ExecutionState = {
             config,
             options,
             signal,
@@ -1368,13 +1629,19 @@ class ModelMix {
         return result;
     }
 
-    async processToolCalls(toolCalls, signal, pluginTools) {
+    async processToolCalls(
+        toolCalls: ToolCall[],
+        signal?: AbortSignal,
+        pluginTools?: MCPToolsManager | null
+    ): Promise<ToolCallResult[]> {
         assertAbortSignal(signal);
-        const result = []
+        const result: ToolCallResult[] = []
 
         for (const toolCall of toolCalls) {
             // Handle different tool call formats more robustly
-            let toolName, toolArgs, toolId;
+            let toolName: string | undefined;
+            let toolArgs: unknown;
+            let toolId: string | undefined;
 
             try {
                 if (toolCall.function) {
@@ -1403,12 +1670,12 @@ class ModelMix {
                 // Verificar si es una herramienta local registrada
                 if (pluginTools?.hasTool(toolName) || this.mcpToolsManager.hasTool(toolName)) {
                     const manager = pluginTools?.hasTool(toolName) ? pluginTools : this.mcpToolsManager;
-                    const response = await manager.executeTool(toolName, toolArgs, signal);
+                    const response = await manager.executeTool(toolName, toolArgs as Record<string, unknown>, signal);
                     throwIfAborted(signal);
                     result.push({
                         name: toolName,
-                        tool_call_id: toolId,
-                        content: response.content.map(item => item.text).join("\n")
+                        tool_call_id: toolId as string,
+                        content: (response as ToolResponseContent).content.map(item => item.text).join("\n")
                     });
                 } else {
                     // Usar el cliente MCP externo
@@ -1419,14 +1686,14 @@ class ModelMix {
 
                     const response = await client.callTool({
                         name: toolName,
-                        arguments: toolArgs
+                        arguments: toolArgs as Record<string, unknown>
                     }, undefined, signal ? { signal } : undefined);
                     throwIfAborted(signal);
 
                     result.push({
                         name: toolName,
-                        tool_call_id: toolId,
-                        content: response.content.map(item => item.text).join("\n")
+                        tool_call_id: toolId as string,
+                        content: (response as ToolResponseContent).content.map(item => item.text).join("\n")
                     });
                 }
             } catch (error) {
@@ -1435,36 +1702,36 @@ class ModelMix {
                 result.push({
                     name: toolName || 'unknown',
                     tool_call_id: toolId || 'unknown',
-                    content: `Error: ${error.message}`
+                    content: `Error: ${(error as Error).message}`
                 });
             }
         }
         return result;
     }
 
-    async addMCP() {
+    async addMCP(...npxArgs: string[]): Promise<void> {
 
-        const key = arguments[0];
+        const key = npxArgs[0];
 
         if (this.mcp[key]) {
             log.info(`MCP ${key} already attached.`);
             return;
         }
 
-        if (this.config.max_history >= 0 && this.config.max_history < 3) {
+        if (this.config.max_history! >= 0 && this.config.max_history! < 3) {
             log.warn(`MCP ${key} requires at least 3 max_history. Setting to 3.`);
             this.config.max_history = 3;
         }
 
-        const env = {}
+        const env: Record<string, string> = {}
         for (const key in process.env) {
             if (['OPENAI', 'ANTHR', 'GOOGLE', 'GROQ', 'TOGET', 'LAMBDA', 'PPLX', 'XAI', 'CEREBR'].some(prefix => key.startsWith(prefix))) continue;
-            env[key] = process.env[key];
+            env[key] = process.env[key] as string;
         }
 
         const transport = new StdioClientTransport({
             command: "npx",
-            args: ["-y", ...arguments],
+            args: ["-y", ...npxArgs],
             env
         });
 
@@ -1485,9 +1752,9 @@ class ModelMix {
 
     }
 
-    addTool(toolDefinition, callback) {
+    addTool(toolDefinition: ToolDefinition, callback: ToolCallback): this {
 
-        if (this.config.max_history >= 0 && this.config.max_history < 3) {
+        if (this.config.max_history! >= 0 && this.config.max_history! < 3) {
             log.warn(`MCP ${toolDefinition.name} requires at least 3 max_history. Setting to 3.`);
             this.config.max_history = 3;
         }
@@ -1507,14 +1774,14 @@ class ModelMix {
         return this;
     }
 
-    addTools(toolsWithCallbacks) {
+    addTools(toolsWithCallbacks: ToolWithCallback[]): this {
         for (const { tool, callback } of toolsWithCallbacks) {
             this.addTool(tool, callback);
         }
         return this;
     }
 
-    removeTool(toolName) {
+    removeTool(toolName: string): this {
         this.mcpToolsManager.removeTool(toolName);
 
         // Also remove from the tools system
@@ -1525,60 +1792,194 @@ class ModelMix {
         return this;
     }
 
-    listTools() {
+    listTools(): ListedTools {
         const localTools = this.mcpToolsManager.getToolsForMCP();
         const mcpTools = Object.values(this.tools).flat();
 
         return {
-            local: localTools,
+            local: localTools as ToolDefinition[],
             mcp: mcpTools.filter(tool => !localTools.find(local => local.name === tool.name))
         };
     }
 }
 
+export interface ModelMix {
+    // OpenAI
+    gpt5mini(args?: ModelAttachArgs): this;
+    gpt5nano(args?: ModelAttachArgs): this;
+    gpt52(args?: ModelAttachArgs): this;
+    gpt54(args?: ModelAttachArgs): this;
+    gpt54mini(args?: ModelAttachArgs): this;
+    gpt54nano(args?: ModelAttachArgs): this;
+    gpt54pro(args?: ModelAttachArgs): this;
+    gpt55(args?: ModelAttachArgs): this;
+    gpt55pro(args?: ModelAttachArgs): this;
+    gpt6astra(args?: ModelAttachArgs): this;
+    gpt61sol(args?: ModelAttachArgs): this;
+    gpt61terra(args?: ModelAttachArgs): this;
+    gpt6sol(args?: ModelAttachArgs): this;
+    gpt6luna(args?: ModelAttachArgs): this;
+    gpt56sol(args?: ModelAttachArgs): this;
+    gpt56terra(args?: ModelAttachArgs): this;
+    gpt56luna(args?: ModelAttachArgs): this;
+    gptRealtime(args?: ModelAttachArgs): this;
+    gptRealtimeMini(args?: ModelAttachArgs): this;
+
+    // Anthropic
+    fable52(args?: ModelAttachArgs): this;
+    fable51(args?: ModelAttachArgs): this;
+    fable50(args?: ModelAttachArgs): this;
+    fable5(args?: ModelAttachArgs): this;
+    opus55(args?: ModelAttachArgs): this;
+    opus50(args?: ModelAttachArgs): this;
+    opus5(args?: ModelAttachArgs): this;
+    opus48(args?: ModelAttachArgs): this;
+    opus47(args?: ModelAttachArgs): this;
+    opus46(args?: ModelAttachArgs): this;
+    sonnet55(args?: ModelAttachArgs): this;
+    sonnet50(args?: ModelAttachArgs): this;
+    sonnet5(args?: ModelAttachArgs): this;
+    sonnet45(args?: ModelAttachArgs): this;
+    haiku55(args?: ModelAttachArgs): this;
+    haiku45(args?: ModelAttachArgs): this;
+
+    // Google
+    gemini4carbon(args?: ModelAttachArgs): this;
+    gemini4argon(args?: ModelAttachArgs): this;
+    gemini38flash(args?: ModelAttachArgs): this;
+    gemini37flash(args?: ModelAttachArgs): this;
+    gemini36flash(args?: ModelAttachArgs): this;
+    gemini35flash(args?: ModelAttachArgs): this;
+    gemini35flashLite(args?: ModelAttachArgs): this;
+    gemini31flashLite(args?: ModelAttachArgs): this;
+
+    // Perplexity
+    sonarPro(args?: ModelAttachArgs): this;
+    sonar(args?: ModelAttachArgs): this;
+
+    // Grok
+    grok47(args?: ModelAttachArgs): this;
+    grok46(args?: ModelAttachArgs): this;
+    grok43(args?: ModelAttachArgs): this;
+
+    // Multi-provider
+    museGlimmer30b(args?: ModelAttachArgs): this;
+    museEmber10(args?: ModelAttachArgs): this;
+    museWonder10(args?: ModelAttachArgs): this;
+    museSpark12(args?: ModelAttachArgs): this;
+    museSpark12c(args?: ModelAttachArgs): this;
+    museSpark13(args?: ModelAttachArgs): this;
+    museSpark13c(args?: ModelAttachArgs): this;
+    qwen35397b(args?: ModelAttachArgs): this;
+    qwen36plus(args?: ModelAttachArgs): this;
+    qwen37plus(args?: ModelAttachArgs): this;
+    qwen38max(args?: ModelAttachArgs): this;
+    qwen3827b(args?: ModelAttachArgs): this;
+    qwen38flash(args?: ModelAttachArgs): this;
+    hermes470b(args?: ModelAttachArgs): this;
+    hermes4405b(args?: ModelAttachArgs): this;
+    hermes3(args?: ModelAttachArgs): this;
+    kimiK26(args?: ModelAttachArgs): this;
+    kimiK27Code(args?: ModelAttachArgs): this;
+    kimiK3(args?: ModelAttachArgs): this;
+    kimiK31Pro(args?: ModelAttachArgs): this;
+    kimiK31ProHighspeed(args?: ModelAttachArgs): this;
+    minimaxM27(args?: ModelAttachArgs): this;
+    minimaxM3(args?: ModelAttachArgs): this;
+    /** MiniMax M3.1 Flash Preview; requires a MiniMax Token Plan key in MINIMAX_API_KEY. */
+    minimaxM31Flash(args?: ModelAttachArgs): this;
+    mimo25(args?: ModelAttachArgs): this;
+    mimo25pro(args?: ModelAttachArgs): this;
+    mimo26pro(args?: ModelAttachArgs): this;
+    deepseekV4Pro(args?: ModelAttachArgs): this;
+    /** Uses deepseek/deepseek-v4-pro-0813 through OpenRouter. */
+    deepseekPro(args?: ModelAttachArgs): this;
+    deepseekV4Flash(args?: ModelAttachArgs): this;
+    deepseekV41Flash(args?: ModelAttachArgs): this;
+    GLM52(args?: ModelAttachArgs): this;
+    GLM53(args?: ModelAttachArgs): this;
+    GLM53Flash(args?: ModelAttachArgs): this;
+}
+
 for (const shortcut of listModelShortcuts()) {
-    ModelMix.prototype[shortcut] = function (args = {}) {
+    (ModelMix.prototype as unknown as Record<string, unknown>)[shortcut] = function (this: ModelMix, args: ModelAttachArgs = {}) {
         return this._attachModels(resolveModelShortcut(shortcut, args, this._mixOverrides));
     };
 }
 
-class ModerationMix extends ModelMix {
-    static new(setup = {}) {
+export class ModerationMix extends ModelMix {
+    constructor(setup: Omit<ModelMixSetup, 'mix'> = {}, internal: ModelMixInternalOptions = {}) {
+        super(setup, internal);
+    }
+
+    static new(setup: Omit<ModelMixSetup, 'mix'> = {}): ModerationMix {
         return new ModerationMix(setup);
     }
 
-    new({ options = {}, config = {} } = {}) {
+    new({ options = {}, config = {} }: Omit<ModelMixSetup, 'mix'> = {}): ModerationMix {
         return new ModerationMix({
             options: { ...this.options, ...options },
             config: { ...this.config, ...config }
         }, { limiter: this._sharedLimiter(config) });
     }
 
-    _assertAttachable(provider) {
+    /** @internal */
+    _assertAttachable(provider: MixCustom): void {
         if (!(provider instanceof MixModeration)) {
             throw new Error('ModerationMix only accepts moderation providers.');
         }
     }
 
-    openai({ options = {}, config = {} } = {}) {
+    openai({ options = {}, config = {} }: ModelAttachArgs = {}): this {
         return this.attach('omni-moderation-latest', new MixOpenAIModeration({ options, config }));
     }
 
-    async message() {
+    async message(): Promise<never> {
         throw new Error('ModerationMix does not generate messages. Use raw() and read result.moderation.');
     }
 
-    async json() {
+    async json(): Promise<never> {
         throw new Error('ModerationMix does not generate JSON. Use raw() and read result.moderation.');
     }
 
-    async block() {
+    async block(): Promise<never> {
         throw new Error('ModerationMix does not generate blocks. Use raw() and read result.moderation.');
     }
 
-    async stream() {
+    async stream(): Promise<never> {
         throw new Error('ModerationMix does not support streaming. Use raw().');
     }
 }
 
-module.exports = { MixCustom, ModelMix, ModerationMix, MixModeration, MixAnthropic, MixKimi, MixMiniMax, MixMiMo, MixDeepSeek, MixOpenAI, MixOpenAIResponses, MixOpenAIModeration, MixOpenAIWebSocket, MixOpenRouter, MixPerplexity, MixOllama, MixLambda, MixLMStudio, MixGroq, MixTogether, MixGrok, MixCerebras, MixGoogle, MixFireworks, MixNVIDIA, normalizeEffort, applyUnifiedEffort, resolveProviderFamily };
+export interface ModerationMix {
+    attach(key: string, provider: MixModeration): this;
+}
+
+export {
+    MixCustom,
+    MixModeration,
+    MixAnthropic,
+    MixKimi,
+    MixMiniMax,
+    MixMiMo,
+    MixDeepSeek,
+    MixOpenAI,
+    MixOpenAIResponses,
+    MixOpenAIModeration,
+    MixOpenAIWebSocket,
+    MixOpenRouter,
+    MixPerplexity,
+    MixOllama,
+    MixLambda,
+    MixLMStudio,
+    MixGroq,
+    MixTogether,
+    MixGrok,
+    MixCerebras,
+    MixGoogle,
+    MixFireworks,
+    MixNVIDIA,
+    normalizeEffort,
+    applyUnifiedEffort,
+    resolveProviderFamily
+};

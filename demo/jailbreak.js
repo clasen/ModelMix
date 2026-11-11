@@ -1,4 +1,4 @@
-import { ModelMix, MixLMStudio } from '../index.js';
+import { ModelMix, MixLMStudio } from '../dist/index.js';
 try { process.loadEnvFile(); } catch {}
 
 const mmix = ModelMix.new({ options: { max_tokens: 10000 }, config: { debug: true } })

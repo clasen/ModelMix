@@ -1,4 +1,4 @@
-import { ModelMix } from '../index.js';
+import { ModelMix } from '../dist/index.js';
 try { process.loadEnvFile(); } catch {}
 
 const model = ModelMix.new({ config: { max_history: 2, debug: 2 } }).grok46()

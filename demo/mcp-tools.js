@@ -1,4 +1,4 @@
-import { ModelMix } from '../index.js';
+import { ModelMix } from '../dist/index.js';
 import fs from 'fs';
 try { process.loadEnvFile(); } catch {}
 

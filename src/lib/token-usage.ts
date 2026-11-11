@@ -1,23 +1,60 @@
-const OPENAI_LONG_CONTEXT_PRICING = Object.freeze({
+import type { TokenCostBreakdown, TokenUsage } from '../types';
+
+interface LongContextPricing {
+    inputThreshold: number;
+    inputMultiplier: number;
+    outputMultiplier: number;
+    inclusive?: boolean;
+}
+
+interface ModelPricing {
+    input: number;
+    cachedInput?: number;
+    cacheWrite?: number;
+    cacheWrite1h?: number;
+    output: number;
+    longContext?: LongContextPricing;
+}
+
+export interface TokenCounts {
+    input?: number;
+    output?: number;
+    thinking?: number;
+    total?: number;
+    cached?: number;
+    cacheWrite?: number;
+    cacheWrite5m?: number;
+    cacheWrite1h?: number;
+}
+
+interface CacheMetrics {
+    cacheSavings: number;
+    cacheWritePremium: number;
+    breakEvenHits: number;
+}
+
+type ProviderUsage = Record<string, any>;
+
+const OPENAI_LONG_CONTEXT_PRICING: LongContextPricing = Object.freeze({
     inputThreshold: 272_000,
     inputMultiplier: 2,
     outputMultiplier: 1.5
 });
 
-const GROK46_LONG_CONTEXT_PRICING = Object.freeze({
+const GROK46_LONG_CONTEXT_PRICING: LongContextPricing = Object.freeze({
     inputThreshold: 200_000,
     inputMultiplier: 2,
     outputMultiplier: 2,
     inclusive: true
 });
 
-const HAIKU55_LONG_CONTEXT_PRICING = Object.freeze({
+const HAIKU55_LONG_CONTEXT_PRICING: LongContextPricing = Object.freeze({
     inputThreshold: 100_000,
     inputMultiplier: 5,
     outputMultiplier: 5
 });
 
-function usesLongContextRates(pricing, inputTokens) {
+function usesLongContextRates(pricing: ModelPricing, inputTokens: number): boolean {
     const longContext = pricing.longContext;
     if (!longContext) return false;
     return longContext.inclusive
@@ -25,7 +62,7 @@ function usesLongContextRates(pricing, inputTokens) {
         : inputTokens > longContext.inputThreshold;
 }
 
-const MODEL_PRICING = {
+const MODEL_PRICING: Record<string, ModelPricing> = {
     // OpenAI
     'gpt-6-astra': { input: 10.00, cachedInput: 1.00, cacheWrite: 12.50, output: 50.00, longContext: OPENAI_LONG_CONTEXT_PRICING },
     'gpt-6.1-sol': { input: 2.00, cachedInput: 0.10, cacheWrite: 2.50, output: 10.00, longContext: OPENAI_LONG_CONTEXT_PRICING },
@@ -189,8 +226,8 @@ const MODEL_PRICING = {
     'zai-glm-4.7': { input: 0.55, output: 2.19 },
 };
 
-function normalizeTokenUsage({ input = 0, output = 0, thinking = 0, total, cached = 0, cacheWrite = 0, cacheWrite5m = 0, cacheWrite1h = 0 } = {}) {
-    const tokenCount = value => Number.isFinite(value) ? Math.max(0, value) : 0;
+export function normalizeTokenUsage({ input = 0, output = 0, thinking = 0, total, cached = 0, cacheWrite = 0, cacheWrite5m = 0, cacheWrite1h = 0 }: TokenCounts = {}): TokenUsage {
+    const tokenCount = (value: number): number => Number.isFinite(value) ? Math.max(0, value) : 0;
     const normalizedInput = tokenCount(input);
     const normalizedOutput = tokenCount(output);
     const normalizedThinking = tokenCount(thinking);
@@ -202,7 +239,7 @@ function normalizeTokenUsage({ input = 0, output = 0, thinking = 0, total, cache
         normalizedCacheWrite5m + normalizedCacheWrite1h
     );
     const normalizedTotal = Number.isFinite(total)
-        ? Math.max(0, total)
+        ? Math.max(0, total as number)
         : normalizedInput + normalizedOutput + normalizedThinking;
     const uncachedInput = Math.max(0, normalizedInput - normalizedCached - normalizedCacheWrite);
     const cacheHitRate = normalizedInput > 0
@@ -236,15 +273,15 @@ function normalizeTokenUsage({ input = 0, output = 0, thinking = 0, total, cache
     };
 }
 
-function calculateCostBreakdown(modelKey, tokens) {
+export function calculateCostBreakdown(modelKey: string, tokens?: TokenCounts): TokenCostBreakdown {
     const pricing = getModelPricing(modelKey);
     if (!pricing) return normalizeTokenUsage().costBreakdown;
 
     const normalized = normalizeTokenUsage(tokens);
     const longContext = pricing.longContext;
     const useLongContextRates = usesLongContextRates(pricing, normalized.input);
-    const inputMultiplier = useLongContextRates ? longContext.inputMultiplier : 1;
-    const outputMultiplier = useLongContextRates ? longContext.outputMultiplier : 1;
+    const inputMultiplier = useLongContextRates ? longContext!.inputMultiplier : 1;
+    const outputMultiplier = useLongContextRates ? longContext!.outputMultiplier : 1;
     const {
         input: inputPerMillion,
         cachedInput: cachedInputPerMillion = inputPerMillion,
@@ -252,7 +289,7 @@ function calculateCostBreakdown(modelKey, tokens) {
         cacheWrite1h: cacheWrite1hPerMillion = cacheWritePerMillion,
         output: outputPerMillion
     } = pricing;
-    const roundCost = value => Number(value.toFixed(12));
+    const roundCost = (value: number): number => Number(value.toFixed(12));
     const genericCacheWrite = Math.max(
         0,
         normalized.cacheWrite - normalized.cacheWrite5m - normalized.cacheWrite1h
@@ -266,7 +303,7 @@ function calculateCostBreakdown(modelKey, tokens) {
     const genericCacheWriteCost = roundCost(
         genericCacheWrite * cacheWritePerMillion * inputMultiplier / 1_000_000
     );
-    const breakdown = {
+    const breakdown: TokenCostBreakdown = {
         uncachedInput: roundCost(normalized.uncachedInput * inputPerMillion * inputMultiplier / 1_000_000),
         cachedInput: roundCost(normalized.cached * cachedInputPerMillion * inputMultiplier / 1_000_000),
         cacheWrite: roundCost(genericCacheWriteCost + cacheWrite5mCost + cacheWrite1hCost),
@@ -274,7 +311,8 @@ function calculateCostBreakdown(modelKey, tokens) {
         cacheWrite1h: cacheWrite1hCost,
         output: roundCost(
             (normalized.output + normalized.thinking) * outputPerMillion * outputMultiplier / 1_000_000
-        )
+        ),
+        total: 0
     };
     breakdown.total = roundCost(
         breakdown.uncachedInput
@@ -285,9 +323,9 @@ function calculateCostBreakdown(modelKey, tokens) {
     return breakdown;
 }
 
-function calculateCacheMetrics(modelKey, tokens) {
+export function calculateCacheMetrics(modelKey: string, tokens?: TokenCounts): CacheMetrics {
     const pricing = getModelPricing(modelKey);
-    const emptyMetrics = {
+    const emptyMetrics: CacheMetrics = {
         cacheSavings: 0,
         cacheWritePremium: 0,
         breakEvenHits: 0
@@ -297,14 +335,14 @@ function calculateCacheMetrics(modelKey, tokens) {
     const normalized = normalizeTokenUsage(tokens);
     const longContext = pricing.longContext;
     const useLongContextRates = usesLongContextRates(pricing, normalized.input);
-    const inputMultiplier = useLongContextRates ? longContext.inputMultiplier : 1;
+    const inputMultiplier = useLongContextRates ? longContext!.inputMultiplier : 1;
     const cachedInputPerMillion = pricing.cachedInput ?? pricing.input;
     const cacheWritePerMillion = pricing.cacheWrite ?? pricing.input;
     const cacheWrite1hPerMillion = pricing.cacheWrite1h ?? cacheWritePerMillion;
     const readSavingsPerMillion = Math.max(0, pricing.input - cachedInputPerMillion) * inputMultiplier;
     const writePremiumPerMillion = Math.max(0, cacheWritePerMillion - pricing.input) * inputMultiplier;
     const write1hPremiumPerMillion = Math.max(0, cacheWrite1hPerMillion - pricing.input) * inputMultiplier;
-    const roundCost = value => Number(value.toFixed(12));
+    const roundCost = (value: number): number => Number(value.toFixed(12));
     const cacheSavings = roundCost(normalized.cached * readSavingsPerMillion / 1_000_000);
     const genericCacheWrite = Math.max(
         0,
@@ -327,18 +365,18 @@ function calculateCacheMetrics(modelKey, tokens) {
     };
 }
 
-function calculateCost(modelKey, tokens) {
+export function calculateCost(modelKey: string, tokens?: TokenCounts): number | null {
     if (!hasModelPricing(modelKey)) return null;
     return calculateCostBreakdown(modelKey, tokens).total;
 }
 
-function hasModelPricing(modelKey) {
+export function hasModelPricing(modelKey: string): boolean {
     return getModelPricing(modelKey) !== undefined;
 }
 
-function getModelPricing(modelKey) {
-    if (Object.prototype.hasOwnProperty.call(MODEL_PRICING, modelKey)) {
-        return MODEL_PRICING[modelKey];
+function getModelPricing(modelKey: unknown): ModelPricing | undefined {
+    if (Object.prototype.hasOwnProperty.call(MODEL_PRICING, modelKey as PropertyKey)) {
+        return MODEL_PRICING[modelKey as string];
     }
     if (typeof modelKey === 'string' && modelKey.startsWith('openai/')) {
         return MODEL_PRICING[modelKey.slice('openai/'.length)];
@@ -346,7 +384,7 @@ function getModelPricing(modelKey) {
     return undefined;
 }
 
-function extractCacheTokens(usage = {}) {
+export function extractCacheTokens(usage: ProviderUsage = {}): number {
     return usage.input_tokens_details?.cached_tokens
         ?? usage.prompt_tokens_details?.cached_tokens
         ?? usage.prompt_cache_hit_tokens
@@ -356,7 +394,7 @@ function extractCacheTokens(usage = {}) {
         ?? 0;
 }
 
-function extractCacheWriteTokens(usage = {}) {
+export function extractCacheWriteTokens(usage: ProviderUsage = {}): number {
     return usage.input_tokens_details?.cache_write_tokens
         ?? usage.prompt_tokens_details?.cache_write_tokens
         ?? usage.cache_creation_input_tokens
@@ -366,12 +404,3 @@ function extractCacheWriteTokens(usage = {}) {
         ?? 0;
 }
 
-module.exports = {
-    normalizeTokenUsage,
-    calculateCostBreakdown,
-    calculateCacheMetrics,
-    calculateCost,
-    hasModelPricing,
-    extractCacheTokens,
-    extractCacheWriteTokens
-};

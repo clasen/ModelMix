@@ -1,9 +1,20 @@
-const { normalizeEffort, resolveNamedEffort, resolveProviderFamily } = require('../effort');
-const { listModelShortcuts, resolveModelShortcut } = require('./model-registry');
+import { normalizeEffort, resolveNamedEffort, resolveProviderFamily } from '../effort';
+import { listModelShortcuts, resolveModelShortcut } from './model-registry';
+import type { AttachedModel, ModelAttachArgs, ModelMixMixFlags } from '../types';
+
+export interface ParsedChainModel {
+    shortcut: string;
+    effort: number | string | undefined;
+}
+
+export interface ChainTarget {
+    _mixOverrides?: ModelMixMixFlags;
+    _attachModels(models: AttachedModel[]): unknown;
+}
 
 const CHAIN_MODEL_SHORTCUTS = new Set(listModelShortcuts());
 
-function parseChainModels(modelSpecs) {
+export function parseChainModels(modelSpecs: unknown[]): ParsedChainModel[] {
     if (modelSpecs.length === 0) {
         throw new TypeError('chain() requires at least one model shortcut string.');
     }
@@ -32,7 +43,7 @@ function parseChainModels(modelSpecs) {
 }
 
 /** Build the { key, provider } entries for one parsed chain model without attaching them. */
-function resolveChainModel(model, { shortcut, effort }, args = {}) {
+export function resolveChainModel(model: ChainTarget, { shortcut, effort }: ParsedChainModel, args: ModelAttachArgs = {}): AttachedModel[] {
     const config = typeof effort === 'number' ? { ...args.config, effort } : { ...args.config };
     const models = resolveModelShortcut(shortcut, { ...args, config }, model._mixOverrides);
     if (typeof effort === 'string') {
@@ -47,12 +58,10 @@ function resolveChainModel(model, { shortcut, effort }, args = {}) {
     return models;
 }
 
-function attachChainModel(model, parsed, args = {}) {
+export function attachChainModel(model: ChainTarget, parsed: ParsedChainModel, args: ModelAttachArgs = {}): void {
     model._attachModels(resolveChainModel(model, parsed, args));
 }
 
-function listChainModelShortcuts() {
+export function listChainModelShortcuts(): string[] {
     return [...CHAIN_MODEL_SHORTCUTS];
 }
-
-module.exports = { listChainModelShortcuts, parseChainModels, resolveChainModel, attachChainModel };

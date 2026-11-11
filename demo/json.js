@@ -1,4 +1,4 @@
-import { ModelMix } from '../index.js';
+import { ModelMix } from '../dist/index.js';
 try { process.loadEnvFile(); } catch {}
 
 const model = await ModelMix.new({ options: { max_tokens: 10000 }, config: { debug: 3 } })

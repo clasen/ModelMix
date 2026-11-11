@@ -1,6 +1,6 @@
 const { expect } = require('chai');
 const nock = require('nock');
-const { ModelMix, MixFireworks, MixKimi, MixOpenRouter, MixTogether } = require('../index.js');
+const { ModelMix, MixFireworks, MixKimi, MixOpenRouter, MixTogether } = require('../dist/index.js');
 
 describe('Kimi Model Registration Tests', () => {
     it('should register only Together Kimi K2.7 Code by default', () => {
