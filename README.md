@@ -231,6 +231,7 @@ ModelMix provides convenient shorthand methods for quickly accessing different A
 | `minimaxM3()` | MiniMax | MiniMax-M3 | [\$0.30][9] | [\$1.20][9] |
 | `minimaxM27()` | MiniMax | MiniMax-M2.7 | [\$0.30][9] | [\$1.20][9] |
 | `mimo26pro()` | MiMo | mimo-v2.6-pro | — | — |
+| `mimo26flash()` | OpenRouter | xiaomi/mimo-v2.6-flash | [\$0.14][34] | [\$0.28][34] |
 | `sonar()` | Perplexity | sonar | [\$1.00][4] | [\$1.00][4] |
 | `sonarPro()` | Perplexity | sonar-pro | [\$3.00][4] | [\$15.00][4] |
 | `hermes470b()` | OpenRouter | nousresearch/hermes-4-70b | [\$0.13][13] | [\$0.40][13] |
@@ -267,7 +268,7 @@ Every textual GPT-5 and GPT-6 shortcut in the table uses the official OpenAI API
 
 OpenRouter fallbacks are disabled globally by default and are appended only with `mix.openrouter: true`. Shortcuts whose primary provider is OpenRouter, such as `qwen36plus()`, are unaffected. The multi-provider shortcuts also expose the current catalog alternatives: `qwen37plus()` supports Together; `kimiK27Code()` supports Fireworks and OpenRouter; `kimiK3()` supports Fireworks, OpenRouter, and Together; `GLM52()` supports Fireworks and OpenRouter; and `minimaxM27()` and `minimaxM3()` support Fireworks. `minimaxM27()` keeps every explicitly enabled provider in its fallback chain.
 
-`minimaxM31Flash()` uses MiniMax's native API with `MiniMax-M3.1-Flash-Preview`, a preview coding model with a 1M-token context window. MiniMax currently serves it only through Token Plan subscriptions, so `MINIMAX_API_KEY` must hold a Token Plan subscription key (`sk-cp-…`); pay-as-you-go keys are rejected and no per-token price is published. No third-party routes are attached yet.
+`minimaxM31Flash()` uses MiniMax's native API with `MiniMax-M3.1-Flash-Preview`, a preview coding model with a 1M-token context window. MiniMax currently serves it only through Token Plan subscriptions, so `MINIMAX_API_KEY` must hold a Token Plan subscription key (`sk-cp-…`); pay-as-you-go keys are rejected and no per-token price is published. Pass `mix: { minimax: false, openrouter: true }` to use [`minimax/minimax-m3.1-flash`](https://openrouter.ai/minimax/minimax-m3.1-flash) through OpenRouter instead, priced at $0.075 input / $0.0075 cached input / $0.30 output per 1M tokens.
 
 [1]: https://platform.openai.com/docs/pricing "Pricing | OpenAI"
 [2]: https://docs.anthropic.com/en/docs/about-claude/pricing "Pricing - Anthropic"
@@ -302,12 +303,13 @@ OpenRouter fallbacks are disabled globally by default and are appended only with
 [31]: https://openrouter.ai/meta/muse-wonder "Muse Wonder on OpenRouter"
 [32]: https://openrouter.ai/meta/muse-ember "Muse Ember on OpenRouter"
 [33]: https://openrouter.ai/anthropic/claude-fable-5.2 "Claude Fable 5.2 on OpenRouter"
+[34]: https://openrouter.ai/xiaomi/mimo-v2.6-flash "MiMo V2.6 Flash on OpenRouter"
 
 `deepseekPro()` uses the pinned OpenRouter model `deepseek/deepseek-v4-pro-0813` and requires `OPENROUTER_API_KEY`. Use `chain('deepseekPro@100')` for maximum reasoning effort. Cost estimates use the listed base rates and $0.05808/M cached input tokens; actual rates may change, including provider and time-based pricing.
 
 By default `deepseekV41Flash()` uses the native DeepSeek API (`https://api.deepseek.com/chat/completions`, model `deepseek-flash`, currently V4.1 Flash) and requires `DEEPSEEK_API_KEY`; `MixDeepSeek` remains available for explicit `.attach()` calls. Use `chain('deepseekV41Flash@100')` for maximum reasoning effort. Native cost estimates use [peak rates](https://api-docs.deepseek.com/quick_start/pricing/): $0.30 input / $0.006 cached input / $1.20 output per 1M tokens; actual off-peak charges are half.
 
-Optional routes: `mix: { fireworks: true }` selects `accounts/fireworks/models/deepseek-v4p1-flash` with `FIREWORKS_API_KEY`, priced at [$0.22 input / $0.007 cached input / $0.66 output per 1M tokens](https://fireworks.ai/models/deepseek-ai/deepseek-v4p1-flash), and `mix: { openrouter: true }` selects `deepseek/deepseek-v4.1-flash` with `OPENROUTER_API_KEY`, which accepts text and image input. With all three providers enabled the order is DeepSeek → Fireworks → OpenRouter.
+Optional routes: `mix: { fireworks: true }` selects `accounts/fireworks/models/deepseek-v4p1-flash` with `FIREWORKS_API_KEY`, priced at [$0.22 input / $0.007 cached input / $0.66 output per 1M tokens](https://fireworks.ai/models/deepseek-ai/deepseek-v4p1-flash), and `mix: { openrouter: true }` selects [`deepseek/deepseek-v4.1-flash-1017`](https://openrouter.ai/deepseek/deepseek-v4.1-flash-1017) with `OPENROUTER_API_KEY`, which accepts text and image input. With all three providers enabled the order is DeepSeek → Fireworks → OpenRouter.
 
 Muse Spark methods ending in `c` select Contributor: prompts and outputs may be used to improve Meta products. Methods without `c` select the standard tier. `museSpark12()` now selects standard; use `museSpark12c()` for the previous Contributor behavior.
 

@@ -95,6 +95,7 @@ const OPENAI_MODEL_LEVELS: Record<string, string[]> = {
     'kimi-k3.1-pro-highspeed': ['low', 'high', 'max'],
     'moonshotai/kimi-k3.1-pro': ['low', 'high', 'max'],
     'MiniMax-M3.1-Flash-Preview': ['low', 'medium', 'high', 'xhigh', 'max'],
+    'minimax/minimax-m3.1-flash': ['low', 'medium', 'high', 'xhigh', 'max'],
     'zai-org/GLM-5.2': ['high', 'xhigh'],
     'accounts/fireworks/models/glm-5p2': ['high', 'xhigh'],
     'z-ai/glm-5.2': ['high', 'xhigh'],
@@ -412,7 +413,7 @@ export function mapEffort(providerFamily: ProviderFamily | null | undefined, eff
         const supported = supportedOpenAILevels(modelKey);
         const desired = modelKey === 'z-ai/glm-5.3' || modelKey === 'z-ai/glm-5.3-flash'
             ? levelFromBands(normalized, GLM53_BANDS)
-            : ['anthropic/claude-fable-5.2', 'anthropic/claude-fable-5.1', 'MiniMax-M3.1-Flash-Preview'].includes(modelKey as string)
+            : ['anthropic/claude-fable-5.2', 'anthropic/claude-fable-5.1', 'MiniMax-M3.1-Flash-Preview', 'minimax/minimax-m3.1-flash'].includes(modelKey as string)
                 ? levelFromBands(normalized, ANTHROPIC_BANDS)
                 : normalized === 100 && supported.includes('max')
                     ? 'max'

@@ -34,6 +34,7 @@ const mmix = await ModelMix.new(setup)
     .kimiK31Pro({ mix: { openrouter: true } }) // (fallback 23 + provider fallback) Moonshot/OpenRouter Kimi K3.1 Pro
     .museEmber10() // (fallback 24) OpenRouter meta/muse-ember
     .gemini4carbon() // (fallback 25) Google gemini-4-carbon
+    .mimo26flash() // (fallback 26) OpenRouter xiaomi/mimo-v2.6-flash
     .addText("What's your name?");
 
 console.log(await mmix.message());

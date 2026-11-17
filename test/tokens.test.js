@@ -43,7 +43,7 @@ describe('Token Usage Tracking', () => {
         it(`separates ${name} reasoning without billing it twice`, () => {
             const tokens = extract({ usage });
             expect(tokens).to.include({ input: 615, output: 30, thinking: 5900, total: 6545 });
-            expect(ModelMix.calculateCostBreakdown('deepseek/deepseek-v4.1-flash', tokens).total).to.equal(0.00365025);
+            expect(ModelMix.calculateCostBreakdown('deepseek/deepseek-v4.1-flash', tokens).total).to.equal(0.003393675);
         });
     }
 

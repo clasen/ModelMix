@@ -215,7 +215,13 @@ export const MODEL_SHORTCUTS: Record<string, ModelShortcutSpec> = {
             together: 'MiniMaxAI/MiniMax-M3'
         }
     },
-    minimaxM31Flash: { provider: MixMiniMax, key: 'MiniMax-M3.1-Flash-Preview' },
+    minimaxM31Flash: {
+        defaultMix: { minimax: true },
+        routes: {
+            minimax: 'MiniMax-M3.1-Flash-Preview',
+            openrouter: 'minimax/minimax-m3.1-flash'
+        }
+    },
     mimo25: {
         defaultMix: { openrouter: true },
         routes: { mimo: 'mimo-v2.5', openrouter: 'xiaomi/mimo-v2.5' }
@@ -228,6 +234,7 @@ export const MODEL_SHORTCUTS: Record<string, ModelShortcutSpec> = {
         defaultMix: { openrouter: true },
         routes: { mimo: 'mimo-v2.6-pro', openrouter: 'xiaomi/mimo-v2.6-pro' }
     },
+    mimo26flash: { provider: MixOpenRouter, key: 'xiaomi/mimo-v2.6-flash' },
 
     deepseekPro: { provider: MixOpenRouter, key: 'deepseek/deepseek-v4-pro-0813' },
     deepseekV4Pro: {
@@ -253,7 +260,7 @@ export const MODEL_SHORTCUTS: Record<string, ModelShortcutSpec> = {
         routes: {
             deepseek: 'deepseek-flash',
             fireworks: 'accounts/fireworks/models/deepseek-v4p1-flash',
-            openrouter: 'deepseek/deepseek-v4.1-flash'
+            openrouter: 'deepseek/deepseek-v4.1-flash-1017'
         }
     },
 

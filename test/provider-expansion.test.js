@@ -147,4 +147,37 @@ describe('Provider expansion regressions', () => {
         expect(response).to.equal('ok');
         api.done();
     });
+    it('should route MiniMax M3.1 Flash through OpenRouter with reasoning_effort', async () => {
+        const api = nock('https://openrouter.ai')
+            .post('/api/v1/chat/completions', body => {
+                expect(body.model).to.equal('minimax/minimax-m3.1-flash');
+                expect(body.reasoning_effort).to.equal('high');
+                expect(body).not.to.have.property('thinking');
+                return true;
+            })
+            .reply(200, {
+                choices: [{ message: { role: 'assistant', content: 'ok' } }]
+            });
+
+        try {
+            const model = ModelMix.new({ config: { effort: 50 } })
+                .minimaxM31Flash({ mix: { minimax: false, openrouter: true } });
+            expect(model.models.map(({ key }) => key)).to.deep.equal(['minimax/minimax-m3.1-flash']);
+            expect(model.models[0].provider).to.be.instanceOf(MixOpenRouter);
+
+            expect(await model.addText('ping').message()).to.equal('ok');
+            expect(api.isDone()).to.equal(true);
+        } finally {
+            nock.cleanAll();
+        }
+    });
+
+    it('should register MiMo 2.6 Flash through OpenRouter', () => {
+        const model = ModelMix.new().mimo26flash();
+
+        expect(model.models).to.have.length(1);
+        expect(model.models[0].key).to.equal('xiaomi/mimo-v2.6-flash');
+        expect(model.models[0].provider).to.be.instanceOf(MixOpenRouter);
+        expect(ModelMix.new().chain('mimo26flash').models[0].key).to.equal('xiaomi/mimo-v2.6-flash');
+    });
 });

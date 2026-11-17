@@ -230,7 +230,7 @@ describe('DeepSeek Model Registration Tests', () => {
                 .post('/inference/v1/chat/completions')
                 .reply(503, { error: { message: 'Unavailable' } });
             const openrouter = nock('https://openrouter.ai')
-                .post('/api/v1/chat/completions', body => body.model === 'deepseek/deepseek-v4.1-flash')
+                .post('/api/v1/chat/completions', body => body.model === 'deepseek/deepseek-v4.1-flash-1017')
                 .reply(200, { choices: [{ message: { content: 'fallback' } }] });
             const model = ModelMix.new({ config: { retry: { retries: 0 } } })
                 .deepseekV41Flash({ mix: { fireworks: true, openrouter: true } })
@@ -238,7 +238,7 @@ describe('DeepSeek Model Registration Tests', () => {
 
             expect(model.models.map(({ key }) => key)).to.deep.equal([
                 'accounts/fireworks/models/deepseek-v4p1-flash',
-                'deepseek/deepseek-v4.1-flash'
+                'deepseek/deepseek-v4.1-flash-1017'
             ]);
             expect(await model.message()).to.equal('fallback');
             expect(fireworks.isDone()).to.equal(true);

@@ -223,13 +223,14 @@ Use `.effort(n)` (or `config.effort`) to enable Anthropic thinking — e.g. `.ef
 `kimiK31Pro()` `kimiK31ProHighspeed()` `kimiK3()` — require `MOONSHOT_API_KEY`. `kimiK31Pro()` can append OpenRouter through `mix`; `kimiK31ProHighspeed()` is Moonshot-only; `kimiK3()` also supports Fireworks, OpenRouter, and Together through `mix`.
 
 ### MiniMax
-`minimaxM27()` `minimaxM3()` `minimaxM31Flash()` — `minimaxM31Flash()` uses `MiniMax-M3.1-Flash-Preview`, which MiniMax currently serves only with a Token Plan subscription key (`sk-cp-…`) in `MINIMAX_API_KEY`.
+`minimaxM27()` `minimaxM3()` `minimaxM31Flash()` — `minimaxM31Flash()` uses `MiniMax-M3.1-Flash-Preview`, which MiniMax currently serves only with a Token Plan subscription key (`sk-cp-…`) in `MINIMAX_API_KEY`; `mix: { minimax: false, openrouter: true }` uses `minimax/minimax-m3.1-flash` on OpenRouter instead.
 
 ### MiMo
 `mimo26pro()` — uses OpenRouter (`xiaomi/mimo-v2.6-pro`) by default; the native API requires `MIMO_API_KEY` and `mix: { mimo: true }`.
+`mimo26flash()` — OpenRouter only (`xiaomi/mimo-v2.6-flash`).
 
 ### DeepSeek
-`deepseekV41Flash({ mix: { deepseek: true, openrouter: false } })` uses the native API at `https://api.deepseek.com/chat/completions` with model `deepseek-flash` (currently V4.1 Flash). Requires `DEEPSEEK_API_KEY`; `MixDeepSeek` supports explicit `.attach()` calls. Unified effort and native cache usage are supported, and assistant reasoning is preserved for tool continuations. Cost estimates use peak rates per 1M tokens: $0.30 input, $0.006 cached input, $1.20 output; off-peak charges are half. Optional routes: `mix: { fireworks: true }` selects `accounts/fireworks/models/deepseek-v4p1-flash` with `FIREWORKS_API_KEY`, and `mix: { openrouter: true }` selects `deepseek/deepseek-v4.1-flash` (text and image input) with `OPENROUTER_API_KEY`; enabling all three routes orders them DeepSeek → Fireworks → OpenRouter.
+`deepseekV41Flash({ mix: { deepseek: true, openrouter: false } })` uses the native API at `https://api.deepseek.com/chat/completions` with model `deepseek-flash` (currently V4.1 Flash). Requires `DEEPSEEK_API_KEY`; `MixDeepSeek` supports explicit `.attach()` calls. Unified effort and native cache usage are supported, and assistant reasoning is preserved for tool continuations. Cost estimates use peak rates per 1M tokens: $0.30 input, $0.006 cached input, $1.20 output; off-peak charges are half. Optional routes: `mix: { fireworks: true }` selects `accounts/fireworks/models/deepseek-v4p1-flash` with `FIREWORKS_API_KEY`, and `mix: { openrouter: true }` selects `deepseek/deepseek-v4.1-flash-1017` (text and image input) with `OPENROUTER_API_KEY`; enabling all three routes orders them DeepSeek → Fireworks → OpenRouter.
 
 ### Fireworks
 `museGlimmer30b()` `qwen36plus()` (private/on-demand only) `qwen37plus()` `qwen38max()` `deepseekV4Flash()` `deepseekV4Pro()` `kimiK27Code()` `kimiK3()` `minimaxM27()` `minimaxM3()` `GLM52()`
@@ -240,7 +241,7 @@ Use `.effort(n)` (or `config.effort`) to enable Anthropic thinking — e.g. `.ef
 ### OpenRouter
 `deepseekPro()` uses `deepseek/deepseek-v4-pro-0813` through OpenRouter. Requires `OPENROUTER_API_KEY`; supports the DeepSeek effort mapping and `chain('deepseekPro@100')`. Base cost estimates per 1M tokens: $0.5808 input, $0.05808 cached input, $1.7424 output. Actual rates may change, including provider and time-based pricing.
 
-`museGlimmer30b()` `museEmber10()` `museWonder10()` `museSpark12()` `museSpark12c()` `museSpark13()` `museSpark13c()` `qwen35397b()` `qwen36plus()` `qwen37plus()` `qwen3827b()` `qwen38flash()` `hermes470b()` `hermes4405b()` `qwen38max()` `kimiK27Code()` `kimiK3()` `kimiK31Pro()` `minimaxM27()` `minimaxM3()` `GLM45()` `GLM52()` `GLM53()` `GLM53Flash()`
+`museGlimmer30b()` `museEmber10()` `museWonder10()` `museSpark12()` `museSpark12c()` `museSpark13()` `museSpark13c()` `qwen35397b()` `qwen36plus()` `qwen37plus()` `qwen3827b()` `qwen38flash()` `hermes470b()` `hermes4405b()` `qwen38max()` `kimiK27Code()` `kimiK3()` `kimiK31Pro()` `minimaxM27()` `minimaxM3()` `minimaxM31Flash()` `mimo26flash()` `GLM45()` `GLM52()` `GLM53()` `GLM53Flash()`
 
 Muse Spark: the `c` suffix selects Contributor, where prompts and outputs may be used to improve Meta products. Without `c`, the standard tier is selected. Use `museSpark12c()` for the former `museSpark12()` Contributor behavior.
 
