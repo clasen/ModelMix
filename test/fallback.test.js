@@ -135,6 +135,8 @@ describe('Provider Fallback Chain Tests', () => {
         it('should register every supported OpenAI text shortcut with its OpenRouter fallback', () => {
             expect(ModelMix.new().mix.openrouter).to.equal(false);
             const shortcuts = [
+                ['gpt62astra', 'gpt-6.2-astra', 'openai/gpt-6.2-astra', MixOpenAIResponses],
+                ['gpt62sol', 'gpt-6.2-sol', 'openai/gpt-6.2-sol', MixOpenAIResponses],
                 ['gpt6astra', 'gpt-6-astra', 'openai/gpt-6-astra', MixOpenAIResponses],
                 ['gpt61sol', 'gpt-6.1-sol', 'openai/gpt-6.1-sol', MixOpenAIResponses],
                 ['gpt61terra', 'gpt-6.1-terra', 'openai/gpt-6.1-terra', MixOpenAIResponses],

@@ -167,6 +167,8 @@ ModelMix provides convenient shorthand methods for quickly accessing different A
 
 | Method | Provider | Model | Input / 1M | Output / 1M |
 | --- | --- | --- | ---: | ---: |
+| `gpt62astra()` | OpenAI | gpt-6.2-astra | [\$8.00][1] | [\$40.00][1] |
+| `gpt62sol()` | OpenAI | gpt-6.2-sol | [\$2.00][1] | [\$10.00][1] |
 | `gpt6astra()` | OpenAI | gpt-6-astra | [\$10.00][1] | [\$50.00][1] |
 | `gpt61sol()` | OpenAI | gpt-6.1-sol | [\$2.00][1] | [\$10.00][1] |
 | `gpt61terra()` | OpenAI | gpt-6.1-terra | [\$1.00][1] | [\$5.00][1] |
@@ -356,6 +358,7 @@ ModelMix.new().effort(-1).minimaxM3().addText('...').message();
 ### Provider-specific behavior
 
 - **Gemini:** Gemini 3+ uses bands 0–24 / 25–49 / 50–74 / 75–100. Gemini 4 Carbon, 4 Argon, 3.8 Flash, and 3.7 Flash clamp these bands to `low` / `low` / `medium` / `high`; `-1` leaves the native `medium` default of Argon, 3.8 Flash, and 3.7 Flash unchanged and sends dynamic `thinkingBudget: -1` to Carbon. Gemini 2.5 maps 0–100 to `thinkingBudget`.
+- **GPT-6.2 Astra and GPT-6.2 Sol:** use the same bands as Astra because they do not support `none`: 0–39 maps to `low`, 40–59 to `medium`, 60–79 to `high`, 80–99 to `xhigh`, and 100 to `max`. [Astra model details](https://developers.openai.com/api/docs/models/gpt-6.2-astra), [Sol model details](https://developers.openai.com/api/docs/models/gpt-6.2-sol). Cache reads cost $0.40 and $0.10 and cache writes $10.00 and $2.50 per 1M tokens; requests over 272K input tokens apply 2× input/cache and 1.5× output rates.
 - **GPT-6 Astra:** 0–39 maps to `low`, 40–59 to `medium`, 60–79 to `high`, 80–99 to `xhigh`, and 100 to `max`. [Model details](https://developers.openai.com/api/docs/models/gpt-6-astra). Cache reads cost $1.00 and cache writes $12.50 per 1M tokens; requests over 272K input tokens apply 2× input/cache and 1.5× output rates.
 - **GPT-6.1 Sol:** uses the same bands as Astra because it does not support `none`: 0–39 maps to `low`, 40–59 to `medium`, 60–79 to `high`, 80–99 to `xhigh`, and 100 to `max`. [Model details](https://developers.openai.com/api/docs/models/gpt-6.1-sol). Cache reads cost $0.10 and cache writes $2.50 per 1M tokens; requests over 272K input tokens apply 2× input/cache and 1.5× output rates.
 - **GPT-6.1 Terra:** 0–19 maps to `none`, 20–39 to `low`, 40–59 to `medium`, 60–79 to `high`, 80–99 to `xhigh`, and 100 to `max`. [Model details](https://developers.openai.com/api/docs/models/gpt-6.1-terra). Cache reads cost $0.05 and cache writes $1.25 per 1M tokens; requests over 272K input tokens apply 2× input/cache and 1.5× output rates.
@@ -874,7 +877,7 @@ The contents of `support.md` and the cache key stay the same between calls; only
 
 ### GPT-5.6 and GPT-6 prompt caching
 
-GPT-5.6 and the GPT-6 models (Astra, Sol, Luna, 6.1 Sol, and 6.1 Terra) support implicit or explicit caching through `prompt_cache_options`. Put the explicit breakpoint at the end of the stable prefix; the provider only caches prompts with at least 1,024 tokens.
+GPT-5.6 and the GPT-6 models (Astra, Sol, Luna, 6.1 Sol, 6.1 Terra, 6.2 Astra, and 6.2 Sol) support implicit or explicit caching through `prompt_cache_options`. Put the explicit breakpoint at the end of the stable prefix; the provider only caches prompts with at least 1,024 tokens.
 
 ```javascript
 const model = ModelMix.new()

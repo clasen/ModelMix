@@ -1815,6 +1815,8 @@ export interface ModelMix {
     gpt55(args?: ModelAttachArgs): this;
     gpt55pro(args?: ModelAttachArgs): this;
     gpt6astra(args?: ModelAttachArgs): this;
+    gpt62astra(args?: ModelAttachArgs): this;
+    gpt62sol(args?: ModelAttachArgs): this;
     gpt61sol(args?: ModelAttachArgs): this;
     gpt61terra(args?: ModelAttachArgs): this;
     gpt6sol(args?: ModelAttachArgs): this;

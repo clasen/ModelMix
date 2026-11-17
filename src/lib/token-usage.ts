@@ -65,6 +65,8 @@ function usesLongContextRates(pricing: ModelPricing, inputTokens: number): boole
 const MODEL_PRICING: Record<string, ModelPricing> = {
     // OpenAI
     'gpt-6-astra': { input: 10.00, cachedInput: 1.00, cacheWrite: 12.50, output: 50.00, longContext: OPENAI_LONG_CONTEXT_PRICING },
+    'gpt-6.2-astra': { input: 8.00, cachedInput: 0.40, cacheWrite: 10.00, output: 40.00, longContext: OPENAI_LONG_CONTEXT_PRICING },
+    'gpt-6.2-sol': { input: 2.00, cachedInput: 0.10, cacheWrite: 2.50, output: 10.00, longContext: OPENAI_LONG_CONTEXT_PRICING },
     'gpt-6.1-sol': { input: 2.00, cachedInput: 0.10, cacheWrite: 2.50, output: 10.00, longContext: OPENAI_LONG_CONTEXT_PRICING },
     'gpt-6.1-terra': { input: 1.00, cachedInput: 0.05, cacheWrite: 1.25, output: 5.00, longContext: OPENAI_LONG_CONTEXT_PRICING },
     'gpt-6-sol': { input: 2.00, cachedInput: 0.20, cacheWrite: 2.50, output: 10.00, longContext: OPENAI_LONG_CONTEXT_PRICING },

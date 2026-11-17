@@ -68,6 +68,8 @@ export const MODEL_SHORTCUTS: Record<string, ModelShortcutSpec> = {
     gpt55: { provider: MixOpenAIResponses, key: 'gpt-5.5', routes: { openrouter: 'openai/gpt-5.5' } },
     gpt55pro: { provider: MixOpenAIResponses, key: 'gpt-5.5-pro', routes: { openrouter: 'openai/gpt-5.5-pro' } },
     gpt6astra: { provider: MixOpenAIResponses, key: 'gpt-6-astra', routes: { openrouter: 'openai/gpt-6-astra' } },
+    gpt62astra: { provider: MixOpenAIResponses, key: 'gpt-6.2-astra', routes: { openrouter: 'openai/gpt-6.2-astra' } },
+    gpt62sol: { provider: MixOpenAIResponses, key: 'gpt-6.2-sol', routes: { openrouter: 'openai/gpt-6.2-sol' } },
     gpt61sol: { provider: MixOpenAIResponses, key: 'gpt-6.1-sol', routes: { openrouter: 'openai/gpt-6.1-sol' } },
     gpt61terra: { provider: MixOpenAIResponses, key: 'gpt-6.1-terra', routes: { openrouter: 'openai/gpt-6.1-terra' } },
     gpt6sol: { provider: MixOpenAIResponses, key: 'gpt-6-sol', routes: { openrouter: 'openai/gpt-6-sol' } },
